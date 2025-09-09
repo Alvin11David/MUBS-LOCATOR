@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "700901312627",
+    "project_id": "mubs-locator",
+    "storage_bucket": "mubs-locator.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700901312627:android:cc7bd9e19054378c050206",
+        "android_client_info": {
+          "package_name": "com.example.mubs_locator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTqbZ0H-uvPmELnETwgfKhyhbHs-GghKk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
