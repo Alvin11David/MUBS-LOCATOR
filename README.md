@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # mubs_locator
 
 A new Flutter project.
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# MUBS-LOCATOR
+>>>>>>> 5cfc11a7a6e7d23cf5ea8e14c5c2113284ee5389
