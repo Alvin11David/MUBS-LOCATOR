@@ -54,6 +54,30 @@ class _OnboardingScreen1State extends State<OnboardingScreen1> {
                       ],
                     ),
                   ),
+                  // Skip button at top right
+                  Positioned(
+                    top: screenHeight * 0.04, // 2% from top for padding
+                    right: screenWidth * 0.02, // 2% from right for padding
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.03,
+                        vertical: screenHeight * 0.01,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Skip',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.04, // Responsive font size
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Urbanist',
+                        ),
+                      ),
+                    ),
+                  ),
                   Container(), // Placeholder for future content
                 ],
               );
