@@ -48,6 +48,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Add C4st60 f6nts here
+  fonts:
+    - family: Abril Fatface
+      fonts:
+        - asset: assets/fonts/AbrilFatface-Regular.ttf
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/MontserratAlternates-Black.ttf
+          weight: 900
+
   
   assets:
     - assets/logo/
