@@ -20,14 +20,49 @@ class SplashScreen extends StatelessWidget {
 
               return Stack(
                 children: [
-                  // Background
+                  // ✅ Background (drawn first so everything stays visible)
                   Container(
                     width: screenWidth,
                     height: screenHeight,
                     color: Colors.black,
                   ),
 
-                  // Rotated blue shape that clips its children
+                  // ✅ Logo and "MUBS Locator" text (on top of background)
+                  Positioned(
+                    top: screenHeight * 0.02, // Slight padding from top
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/logo/logo.png',
+                          width: screenWidth * 0.2,
+                          height: screenHeight * 0.1,
+                          fit: BoxFit.contain,
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'MUBS Locator',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.06,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Poppins',
+                            shadows: [
+                              Shadow(
+                                offset: Offset(0, 0),
+                                blurRadius: 3.0,
+                                color: Colors.black,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ✅ Rotated blue shape with image + texts
                   Positioned(
                     right: -screenWidth * 0.55,
                     top: screenHeight * 0.3,
@@ -53,28 +88,18 @@ class SplashScreen extends StatelessWidget {
                                   alignment: Alignment.centerLeft,
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                      right:
-                                          screenWidth *
-                                          0.3, // Reduced padding to give more space
-                                      bottom:
-                                          screenHeight *
-                                          0.0, // Reduced padding
+                                      right: screenWidth * 0.3,
                                     ),
                                     child: Image.asset(
                                       'assets/images/ambasizejackline.png',
-                                      width:
-                                          screenWidth *
-                                          0.6, // Adjusted to a reasonable scale
-                                      height:
-                                          screenHeight *
-                                          0.6, // Adjusted to a reasonable scale
-                                      fit: BoxFit
-                                          .contain, // Changed to cover for enlargement
+                                      width: screenWidth * 0.6,
+                                      height: screenHeight * 0.6,
+                                      fit: BoxFit.contain,
                                     ),
                                   ),
                                 ),
 
-                                // Positioned Text on top of image
+                                // Texts over the image
                                 Positioned(
                                   left: screenWidth * 0.12,
                                   top: screenHeight * 0.15,
@@ -95,7 +120,6 @@ class SplashScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                // Positioned Text on top of image
                                 Positioned(
                                   left: screenWidth * 0.42,
                                   top: screenHeight * 0.2,
@@ -116,14 +140,13 @@ class SplashScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                // Positioned Text on top of image
                                 Positioned(
                                   left: screenWidth * 0.40,
                                   top: screenHeight * 0.265,
                                   child: Text(
                                     'Bachelor of Leadership and\n Governance',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.041,
+                                      fontSize: screenWidth * 0.039,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       fontFamily: 'Abril Fatface',
@@ -137,7 +160,6 @@ class SplashScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                // Positioned Text on top of image
                                 Positioned(
                                   left: screenWidth * 0.69,
                                   top: screenHeight * 0.30,
