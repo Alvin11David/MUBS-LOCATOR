@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/firebase_options.dart';
+import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
+import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
+import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 
 void main() async {
@@ -25,7 +28,9 @@ class MyApp extends StatelessWidget {
       ),
       routes: {
         '/': (context) => const SplashScreen(),
-        
+        '/OnboardingScreen1': (context) => const OnboardingScreen1(),
+        '/OnboardingScreen2': (context) => const OnboardingScreen2(),
+        '/OnboardingScreen3': (context) => const OnboardingScreen3(),
       },
     );
   }
