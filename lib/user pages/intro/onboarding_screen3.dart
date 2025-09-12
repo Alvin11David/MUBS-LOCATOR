@@ -56,7 +56,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> {
                   ),
                   // Skip button at top right
                   Positioned(
-                    top: screenHeight * 0.04, // 2% from top for padding
+                    top: screenHeight * 0.02, // 2% from top for padding
                     right: screenWidth * 0.02, // 2% from right for padding
                     child: Container(
                       padding: EdgeInsets.symmetric(
@@ -75,6 +75,21 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> {
                           color: Colors.white,
                           fontFamily: 'Urbanist',
                         ),
+                      ),
+                    ),
+                  ),
+                  // Locate any building fast text at center right
+                  Positioned(
+                    top: screenHeight * 0.6, // Centered vertically, adjusted for alignment
+                    left: screenWidth * 0.05, // 5% from right for padding
+                    child: Text(
+                      'Stay Updated.',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.08, // Responsive font size
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Abril Fatface',
                       ),
                     ),
                   ),
