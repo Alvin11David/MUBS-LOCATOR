@@ -106,6 +106,42 @@ class _OnboardingScreen1State extends State<OnboardingScreen1> {
                             fontFamily: 'Montserrat',
                           ),
                         ),
+                        SizedBox(height: screenHeight * 0.03), // Spacing for page indicator
+                        // Page indicator: 3 rounded rectangles
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Inactive
+                            Container(
+                              width: screenWidth * 0.06,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            SizedBox(width: screenWidth * 0.02), // Spacing between indicators
+                            // Active (first one)
+                            Container(
+                              width: screenWidth * 0.04,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            // Inactive
+                            Container(
+                              width: screenWidth * 0.04,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class OnboardingScreen2 extends StatefulWidget {
-  const OnboardingScreen2({super.key});
+class OnboardingScreen1 extends StatefulWidget {
+  const OnboardingScreen1({super.key});
 
   @override
-  State<OnboardingScreen2> createState() => _OnboardingScreen2State();
+  State<OnboardingScreen1> createState() => _OnboardingScreen1State();
 }
 
-class _OnboardingScreen2State extends State<OnboardingScreen2> {
+class _OnboardingScreen1State extends State<OnboardingScreen1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,7 +16,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/onboarding_screen2.png'),
+            image: AssetImage('assets/images/onboarding_screen1.png'),
             fit: BoxFit.cover,
           ),
         ),
@@ -86,7 +86,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Navigate Campus\n',
+                          'Locate any\nbuilding fast.',
                           textAlign: TextAlign.left,
                           style: TextStyle(
                             fontSize: screenWidth * 0.08, // Responsive font size
@@ -97,7 +97,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> {
                         ),
                         SizedBox(height: screenHeight * 0.02), // Small spacing between texts
                         Text(
-                          'Never get lost. Find the\nquickest path to your\ndestination..',
+                          'Search for lecture blocks,\ndepartments or service in\nseconds.',
                           textAlign: TextAlign.left,
                           style: TextStyle(
                             fontSize: screenWidth * 0.05, // Responsive font size (smaller for subtitle)
@@ -105,6 +105,42 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> {
                             color: Colors.white,
                             fontFamily: 'Montserrat',
                           ),
+                        ),
+                        SizedBox(height: screenHeight * 0.03), // Spacing for page indicator
+                        // Page indicator: 3 rounded rectangles
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Inactive
+                            Container(
+                              width: screenWidth * 0.04,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            SizedBox(width: screenWidth * 0.02), // Spacing between indicators
+                            // Active (first one)
+                            Container(
+                              width: screenWidth * 0.06,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            // Inactive
+                            Container(
+                              width: screenWidth * 0.04,
+                              height: screenHeight * 0.01,
+                              decoration: BoxDecoration(
+                                color: Colors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

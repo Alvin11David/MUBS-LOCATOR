@@ -57,6 +57,10 @@ flutter:
       fonts:
         - asset: assets/fonts/MontserratAlternates-Black.ttf
           weight: 900
+    - family: Urbanist
+      fonts:
+        - asset: assets/fonts/Urbanist-ExtraBold.ttf
+          weight: 800
 
   
   assets:
