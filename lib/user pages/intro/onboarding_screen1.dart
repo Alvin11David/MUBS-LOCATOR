@@ -26,7 +26,37 @@ class _OnboardingScreen1State extends State<OnboardingScreen1> {
               double screenWidth = constraints.maxWidth;
               double screenHeight = constraints.maxHeight;
 
-              return Container(); // Placeholder for future content
+              return Stack(
+                children: [
+                  // Logo and MUBS Locator at top left
+                  Positioned(
+                    top: screenHeight * 0.02, // 2% from top for padding
+                    left: screenWidth * 0.02, // 2% from left for padding
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/logo/logo.png',
+                          width: screenWidth * 0.1, // 10% of screen width
+                          height: screenHeight * 0.1, // 10% of screen height
+                          fit: BoxFit.contain,
+                        ),
+                        SizedBox(width: 4), // Small width of 4 pixels
+                        Text(
+                          'MUBS Locator',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.04, // Responsive font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(), // Placeholder for future content
+                ],
+              );
             },
           ),
         ),
