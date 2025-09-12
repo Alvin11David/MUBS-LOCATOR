@@ -51,11 +51,11 @@ class SplashScreen extends StatelessWidget {
                                 Align(
                                   alignment: Alignment.centerLeft, // 👈 Move image to the left
                                   child: Padding(
-                                    padding: EdgeInsets.only(left: screenWidth * 0.08), // fine-tune spacing
+                                    padding: EdgeInsets.only(right: screenWidth * 0.8), // fine-tune spacing
                                     child: Image.asset(
                                       'assets/images/ambasizejackline.png',
-                                      width: screenWidth * 0.5,
-                                      height: screenHeight * 0.6,
+                                      width: screenWidth * 1.9,
+                                      height: screenHeight * 1.9,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
