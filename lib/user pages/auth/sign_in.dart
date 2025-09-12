@@ -36,7 +36,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   fit: BoxFit.contain, // Ensures the image scales without distortion
                 ),
               ),
-              // "Jackline" at top left
+              // "Ambasize" at top left
               Positioned(
                 top: screenHeight * 0.02, // 2% from the top for padding
                 left: screenWidth * 0.02, // 2% from the left for padding
@@ -50,9 +50,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-              // "Ambisize" at top right
+              // "Jackline" at top right
               Positioned(
-                top: screenHeight * 0.09, // 2% from the top for padding
+                top: screenHeight * 0.09, // 9% from the top for padding
                 right: screenWidth * 0.02, // 2% from the right for padding
                 child: Text(
                   'Jackline',
@@ -61,6 +61,53 @@ class _SignInScreenState extends State<SignInScreen> {
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                     fontFamily: 'Abril Fatface', // Ensure this font is defined in pubspec.yaml
+                  ),
+                ),
+              ),
+              // "Let's get you\nsigned in" below the logo
+              Positioned(
+                top: screenHeight * 0.05 + screenHeight * 0.1 + screenHeight * 0.02, // Below logo (5% top + 10% logo height + 2% padding)
+                left: screenWidth * 0.5 - (screenWidth * 0.3) / 2, // Center horizontally (half screen width minus half text width approximation)
+                child: Text(
+                  'Let\'s get you\nsigned in',
+                  textAlign: TextAlign.center, // Center the text
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.06, // 6% of screen width for responsive font size
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'Montserrat', // Assuming "Monstreal" was a typo for Montserrat
+                  ),
+                ),
+              ),
+              // White rectangle with 30 border radius below the text
+              Positioned(
+                top: screenHeight * 0.1 + screenHeight * 0.1 + screenHeight * 0.02 + screenHeight * 0.08, // Below text (adjust based on text height)
+                left: screenWidth * 0.02, // 2% left padding
+                right: screenWidth * 0.02, // 2% right padding
+                child: Container(
+                  height: screenHeight * 0.69, // 69% of screen height for responsiveness (adjust as needed)
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30), // 30 border radius
+                  ),
+                  child: Stack(
+                    children: [
+                      // "Sign In" at top center of the rectangle
+                      Positioned(
+                        top: screenHeight * 0.01, // 1% padding from the top of the rectangle
+                        left: screenWidth * 0.55 - (screenWidth * 0.3) / 2, // Center horizontally (approximate width of 30%)
+                        child: Text(
+                          'Sign In',
+                          textAlign: TextAlign.center, // Center the text
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.06, // 6% of screen width for responsive font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'Epunda Slab',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

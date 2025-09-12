@@ -61,6 +61,10 @@ flutter:
       fonts:
         - asset: assets/fonts/Urbanist-ExtraBold.ttf
           weight: 800
+    - family: Epunda Slab
+      fonts:
+        - asset: assets/fonts/EpundaSlab-Bold.ttf
+          weight: 800
 
   
   assets:
