@@ -78,19 +78,35 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> {
                       ),
                     ),
                   ),
-                  // Locate any building fast text at center right
+                  // Locate any building fast text at center left
                   Positioned(
                     top: screenHeight * 0.6, // Centered vertically, adjusted for alignment
-                    left: screenWidth * 0.05, // 5% from right for padding
-                    child: Text(
-                      'Stay Updated.',
-                      textAlign: TextAlign.left,
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.08, // Responsive font size
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'Abril Fatface',
-                      ),
+                    left: screenWidth * 0.05, // 5% from left for padding
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stay Updated',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.08, // Responsive font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Abril Fatface',
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02), // Small spacing between texts
+                        Text(
+                          'Receive important updates\nand alerts directly in the app.',
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.05, // Responsive font size (smaller for subtitle)
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Container(), // Placeholder for future content
