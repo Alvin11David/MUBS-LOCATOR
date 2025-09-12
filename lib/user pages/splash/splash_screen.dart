@@ -30,7 +30,7 @@ class SplashScreen extends StatelessWidget {
                   // Rotated blue shape that clips its children
                   Positioned(
                     right: -screenWidth * 0.55,
-                    top: screenHeight * 0.2,
+                    top: screenHeight * 0.3,
                     child: Transform.rotate(
                       angle: rotationAngle,
                       child: ClipRRect(
@@ -40,7 +40,7 @@ class SplashScreen extends StatelessWidget {
                         ),
                         child: Container(
                           width: screenWidth * 1.4,
-                          height: screenHeight * 0.5,
+                          height: screenHeight * 0.37,
                           color: const Color(0xFF007BFF),
 
                           // Counter-rotate children so they appear straight
@@ -53,22 +53,54 @@ class SplashScreen extends StatelessWidget {
                                   alignment: Alignment.centerLeft,
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                        right: screenWidth * 0.8),
+                                      right:
+                                          screenWidth *
+                                          0.3, // Reduced padding to give more space
+                                      bottom:
+                                          screenHeight *
+                                          0.0, // Reduced padding
+                                    ),
                                     child: Image.asset(
                                       'assets/images/ambasizejackline.png',
-                                      width: screenWidth * 1.9,
-                                      height: screenHeight * 1.9,
-                                      fit: BoxFit.contain,
+                                      width:
+                                          screenWidth *
+                                          0.6, // Adjusted to a reasonable scale
+                                      height:
+                                          screenHeight *
+                                          0.6, // Adjusted to a reasonable scale
+                                      fit: BoxFit
+                                          .contain, // Changed to cover for enlargement
                                     ),
                                   ),
                                 ),
 
                                 // Positioned Text on top of image
                                 Positioned(
-                                  left: screenWidth * 0.1,
-                                  top: screenHeight * 0.2,
+                                  left: screenWidth * 0.12,
+                                  top: screenHeight * 0.15,
                                   child: Text(
                                     'AMBASIZE',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.1,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Poppins',
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(0, 0),
+                                          blurRadius: 3.0,
+                                          color: Colors.black,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Positioned Text on top of image
+                                Positioned(
+                                  left: screenWidth * 0.42,
+                                  top: screenHeight * 0.2,
+                                  child: Text(
+                                    'JACKLINE',
                                     style: TextStyle(
                                       fontSize: screenWidth * 0.09,
                                       fontWeight: FontWeight.bold,
@@ -86,20 +118,41 @@ class SplashScreen extends StatelessWidget {
                                 ),
                                 // Positioned Text on top of image
                                 Positioned(
-                                  left: screenWidth * 0.4,
-                                  top: screenHeight * 0.25,
+                                  left: screenWidth * 0.40,
+                                  top: screenHeight * 0.265,
                                   child: Text(
-                                    'JACKLINE',
+                                    'Bachelor of Leadership and\n Governance',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.09,
+                                      fontSize: screenWidth * 0.041,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'Abril Fatface',
                                       shadows: [
                                         Shadow(
                                           offset: Offset(0, 0),
                                           blurRadius: 3.0,
                                           color: Colors.black,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Positioned Text on top of image
+                                Positioned(
+                                  left: screenWidth * 0.69,
+                                  top: screenHeight * 0.30,
+                                  child: Text(
+                                    'Year 2',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.05,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontFamily: 'Abril Fatface',
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(0, 0),
+                                          blurRadius: 9.0,
+                                          color: Colors.white,
                                         ),
                                       ],
                                     ),
