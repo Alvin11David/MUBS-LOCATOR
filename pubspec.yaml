@@ -25,6 +25,8 @@ dependencies:
   firebase_auth:
   # IOS firestore
   cloud_firestore:
+  #Wave
+  wave:
 
 dev_dependencies:
   flutter_test:
