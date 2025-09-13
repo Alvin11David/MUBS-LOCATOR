@@ -10,6 +10,22 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool isButtonEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_updateButtonState);
+    _passwordController.addListener(_updateButtonState);
+  }
+
+  void _updateButtonState() {
+    setState(() {
+      isButtonEnabled =
+          _emailController.text.trim().isNotEmpty &&
+          _passwordController.text.trim().isNotEmpty;
+    });
+  }
 
   @override
   void dispose() {
@@ -21,6 +37,8 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset:
+          false, // Prevents resizing when keyboard appears
       body: LayoutBuilder(
         builder: (context, constraints) {
           double screenWidth = constraints.maxWidth;
@@ -30,10 +48,11 @@ class _SignInScreenState extends State<SignInScreen> {
             children: [
               // Background
               Container(
-                  width: screenWidth,
-                  height: screenHeight,
-                  color: const Color(0xFF93C5FD),
-                  child: const SizedBox()),
+                width: screenWidth,
+                height: screenHeight,
+                color: const Color(0xFF93C5FD),
+                child: const SizedBox(),
+              ),
 
               // Logo at center top
               Positioned(
@@ -80,7 +99,7 @@ class _SignInScreenState extends State<SignInScreen> {
               // "Let's get you signed in"
               Positioned(
                 top: screenHeight * 0.17,
-                left: screenWidth * 0.4 - (screenWidth * 0.3) / 2,
+                left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
                 child: Text(
                   "Let's get you\nsigned in",
                   textAlign: TextAlign.center,
@@ -93,45 +112,27 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
 
-              // White container with inputs
+              // White container with inputs (fixed height, scrollable content)
               Positioned(
-                top: screenHeight * 0.29,
+                top: screenHeight * 0.31,
                 left: screenWidth * 0.02,
                 right: screenWidth * 0.02,
                 child: Container(
-                  height: screenHeight * 0.69,
+                  height: screenHeight * 0.69, // Fixed height
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: Stack(
-                    children: [
-                      // Sign In title
-                      Positioned(
-                        top: screenHeight * 0.01,
-                        left: screenWidth * 0.5 - (screenWidth * 0.5) / 2,
-                        child: SizedBox(
-                          width: screenWidth * 0.5,
-                          child: Text(
-                            'Sign In',
-                            textAlign: TextAlign.center,
-                            softWrap: true,
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.07,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              fontFamily: 'Epunda Slab',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Subtitle
-                      Positioned(
-                        top: screenHeight * 0.07,
-                        left: screenWidth * 0.5 - (screenWidth * 0.8) / 2,
-                        child: SizedBox(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.04,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Subtitle
+                        SizedBox(
                           width: screenWidth * 0.8,
                           child: Text(
                             'Please enter the details to\ncontinue.',
@@ -146,162 +147,243 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           ),
                         ),
-                      ),
+                        SizedBox(height: screenHeight * 0.03),
 
-                      // Email Field
-                      Positioned(
-                        top: screenHeight * 0.16,
-                        left: screenWidth * 0.1,
-                        child: SizedBox(
-                          width: screenWidth * 0.8,
+                        // Email Field
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.08,
+                          ),
                           child: EmailField(controller: _emailController),
                         ),
-                      ),
+                        SizedBox(height: screenHeight * 0.03),
 
-                      // Password Field
-                      Positioned(
-                        top: screenHeight * 0.26,
-                        left: screenWidth * 0.1,
-                        child: SizedBox(
-                          width: screenWidth * 0.8,
+                        // Password Field
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.08,
+                          ),
                           child: PasswordField(controller: _passwordController),
                         ),
-                      ),
+                        SizedBox(height: screenHeight * 0.01),
 
-                      // Forgot Password text
-                      Positioned(
-                        top: screenHeight * 0.35,
-                        right: screenWidth * 0.1,
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/');
-                          },
-                          child: Text(
-                            "Forgot Password?",
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Sign In button
-                      Positioned(
-                        top: screenHeight * 0.42,
-                        left: screenWidth * 0.1,
-                        child: SizedBox(
-                          width: screenWidth * 0.8,
-                          height: screenHeight * 0.06,
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/HomeScreen');
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(
-                                  color: const Color(0xFF3B82F6), // Blue border
-                                  width: 1,
-                                ),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFE0E7FF), // Light shade at 0%
-                                    Color(0xFF93C5FD), // Blue shade at 47%
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              alignment: Alignment.center,
+                        // Forgot Password text
+                        Padding(
+                          padding: EdgeInsets.only(right: screenWidth * 0.091),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/');
+                              },
                               child: Text(
-                                "Sign In",
+                                "Forgot Password?",
                                 style: TextStyle(
-                                  fontSize: screenWidth * 0.05,
+                                  fontSize: screenWidth * 0.04,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
-                                  fontFamily: 'Epunda Slab',
+                                  fontFamily: 'Poppins',
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                        SizedBox(height: screenHeight * 0.03),
 
-                      // Or Divider
-                      Positioned(
-                        top: screenHeight * 0.50,
-                        left: screenWidth * 0.1,
-                        child: SizedBox(
-                          width: screenWidth * 0.8,
+                        // Sign In button
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.08,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: screenHeight * 0.06,
+                            child: GestureDetector(
+                              onTap: isButtonEnabled
+                                  ? () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/HomeScreen',
+                                      );
+                                    }
+                                  : null,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: isButtonEnabled
+                                        ? const Color(0xFF3B82F6)
+                                        : Colors.grey,
+                                    width: 1,
+                                  ),
+                                  gradient: isButtonEnabled
+                                      ? const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE0E7FF),
+                                            Color(0xFF93C5FD),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE5E7EB),
+                                            Color(0xFFD1D5DB),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "Sign In",
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.05,
+                                    fontWeight: FontWeight.bold,
+                                    color: isButtonEnabled
+                                        ? Colors.black
+                                        : Colors.grey,
+                                    fontFamily: 'Epunda Slab',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.03),
+
+                        // Or Divider
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.1,
+                          ),
                           child: OrDivider(),
                         ),
-                      ),
+                        SizedBox(height: screenHeight * 0.03),
 
-                      // Sign In with Google button
-                      Positioned(
-                        top: screenHeight * 0.56,
-                        left: screenWidth * 0.1,
-                        child: SizedBox(
-                          width: screenWidth * 0.8,
-                          height: screenHeight * 0.06,
-                          child: GestureDetector(
-                            onTap: () {
-                              // Add navigation or action here
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(
-                                  color: const Color(0xFFD59A00), // Gold border
-                                  width: 1,
-                                ),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color.fromARGB(255, 255, 255, 255), // Light shade at 0%
-                                    Color.fromARGB(255, 255, 255, 255), // White shade
+                        // Sign In with Google button
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.1,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: screenHeight * 0.06,
+                            child: GestureDetector(
+                              onTap: () {
+                                // Add navigation or action here
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFFD59A00,
+                                    ), // Gold border
+                                    width: 1,
+                                  ),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ), // Light shade at 0%
+                                      Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ), // White shade
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(
+                                        0.2,
+                                      ), // Shadow color
+                                      spreadRadius: 2,
+                                      blurRadius: 5,
+                                      offset: const Offset(
+                                        0,
+                                        3,
+                                      ), // Shadow offset (x, y)
+                                    ),
                                   ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2), // Shadow color
-                                    spreadRadius: 2,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 3), // Shadow offset (x, y)
-                                  ),
-                                ],
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/logo/googleicon.png',
+                                      width: screenWidth * 0.08,
+                                      height: screenHeight * 0.03,
+                                      fit: BoxFit.contain,
+                                    ),
+                                    const SizedBox(
+                                      width: 5,
+                                    ), // Spacing between icon and text
+                                    Text(
+                                      "Google",
+                                      style: TextStyle(
+                                        fontSize: screenWidth * 0.05,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                        fontFamily: 'Epunda Slab',
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    'assets/logo/googleicon.png',
-                                    width: screenWidth * 0.08,
-                                    height: screenHeight * 0.03,
-                                    fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.03),
+
+                        // "Don't have an account, Sign Up" text
+                        Center(
+                          child: SizedBox(
+                            width: screenWidth * 0.8,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Don't have an account, ",
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    fontFamily: 'Epunda Slab',
                                   ),
-                                  const SizedBox(width: 5), // Spacing between icon and text
-                                  Text(
-                                    "Google",
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/SignUpScreen',
+                                    );
+                                  },
+                                  child: Text(
+                                    "Sign Up",
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.05,
+                                      fontSize: screenWidth * 0.04,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                                      color: const Color(0xFF93C5FD),
                                       fontFamily: 'Epunda Slab',
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -357,25 +439,22 @@ class EmailField extends StatelessWidget {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(Icons.mail, color: const Color.fromARGB(255, 69, 141, 224)),
+              child: Icon(
+                Icons.mail,
+                color: const Color.fromARGB(255, 69, 141, 224),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFFD59A00),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFD59A00), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFF93C5FD),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
             ),
             contentPadding: EdgeInsets.symmetric(
-              vertical: screenWidth * 0.04,
-              horizontal: screenWidth * 0.04,
+              vertical: screenWidth * 0.05,
+              horizontal: screenWidth * 0.05,
             ),
           ),
           style: TextStyle(
@@ -436,7 +515,10 @@ class _PasswordFieldState extends State<PasswordField> {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(Icons.lock, color: const Color.fromARGB(255, 73, 122, 220)),
+              child: Icon(
+                Icons.lock,
+                color: const Color.fromARGB(255, 73, 122, 220),
+              ),
             ),
             suffixIcon: IconButton(
               icon: Icon(
@@ -451,17 +533,11 @@ class _PasswordFieldState extends State<PasswordField> {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFFD59A00),
-                width: 1,
-              ),
+              borderSide: const BorderSide(color: Color(0xFFD59A00), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
-              borderSide: const BorderSide(
-                color: Color(0xFF93C5FD),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
             ),
             contentPadding: EdgeInsets.symmetric(
               vertical: screenWidth * 0.05,

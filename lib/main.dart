@@ -5,6 +5,7 @@ import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 
 void main() async {
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
         '/SignInScreen': (context) => const SignInScreen(),
+        
       },
     );
   }
