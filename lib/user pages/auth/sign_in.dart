@@ -188,7 +188,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
 
-                      // ✅ SIGN IN BUTTON
+                      // Sign In button
                       Positioned(
                         top: screenHeight * 0.42,
                         left: screenWidth * 0.1,
@@ -224,6 +224,78 @@ class _SignInScreenState extends State<SignInScreen> {
                                   color: Colors.black,
                                   fontFamily: 'Epunda Slab',
                                 ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Or Divider
+                      Positioned(
+                        top: screenHeight * 0.50,
+                        left: screenWidth * 0.1,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
+                          child: OrDivider(),
+                        ),
+                      ),
+
+                      // Sign In with Google button
+                      Positioned(
+                        top: screenHeight * 0.56,
+                        left: screenWidth * 0.1,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
+                          height: screenHeight * 0.06,
+                          child: GestureDetector(
+                            onTap: () {
+                              // Add navigation or action here
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: const Color(0xFFD59A00), // Gold border
+                                  width: 1,
+                                ),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color.fromARGB(255, 255, 255, 255), // Light shade at 0%
+                                    Color.fromARGB(255, 255, 255, 255), // White shade
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2), // Shadow color
+                                    spreadRadius: 2,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 3), // Shadow offset (x, y)
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    'assets/logo/googleicon.png',
+                                    width: screenWidth * 0.08,
+                                    height: screenHeight * 0.03,
+                                    fit: BoxFit.contain,
+                                  ),
+                                  const SizedBox(width: 5), // Spacing between icon and text
+                                  Text(
+                                    "Google",
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.05,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontFamily: 'Epunda Slab',
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -403,6 +475,41 @@ class _PasswordFieldState extends State<PasswordField> {
             fontSize: screenWidth * 0.045,
           ),
           cursorColor: const Color(0xFFD59A00),
+        );
+      },
+    );
+  }
+}
+
+// OR DIVIDER
+class OrDivider extends StatelessWidget {
+  const OrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        return SizedBox(
+          width: screenWidth * 0.8, // Responsive width (80% of container width)
+          child: Row(
+            children: [
+              Expanded(child: Container(height: 1, color: Colors.grey)),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                child: Text(
+                  'Or Sign In With',
+                  style: TextStyle(
+                    color: const Color(0xFF6B7280), // Gray
+                    fontSize: screenWidth * 0.04, // Responsive font size
+                    fontFamily: 'Epunda Slab',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              Expanded(child: Container(height: 1, color: Colors.grey)),
+            ],
+          ),
         );
       },
     );
