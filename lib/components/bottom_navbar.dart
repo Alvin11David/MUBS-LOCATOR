@@ -110,7 +110,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                               isSelected: _selectedIndex == 1,
                             ),
                             _buildNavItem(
-                              icon: Icons.feedback,
+                              icon: Icons.feedback_rounded,
                               label: 'Feedback',
                               index: 2,
                               screenWidth: screenWidth,
