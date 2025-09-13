@@ -404,9 +404,9 @@ class EmailField extends StatelessWidget {
     if (value == null || value.trim().isEmpty) {
       return 'Enter your email address';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
     if (!emailRegex.hasMatch(value.trim())) {
-      return 'Enter a valid email address';
+      return 'Please enter a Gmail address (e.g., username@gmail.com)';
     }
     return null;
   }
@@ -428,7 +428,7 @@ class EmailField extends StatelessWidget {
               fontWeight: FontWeight.w500,
               fontSize: screenWidth * 0.05,
             ),
-            hintText: 'Enter Your Email',
+            hintText: 'Enter Your Gmail',
             hintStyle: TextStyle(
               color: Colors.black,
               fontFamily: 'Poppins',
