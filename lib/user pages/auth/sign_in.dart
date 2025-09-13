@@ -9,10 +9,12 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -26,117 +28,205 @@ class _SignInScreenState extends State<SignInScreen> {
 
           return Stack(
             children: [
+              // Background
               Container(
-                width: screenWidth,
-                height: screenHeight,
-                color: const Color(0xFF93C5FD), // Background color #93C5FD
-                child: const Center(
-                  child: Placeholder(),
-                ),
-              ),
+                  width: screenWidth,
+                  height: screenHeight,
+                  color: const Color(0xFF93C5FD),
+                  child: const SizedBox()),
+
+              // Logo at center top
               Positioned(
-                top: screenHeight * 0.05, // 5% from the top for padding
-                left: screenWidth * 0.5 - (screenWidth * 0.2) / 2, // Center horizontally for logo
+                top: screenHeight * 0.05,
+                left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
                 child: Image.asset(
                   'assets/logo/logo.png',
-                  width: screenWidth * 0.2, // 20% of screen width for responsiveness
-                  height: screenHeight * 0.1, // 10% of screen height for responsiveness
-                  fit: BoxFit.contain, // Ensures the image scales without distortion
+                  width: screenWidth * 0.2,
+                  height: screenHeight * 0.1,
+                  fit: BoxFit.contain,
                 ),
               ),
-              // "Ambasize" at top left
+
+              // Ambasize top left
               Positioned(
-                top: screenHeight * 0.02, // 2% from the top for padding
-                left: screenWidth * 0.02, // 2% from the left for padding
+                top: screenHeight * 0.04,
+                left: screenWidth * 0.02,
                 child: Text(
                   'Ambasize',
                   style: TextStyle(
-                    fontSize: screenWidth * 0.05, // 5% of screen width for responsive font size
+                    fontSize: screenWidth * 0.05,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
-                    fontFamily: 'Abril Fatface', // Ensure this font is defined in pubspec.yaml
+                    fontFamily: 'Abril Fatface',
                   ),
                 ),
               ),
-              // "Jackline" at top right
+
+              // Jackline top right
               Positioned(
-                top: screenHeight * 0.09, // 9% from the top for padding
-                right: screenWidth * 0.02, // 2% from the right for padding
+                top: screenHeight * 0.09,
+                right: screenWidth * 0.02,
                 child: Text(
                   'Jackline',
                   style: TextStyle(
-                    fontSize: screenWidth * 0.05, // 5% of screen width for responsive font size
+                    fontSize: screenWidth * 0.05,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
-                    fontFamily: 'Abril Fatface', // Ensure this font is defined in pubspec.yaml
+                    fontFamily: 'Abril Fatface',
                   ),
                 ),
               ),
-              // "Let's get you\nsigned in" below the logo
+
+              // "Let's get you signed in"
               Positioned(
-                top: screenHeight * 0.05 + screenHeight * 0.1 + screenHeight * 0.02, // Below logo (5% top + 10% logo height + 2% padding)
-                left: screenWidth * 0.5 - (screenWidth * 0.3) / 2, // Center horizontally
+                top: screenHeight * 0.17,
+                left: screenWidth * 0.4 - (screenWidth * 0.3) / 2,
                 child: Text(
-                  'Let\'s get you\nsigned in',
-                  textAlign: TextAlign.center, // Center the text
+                  "Let's get you\nsigned in",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: screenWidth * 0.06, // 6% of screen width for responsive font size
+                    fontSize: screenWidth * 0.08,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
-                    fontFamily: 'Montserrat', // Assuming "Monstreal" was a typo for Montserrat
+                    fontFamily: 'Montserrat',
                   ),
                 ),
               ),
-              // White rectangle with 30 border radius below the text
+
+              // White container with inputs
               Positioned(
-                top: screenHeight * 0.1 + screenHeight * 0.1 + screenHeight * 0.02 + screenHeight * 0.08, // Below text
-                left: screenWidth * 0.02, // 2% left padding
-                right: screenWidth * 0.02, // 2% right padding
+                top: screenHeight * 0.29,
+                left: screenWidth * 0.02,
+                right: screenWidth * 0.02,
                 child: Container(
-                  height: screenHeight * 0.69, // 69% of screen height for responsiveness
+                  height: screenHeight * 0.69,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(30), // 30 border radius
+                    borderRadius: BorderRadius.circular(30),
                   ),
                   child: Stack(
                     children: [
-                      // "Sign In" at top center of the rectangle
+                      // Sign In title
                       Positioned(
-                        top: screenHeight * 0.01, // 1% padding from the top of the rectangle
-                        left: screenWidth * 0.5 - (screenWidth * 0.3) / 2, // Center horizontally
-                        child: Text(
-                          'Sign In',
-                          textAlign: TextAlign.center, // Center the text
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.06, // 6% of screen width for responsive font size
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'Epunda Slab', // Ensure this font is defined in pubspec.yaml
-                          ),
-                        ),
-                      ),
-                      // "Please enter the details to continue" below "Sign In"
-                      Positioned(
-                        top: screenHeight * 0.01 + screenHeight * 0.06, // Below "Sign In"
-                        left: screenWidth * 0.35 - (screenWidth * 0.4) / 2, // Center horizontally
-                        child: Text(
-                          'Please enter the details to continue.',
-                          textAlign: TextAlign.center, // Center the text
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.04, // 4% of screen width for responsive font size
-                            fontWeight: FontWeight.w300,
-                            color: Colors.black,
-                            fontFamily: 'Poppins', // Ensure this font is defined in pubspec.yaml
-                          ),
-                        ),
-                      ),
-                      // EmailField below the "Please enter the details to continue" text
-                      Positioned(
-                        top: screenHeight * 0.01 + screenHeight * 0.06 + screenHeight * 0.06, // Below "Please enter the details"
-                        left: screenWidth * 0.5 - (screenWidth * 0.8) / 2, // Center horizontally (80% width)
+                        top: screenHeight * 0.01,
+                        left: screenWidth * 0.5 - (screenWidth * 0.5) / 2,
                         child: SizedBox(
-                          width: screenWidth * 0.8, // 80% of screen width for responsiveness
+                          width: screenWidth * 0.5,
+                          child: Text(
+                            'Sign In',
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.07,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontFamily: 'Epunda Slab',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Subtitle
+                      Positioned(
+                        top: screenHeight * 0.07,
+                        left: screenWidth * 0.5 - (screenWidth * 0.8) / 2,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
+                          child: Text(
+                            'Please enter the details to\ncontinue.',
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.045,
+                              fontWeight: FontWeight.w300,
+                              color: Colors.black,
+                              fontFamily: 'Epunda Slab',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Email Field
+                      Positioned(
+                        top: screenHeight * 0.16,
+                        left: screenWidth * 0.1,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
                           child: EmailField(controller: _emailController),
+                        ),
+                      ),
+
+                      // Password Field
+                      Positioned(
+                        top: screenHeight * 0.26,
+                        left: screenWidth * 0.1,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
+                          child: PasswordField(controller: _passwordController),
+                        ),
+                      ),
+
+                      // Forgot Password text
+                      Positioned(
+                        top: screenHeight * 0.35,
+                        right: screenWidth * 0.1,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/');
+                          },
+                          child: Text(
+                            "Forgot Password?",
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.04,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ✅ SIGN IN BUTTON
+                      Positioned(
+                        top: screenHeight * 0.42,
+                        left: screenWidth * 0.1,
+                        child: SizedBox(
+                          width: screenWidth * 0.8,
+                          height: screenHeight * 0.06,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/HomeScreen');
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: const Color(0xFF3B82F6), // Blue border
+                                  width: 1,
+                                ),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFE0E7FF), // Light shade at 0%
+                                    Color(0xFF93C5FD), // Blue shade at 47%
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                "Sign In",
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.05,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  fontFamily: 'Epunda Slab',
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -151,6 +241,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
+// EMAIL FIELD
 class EmailField extends StatelessWidget {
   final TextEditingController controller;
   const EmailField({super.key, required this.controller});
@@ -178,55 +269,140 @@ class EmailField extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Email',
             labelStyle: TextStyle(
-              color: const Color.fromARGB(255, 0, 0, 0), // Dark Gray
+              color: Colors.black,
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w500,
-              fontSize: screenWidth * 0.05, // Responsive font size
+              fontSize: screenWidth * 0.05,
             ),
             hintText: 'Enter Your Email',
             hintStyle: TextStyle(
-              color: const Color(0xFF9CA3AF), // Light Gray (hint)
+              color: Colors.black,
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w400,
-              fontSize: screenWidth * 0.045, // Responsive font size
+              fontSize: screenWidth * 0.045,
             ),
-            fillColor: const Color(0xFFE5E7EB), // Light Gray background
+            fillColor: const Color.fromARGB(255, 237, 236, 236),
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(Icons.mail, color: const Color(0xFF6B7280)), // Gray icon
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 0,
-              minHeight: 0,
+              child: Icon(Icons.mail, color: const Color.fromARGB(255, 69, 141, 224)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(
                 color: Color(0xFFD59A00),
                 width: 1,
-              ), // Blue
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(
-                color: Color(0xFF1E3A8A),
+                color: Color(0xFF93C5FD),
                 width: 2,
-              ), // Navy Blue
+              ),
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: screenWidth * 0.04,
+              horizontal: screenWidth * 0.04,
+            ),
+          ),
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w400,
+            fontSize: screenWidth * 0.045,
+          ),
+          cursorColor: const Color(0xFF3B82F6),
+        );
+      },
+    );
+  }
+}
+
+// PASSWORD FIELD
+class PasswordField extends StatefulWidget {
+  final TextEditingController controller;
+  const PasswordField({super.key, required this.controller});
+
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool _isObscured = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        return TextFormField(
+          controller: widget.controller,
+          obscureText: _isObscured,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Enter your password';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            labelText: 'Password',
+            labelStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+              fontSize: screenWidth * 0.05,
+            ),
+            hintText: 'Enter Your Password',
+            hintStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w400,
+              fontSize: screenWidth * 0.045,
+            ),
+            fillColor: const Color.fromARGB(255, 237, 236, 236),
+            filled: true,
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.02),
+              child: Icon(Icons.lock, color: const Color.fromARGB(255, 73, 122, 220)),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _isObscured ? Icons.visibility_off : Icons.visibility,
+                color: const Color.fromARGB(255, 86, 156, 235),
+              ),
+              onPressed: () {
+                setState(() {
+                  _isObscured = !_isObscured;
+                });
+              },
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(
+                color: Color(0xFFD59A00),
+                width: 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(
+                color: Color(0xFF93C5FD),
+                width: 2,
+              ),
             ),
             contentPadding: EdgeInsets.symmetric(
               vertical: screenWidth * 0.05,
               horizontal: screenWidth * 0.06,
             ),
-            floatingLabelBehavior: FloatingLabelBehavior.auto,
           ),
           style: TextStyle(
-            color: const Color(0xFF374151), // Dark Gray
+            color: Colors.black,
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w400,
-            fontSize: screenWidth * 0.045, // Responsive font size
+            fontSize: screenWidth * 0.045,
           ),
-          cursorColor: const Color(0xFF3B82F6), // Blue
+          cursorColor: const Color(0xFFD59A00),
         );
       },
     );

@@ -224,8 +224,8 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                         }
                       },
                       child: Container(
-                        width: screenWidth * 0.13,
-                        height: screenWidth * 0.13,
+                        width: screenWidth * 0.15,
+                        height: screenWidth * 0.15,
                         decoration: BoxDecoration(
                           color: Colors.black,
                           shape: BoxShape.circle,
@@ -253,7 +253,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                           filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             width: screenWidth * 0.78,
-                            height: screenWidth * 0.13,
+                            height: screenWidth * 0.15,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               border: Border.all(
@@ -314,8 +314,8 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                     bottom: screenHeight * 0.02,
                     left: screenWidth * 0.19,
                     child: Container(
-                      width: screenWidth * 0.13,
-                      height: screenWidth * 0.13,
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
