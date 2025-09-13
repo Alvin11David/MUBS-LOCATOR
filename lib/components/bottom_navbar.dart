@@ -43,7 +43,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                   ),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: Colors.grey.shade300,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                     width: 1,
                   ),
                   boxShadow: [
@@ -63,7 +63,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       left: padding + _selectedIndex * effectiveItemWidth, // Align precisely with each item's position
                       top: screenHeight * 0.015, // Slightly lower for better vertical centering over icon + label
                       width: effectiveItemWidth, // Matches the exact space for each item
-                      height: screenHeight * 0.08, // Covers icon and label
+                      height: screenHeight * 0.075, // Covers icon and label
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -74,7 +74,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(28), // Subtler curve to fit the width better
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Colors.white, // White stroke
+                            width: 1, // Stroke width
+                          ), // Subtler curve to fit the width better
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
