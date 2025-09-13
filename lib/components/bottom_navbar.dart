@@ -17,9 +17,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
         double screenHeight = constraints.maxHeight;
-        double itemWidth = screenWidth / 4; // Width per icon
-        double padding = screenWidth * 0.055; // Horizontal padding value
-        double effectiveItemWidth = (screenWidth - 2.5 * padding) / 4; // Adjusted width per item after padding
+        double padding = screenWidth * 0.059; // Horizontal padding value
+        double effectiveItemWidth = (screenWidth - 2.6 * padding) / 4; // Adjusted width per item after padding
 
         return Positioned(
           bottom: screenHeight * 0.002, // Raised by 0.002 of screen height
@@ -78,7 +77,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           border: Border.all(
                             color: Colors.white, // White stroke
                             width: 1, // Stroke width
-                          ), // Subtler curve to fit the width better
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
@@ -160,7 +159,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
             Icon(
               icon,
               color: Colors.black,
-              size: screenWidth * 0.06,
+              size: isSelected ? screenWidth * 0.07 : screenWidth * 0.06, // Larger icon when selected
             ),
             Text(
               label,
@@ -168,7 +167,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 color: Colors.black,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w500,
-                fontSize: screenWidth * 0.035,
+                fontSize: isSelected ? screenWidth * 0.04 : screenWidth * 0.035, // Larger text when selected
               ),
             ),
           ],
