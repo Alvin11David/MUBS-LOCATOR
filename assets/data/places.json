@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Main Library",
+    "description": "The central library with academic books and digital resources.",
+    "department": "Academics",
+    "latitude": 0.3476,
+    "longitude": 32.5825
+  },
+  {
+    "id": 2,
+    "name": "Science Lab",
+    "description": "Equipped with chemistry, biology, and physics experiment facilities.",
+    "department": "Science",
+    "latitude": 0.3480,
+    "longitude": 32.5830
+  },
+  {
+    "id": 3,
+    "name": "Administration Block",
+    "description": "Main offices for the headteacher, deputy, and bursar.",
+    "department": "Administration",
+    "latitude": 0.3483,
+    "longitude": 32.5819
+  },
+  {
+    "id": 4,
+    "name": "Playground",
+    "description": "Open space for sports like football, netball, and athletics.",
+    "department": "Sports",
+    "latitude": 0.3479,
+    "longitude": 32.5829
+  },
+  {
+    "id": 5,
+    "name": "Mothers’ Hall",
+    "description": "Hall for school meetings, gatherings, and cultural events.",
+    "department": "Community",
+    "latitude": 0.3482,
+    "longitude": 32.5827
+  }
+]
