@@ -67,6 +67,10 @@ flutter:
       fonts:
         - asset: assets/fonts/EpundaSlab-Bold.ttf
           weight: 800
+    - family: Reem Kufi
+      fonts: 
+        - asset: assets/fonts/ReemKufi-Bold.ttf
+          weight: 700
 
   
   assets:

@@ -244,7 +244,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                     left: screenWidth * 0.20,
                     child: GestureDetector(
                       onTap: () {
-                        Navigator.pushNamed(context, '/LocationSelectScreen'); // Placeholder for next screen
+                        Navigator.pushNamed(context, '/AboutScreen'); // Placeholder for next screen
                         // Optionally, animate indicators back to start or handle completion
                       },
                       child: ClipRRect(

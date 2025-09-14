@@ -1,5 +1,5 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
@@ -27,23 +27,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3), // Subtle blur for less shine
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Matching search bar blur
               child: Container(
                 height: screenHeight * 0.1, // 10% of screen height
                 width: screenWidth, // Full width
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color.fromARGB(255, 209, 209, 209).withOpacity(0.9),
-                      Colors.white.withOpacity(0.8),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Colors.white.withOpacity(0.2), // Matching search bar background
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    width: 1,
+                    color: Colors.white.withOpacity(0.3), // Matching search bar border
+                    width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -56,7 +49,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 ),
                 child: Stack(
                   children: [
-                    // Sliding glassy rectangle
+                    // Sliding watery glass rectangle (adjusted to match glassy effect)
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 300), // Smooth animation
                       left: padding + _selectedIndex * effectiveItemWidth, // Align precisely with each item's position
@@ -65,24 +58,17 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       height: screenHeight * 0.075, // Covers icon and label
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.7), // More transparent for glassy effect
-                              Colors.white.withOpacity(0.5),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: Colors.white.withOpacity(0.2), // Matching overall glassy effect
                           borderRadius: BorderRadius.circular(28),
                           border: Border.all(
-                            color: Colors.white, // White stroke
-                            width: 1.2, // Stroke width
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1.2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withOpacity(0.05),
                               blurRadius: 4,
-                              spreadRadius: 1,
+                              spreadRadius: 0.5,
                             ),
                           ],
                         ),

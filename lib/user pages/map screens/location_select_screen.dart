@@ -21,6 +21,11 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Split the search text into keywords (simplified logic, refine as needed)
+    List<String> keywords = _searchController.text.isNotEmpty
+        ? _searchController.text.split(' ').where((word) => word.isNotEmpty).toList()
+        : [];
+
     return Scaffold(
       extendBody: true, // Allows body to extend under the bottom navigation bar
       body: Container(
@@ -78,6 +83,9 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                                   color: Colors.black.withOpacity(0.7),
                                   fontSize: MediaQuery.of(context).size.width * 0.04,
                                 ),
+                                onChanged: (value) {
+                                  setState(() {}); // Trigger rebuild when text changes
+                                },
                               ),
                             ),
                           ],
@@ -215,11 +223,62 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   ],
                 ),
               ),
+              if (keywords.isNotEmpty) // Show keywords only if there are any
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: MediaQuery.of(context).size.width * 0.05,
+                    right: MediaQuery.of(context).size.width * 0.05,
+                    top: MediaQuery.of(context).size.height * 0.01,
+                  ),
+                  child: Wrap(
+                    spacing: MediaQuery.of(context).size.width * 0.02, // Space between rectangles
+                    runSpacing: MediaQuery.of(context).size.height * 0.01, // Space between rows
+                    children: keywords.map((keyword) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: MediaQuery.of(context).size.width * 0.03,
+                              vertical: MediaQuery.of(context).size.height * 0.01,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              keyword,
+                              style: TextStyle(
+                                color: Colors.black.withOpacity(0.7),
+                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: const BottomNavBar(),
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+          left: MediaQuery.of(context).size.width * 0.05,
+          right: MediaQuery.of(context).size.width * 0.05,
+          bottom: MediaQuery.of(context).size.height * 0.015, // Lifted slightly up
+        ),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9, // Reduced width to 90% of screen
+          child: const BottomNavBar(),
+        ),
+      ),
     );
   }
 }
