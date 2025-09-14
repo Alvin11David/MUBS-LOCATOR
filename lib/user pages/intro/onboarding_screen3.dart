@@ -241,7 +241,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                   // Glassy rectangle with 30 border radius and white stroke to the right of the circle
                   Positioned(
                     bottom: screenHeight * 0.02,
-                    left: screenWidth * 0.19,
+                    left: screenWidth * 0.20,
                     child: GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, '/SignInScreen'); // Placeholder for next screen
@@ -312,7 +312,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                   // White circle with black chevron_right icon on the left of the rectangle
                   Positioned(
                     bottom: screenHeight * 0.02,
-                    left: screenWidth * 0.19,
+                    left: screenWidth * 0.20,
                     child: Container(
                       width: screenWidth * 0.15,
                       height: screenWidth * 0.15,

@@ -204,7 +204,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                   // Glassy rectangle with 30 border radius and white stroke to the right of the circle
                   Positioned(
                     bottom: screenHeight * 0.02, // Same vertical position as circle
-                    left: screenWidth * 0.19, // Adjusted to right of circle (0.05 + 0.13 + small gap)
+                    left: screenWidth * 0.20, // Adjusted to right of circle (0.05 + 0.13 + small gap)
                     child: GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, '/OnboardingScreen3');
@@ -274,7 +274,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                   // White circle with black chevron_right icon on the left of the rectangle
                   Positioned(
                     bottom: screenHeight * 0.02, // Same vertical position as circle and rectangle
-                    left: screenWidth * 0.19, // Aligned with the left edge of the rectangle
+                    left: screenWidth * 0.20, // Aligned with the left edge of the rectangle
                     child: Container(
                       width: screenWidth * 0.15, // Same size as the black circle for consistency
                       height: screenWidth * 0.15, // Same height as circle and rectangle

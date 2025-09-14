@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mubs_locator/components/bottom_navbar.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -388,8 +387,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-              // Bottom navigation bar positioned at the bottom
-              const BottomNavBar(),
             ],
           );
         },
