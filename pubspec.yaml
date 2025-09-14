@@ -25,6 +25,8 @@ dependencies:
   firebase_auth:
   # IOS firestore
   cloud_firestore:
+  #Wave
+  wave:
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +63,14 @@ flutter:
       fonts:
         - asset: assets/fonts/Urbanist-ExtraBold.ttf
           weight: 800
+    - family: Epunda Slab
+      fonts:
+        - asset: assets/fonts/EpundaSlab-Bold.ttf
+          weight: 800
+    - family: Reem Kufi
+      fonts: 
+        - asset: assets/fonts/ReemKufi-Bold.ttf
+          weight: 700
 
   
   assets:
