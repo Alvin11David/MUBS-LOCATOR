@@ -148,9 +148,7 @@ class _AboutScreenState extends State<AboutScreen> {
                           'I am a year 2 student\n pursuing a bachelor\'s degree\n in Leadership and\n Governance.',
                           style: TextStyle(
                             color: Colors.black,
-                            fontWeight: FontWeight.w200,
                             fontSize: screenWidth * 0.05, // Responsive font size
-                            fontFamily: 'Urbanist',
                           ),
                           textAlign: TextAlign.center, // Ensure text wraps and centers
                         ),
@@ -161,24 +159,80 @@ class _AboutScreenState extends State<AboutScreen> {
                       top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.15) + screenHeight * 0.14, // Below the second text with padding
                       left: 0,
                       right: 0,
-                      child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: Container(
-                              height: screenHeight * 0.25, // Responsive height
-                              width: screenWidth * 0.8, // Reduced to 80% of screen width
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
-                                  width: 1,
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  height: screenHeight * 0.25, // Responsive height
+                                  width: screenWidth * 0.8, // Reduced to 80% of screen width
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
+                          // Text quotation mark at the top of the glassy rectangle
+                          Positioned(
+                            top: 0, // Small padding from the top
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Text(
+                                '"',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.2, // Responsive font size
+                                  fontFamily: 'Epunda Slab',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          // Text "Navigate MUBS with ease, your success is our guide" below the quotation mark
+                          Positioned(
+                            top: screenHeight * 0.09, // Padding below the quotation mark
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Text(
+                                'Navigate MUBS with ease,\n your success is our guide.',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.042, // Responsive font size
+                                  fontFamily: 'Urbanist',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          // Text "Ambasize Jackline" below the quote
+                          Positioned(
+                            top: screenHeight * 0.19, // Padding below the quote
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Text(
+                                'Ambasize Jackline',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: screenWidth * 0.05, // Responsive font size
+                                  fontFamily: 'Epunda Slab',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
