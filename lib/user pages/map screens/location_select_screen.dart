@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'dart:ui';
+
 
 class LocationSelectScreen extends StatefulWidget {
   const LocationSelectScreen({super.key});
@@ -9,7 +11,6 @@ class LocationSelectScreen extends StatefulWidget {
 }
 
 class _LocationSelectScreenState extends State<LocationSelectScreen> {
-  // Simulate search history state (true if there are searched words, false otherwise)
   bool hasSearchHistory = false;
 
   @override
@@ -92,16 +93,16 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                       child: Stack(
                         children: [
                           Positioned(
-                            top: MediaQuery.of(context).size.height * 0.1, // Center vertically
+                            top: MediaQuery.of(context).size.height * 0.1,
                             left: 0,
                             right: 0,
                             child: Container(
-                              height: 1.2, // Divider thickness
+                              height: 1.2,
                               color: Colors.black,
                             ),
                           ),
                           Positioned(
-                            top: MediaQuery.of(context).size.height * 0.02, // Above divider
+                            top: MediaQuery.of(context).size.height * 0.02,
                             left: MediaQuery.of(context).size.width * 0.03,
                             child: Row(
                               children: [
@@ -133,7 +134,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                             ),
                           ),
                           Positioned(
-                            top: MediaQuery.of(context).size.height * 0.12, // Below divider
+                            top: MediaQuery.of(context).size.height * 0.12,
                             left: MediaQuery.of(context).size.width * 0.03,
                             child: Row(
                               children: [
@@ -201,6 +202,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: const BottomNavBar(),
     );
   }
 }

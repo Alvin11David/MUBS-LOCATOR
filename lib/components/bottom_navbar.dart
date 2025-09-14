@@ -60,7 +60,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                     AnimatedPositioned(
                       duration: const Duration(milliseconds: 300), // Smooth animation
                       left: padding + _selectedIndex * effectiveItemWidth, // Align precisely with each item's position
-                      top: screenHeight * 0.015, // Slightly lower for better vertical centering over icon + label
+                      top: screenHeight * 0.010, // Slightly lower for better vertical centering over icon + label
                       width: effectiveItemWidth, // Matches the exact space for each item
                       height: screenHeight * 0.075, // Covers icon and label
                       child: Container(
