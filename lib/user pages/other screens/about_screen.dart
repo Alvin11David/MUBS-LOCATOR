@@ -148,11 +148,36 @@ class _AboutScreenState extends State<AboutScreen> {
                           'I am a year 2 student\n pursuing a bachelor\'s degree\n in Leadership and\n Governance.',
                           style: TextStyle(
                             color: Colors.black,
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w200,
                             fontSize: screenWidth * 0.05, // Responsive font size
                             fontFamily: 'Urbanist',
                           ),
                           textAlign: TextAlign.center, // Ensure text wraps and centers
+                        ),
+                      ),
+                    ),
+                    // Glassy rectangle below the second text with reduced width
+                    Positioned(
+                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.15) + screenHeight * 0.14, // Below the second text with padding
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              height: screenHeight * 0.25, // Responsive height
+                              width: screenWidth * 0.8, // Reduced to 80% of screen width
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
