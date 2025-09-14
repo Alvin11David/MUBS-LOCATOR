@@ -9,10 +9,12 @@ class AboutScreen extends StatefulWidget {
   State<AboutScreen> createState() => _AboutScreenState();
 }
 
-class _AboutScreenState extends State<AboutScreen> {
+class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStateMixin {
   late PageController _pageController;
   int _currentPage = 0;
   late Timer _timer;
+  late AnimationController _rippleController;
+  late Animation<double> _rippleAnimation;
 
   @override
   void initState() {
@@ -30,12 +32,24 @@ class _AboutScreenState extends State<AboutScreen> {
         );
       }
     });
+
+    // Initialize ripple animation
+    _rippleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _rippleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _rippleController, curve: Curves.easeInOut),
+    )..addListener(() {
+      setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _timer.cancel();
     _pageController.dispose();
+    _rippleController.dispose();
     super.dispose();
   }
 
@@ -301,79 +315,145 @@ class _AboutScreenState extends State<AboutScreen> {
     ];
 
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            height: screenHeight * 0.25,
-            width: screenWidth * 0.8,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
+      child: CustomPaint(
+        painter: RipplePainter(_rippleAnimation.value),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: CustomPaint(
+            painter: WaterWavePainter(_rippleAnimation.value),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                height: screenHeight * 0.25,
+                width: screenWidth * 0.8,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Quote symbol
+                    Positioned(
+                      top: 5,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          '"',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenWidth * 0.2,
+                            fontFamily: 'Epunda Slab',
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Quote text
+                    Positioned(
+                      top: screenHeight * 0.09,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          contents[index % contents.length], // Cycle through contents
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenWidth * 0.042,
+                            fontFamily: 'Urbanist',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    // Author name
+                    Positioned(
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'Ambasize Jackline',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: screenWidth * 0.05,
+                            fontFamily: 'Epunda Slab',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Stack(
-              children: [
-                // Quote symbol
-                Positioned(
-                  top: 5,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      '"',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: screenWidth * 0.2,
-                        fontFamily: 'Epunda Slab',
-                      ),
-                    ),
-                  ),
-                ),
-                // Quote text
-                Positioned(
-                  top: screenHeight * 0.09,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      contents[index % contents.length], // Cycle through contents
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: screenWidth * 0.042,
-                        fontFamily: 'Urbanist',
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                // Author name
-                Positioned(
-                  bottom: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      'Ambasize Jackline',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: screenWidth * 0.05,
-                        fontFamily: 'Epunda Slab',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+// Custom painter for ripple effect
+class RipplePainter extends CustomPainter {
+  final double animationValue;
+
+  RipplePainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width * 0.4; // Maximum ripple radius
+    final currentRadius = maxRadius * animationValue;
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.3 - (0.2 * animationValue))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawCircle(center, currentRadius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Custom painter for water wave effect inside the rectangle
+class WaterWavePainter extends CustomPainter {
+  final double animationValue;
+
+  WaterWavePainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.2)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final waveHeight = size.height * 0.1;
+    final waveCount = (size.width / (size.width * 0.2)).floor();
+    final offset = animationValue * size.width * 0.5; // Move waves based on animation
+
+    path.moveTo(0, size.height);
+    for (int i = 0; i <= waveCount; i++) {
+      final x = i * size.width * 0.2 - offset;
+      path.quadraticBezierTo(
+        x + size.width * 0.1,
+        size.height - (i.isEven ? waveHeight : -waveHeight) * (1 - animationValue),
+        x + size.width * 0.2,
+        size.height,
+      );
+    }
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 // Custom painter stays the same
