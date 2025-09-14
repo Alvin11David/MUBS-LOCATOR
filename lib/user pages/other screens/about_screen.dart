@@ -28,37 +28,27 @@ class _AboutScreenState extends State<AboutScreen> {
                 left: screenWidth * 0.04, // 4% of screen width for left padding
                 child: ClipOval(
                   child: Container(
-                    width:
-                        screenWidth *
-                        0.15, // Circle size is 15% of screen width
+                    width: screenWidth * 0.15, // Circle size is 15% of screen width
                     height: screenWidth * 0.15, // Keep aspect ratio
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(
-                        0.2,
-                      ), // Semi-transparent for glassy effect
+                      color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
                       border: Border.all(
                         color: Colors.white, // White stroke
-                        width:
-                            screenWidth *
-                            0.002, // Stroke width scales with screen (approx 1px on average)
+                        width: screenWidth * 0.002, // Stroke width scales with screen (approx 1px on average)
                       ),
                     ),
                     child: Center(
                       child: Icon(
                         Icons.chevron_left,
                         color: Colors.black, // Black icon color
-                        size:
-                            screenWidth *
-                            0.08, // Icon size is 8% of screen width for responsiveness
+                        size: screenWidth * 0.08, // Icon size is 8% of screen width for responsiveness
                       ),
                     ),
                   ),
                 ),
               ),
               Positioned(
-                top:
-                    screenHeight *
-                    0.04, // Align with the top padding of the back icon
+                top: screenHeight * 0.04, // Align with the top padding of the back icon
                 left: 0,
                 right: 0,
                 child: Center(
@@ -108,7 +98,6 @@ class _AboutScreenState extends State<AboutScreen> {
                         ],
                       ),
                     ),
-
                     // Wavy rectangle with gradient
                     ClipRect(
                       child: BackdropFilter(
@@ -129,6 +118,41 @@ class _AboutScreenState extends State<AboutScreen> {
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                    ),
+                    // Text "Ambasize Jackline" below the image
+                    Positioned(
+                      top: -(screenHeight * 0.185 - (screenWidth * 1.5 * (9 / 16)) * 0.4), // Position just below the image
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'Ambasize Jackline',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: screenWidth * 0.06, // Responsive font size
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Text "I am a year 2 student pursuing a bachelor's degree in Leadership and Governance" below
+                    Positioned(
+                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.4) + screenHeight * 0.08, // Below the first text with padding
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'I am a year 2 student\n pursuing a bachelor\'s degree\n in Leadership and\n Governance.',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w400,
+                            fontSize: screenWidth * 0.05, // Responsive font size
+                            fontFamily: 'Urbanist',
+                          ),
+                          textAlign: TextAlign.center, // Ensure text wraps and centers
                         ),
                       ),
                     ),
@@ -155,10 +179,8 @@ class WaveCloudPainter extends CustomPainter {
     path.moveTo(0, 0); // Start at the top-left
 
     // Create a wavy pattern
-    final waveHeight =
-        size.height * 0.1; // 10% of container height for wave amplitude
-    final waveCount = (size.width / (size.width * 0.1))
-        .floor(); // Number of waves based on width
+    final waveHeight = size.height * 0.1; // 10% of container height for wave amplitude
+    final waveCount = (size.width / (size.width * 0.1)).floor(); // Number of waves based on width
     for (int i = 0; i <= waveCount; i++) {
       final x = i * size.width * 0.1;
       path.quadraticBezierTo(
