@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -9,46 +10,76 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> {
+  late PageController _pageController;
+  int _currentPage = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+
+    // Auto-slide every 5 seconds
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_pageController.hasClients) {
+        _currentPage = (_currentPage + 1) % 4; // 4 rectangles
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions for responsive sizing
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: SafeArea(
         child: Container(
-          color: const Color(0xFF93C5FD), // Set background color to #93C5FD
+          color: const Color(0xFF93C5FD),
           width: double.infinity,
           height: double.infinity,
           child: Stack(
             children: [
+              // ---- Back button ----
               Positioned(
-                top: screenHeight * 0.02, // 2% of screen height for top padding
-                left: screenWidth * 0.04, // 4% of screen width for left padding
+                top: screenHeight * 0.02,
+                left: screenWidth * 0.04,
                 child: ClipOval(
                   child: Container(
-                    width: screenWidth * 0.15, // Circle size is 15% of screen width
-                    height: screenWidth * 0.15, // Keep aspect ratio
+                    width: screenWidth * 0.15,
+                    height: screenWidth * 0.15,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
+                      color: Colors.white.withOpacity(0.2),
                       border: Border.all(
-                        color: Colors.white, // White stroke
-                        width: screenWidth * 0.002, // Stroke width scales with screen (approx 1px on average)
+                        color: Colors.white,
+                        width: screenWidth * 0.002,
                       ),
                     ),
                     child: Center(
                       child: Icon(
                         Icons.chevron_left,
-                        color: Colors.black, // Black icon color
-                        size: screenWidth * 0.08, // Icon size is 8% of screen width for responsiveness
+                        color: Colors.black,
+                        size: screenWidth * 0.08,
                       ),
                     ),
                   ),
                 ),
               ),
+              // ---- Title ----
               Positioned(
-                top: screenHeight * 0.04, // Align with the top padding of the back icon
+                top: screenHeight * 0.04,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -63,16 +94,17 @@ class _AboutScreenState extends State<AboutScreen> {
                   ),
                 ),
               ),
+              // ---- Image ----
               Positioned(
-                top: screenHeight * 0.10, // Position below the text with some padding
+                top: screenHeight * 0.10,
                 left: 0,
                 right: 90,
                 child: Center(
                   child: Image.asset(
                     'assets/images/ambasizejackline.png',
-                    width: screenWidth * 1.5, // 50% of screen width for responsiveness
-                    height: screenWidth * 1.5 * (9/16), // Maintain aspect ratio (assuming 16:9, adjust if different)
-                    fit: BoxFit.contain, // Ensure the image scales properly
+                    width: screenWidth * 1.5,
+                    height: screenWidth * 1.5 * (9 / 16),
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
@@ -86,12 +118,12 @@ class _AboutScreenState extends State<AboutScreen> {
                   children: [
                     // Shadow layer
                     Container(
-                      height: screenHeight * 0.3,
+                      height: screenHeight * 0.6, // Extended to cover carousel area
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF93C5FD).withOpacity(0.9),
-                            offset: const Offset(0, -8), // Shift shadow up
+                            offset: const Offset(0, -8),
                             blurRadius: 20,
                             spreadRadius: 7,
                           ),
@@ -105,7 +137,7 @@ class _AboutScreenState extends State<AboutScreen> {
                         child: CustomPaint(
                           painter: WaveCloudPainter(),
                           child: Container(
-                            height: screenHeight * 0.3,
+                            height: screenHeight * 0.6, // Extended to cover carousel area
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -123,7 +155,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     ),
                     // Text "Ambasize Jackline" below the image
                     Positioned(
-                      top: -(screenHeight * 0.185 - (screenWidth * 1.5 * (9 / 16)) * 0.4), // Position just below the image
+                      top: -(screenHeight * 0.185 - (screenWidth * 1.5 * (9 / 16)) * 0.4),
                       left: 0,
                       right: 0,
                       child: Center(
@@ -132,7 +164,7 @@ class _AboutScreenState extends State<AboutScreen> {
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
-                            fontSize: screenWidth * 0.06, // Responsive font size
+                            fontSize: screenWidth * 0.06,
                             fontFamily: 'Urbanist',
                           ),
                         ),
@@ -140,7 +172,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     ),
                     // Text "I am a year 2 student pursuing a bachelor's degree in Leadership and Governance" below
                     Positioned(
-                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.4) + screenHeight * 0.08, // Below the first text with padding
+                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.35) + screenHeight * 0.08,
                       left: 0,
                       right: 0,
                       child: Center(
@@ -148,91 +180,105 @@ class _AboutScreenState extends State<AboutScreen> {
                           'I am a year 2 student\n pursuing a bachelor\'s degree\n in Leadership and\n Governance.',
                           style: TextStyle(
                             color: Colors.black,
-                            fontSize: screenWidth * 0.05, // Responsive font size
+                            fontWeight: FontWeight.w200,
+                            fontSize: screenWidth * 0.05,
+                            fontFamily: 'Urbanist',
                           ),
-                          textAlign: TextAlign.center, // Ensure text wraps and centers
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
-                    // Glassy rectangle below the second text with reduced width
+                    // ---- Carousel area ----
                     Positioned(
-                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.15) + screenHeight * 0.14, // Below the second text with padding
+                      top: screenHeight * 0.14, // Adjusted to avoid overlap with text
                       left: 0,
                       right: 0,
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Container(
-                                  height: screenHeight * 0.25, // Responsive height
-                                  width: screenWidth * 0.8, // Reduced to 80% of screen width
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                      child: SizedBox(
+                        height: screenHeight * 0.4, // Adjusted height for carousel
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: 4,
+                          itemBuilder: (context, index) {
+                            return _buildGlassyRectangle(screenWidth, screenHeight, index);
+                          },
+                        ),
+                      ),
+                    ),
+                    // ---- "Get In Touch" text below the carousel ----
+                    Positioned(
+                      top: screenHeight * 0.49, // Below the carousel (0.14 + 0.4)
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'Get In Touch',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: screenWidth * 0.05, // Responsive font size
+                            fontFamily: 'Urbanist',
                           ),
-                          // Text quotation mark at the top of the glassy rectangle
-                          Positioned(
-                            top: 0, // Small padding from the top
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: Text(
-                                '"',
-                                style: TextStyle(
+                        ),
+                      ),
+                    ),
+                    // ---- Three white circles with icons below "Get In Touch" ----
+                    Positioned(
+                      top: screenHeight * 0.55, // Below "Get In Touch" text
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: screenWidth * 0.15,
+                              height: screenWidth * 0.15,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.email,
                                   color: Colors.black,
-                                  fontSize: screenWidth * 0.2, // Responsive font size
-                                  fontFamily: 'Epunda Slab',
+                                  size: screenWidth * 0.08,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
-                          ),
-                          // Text "Navigate MUBS with ease, your success is our guide" below the quotation mark
-                          Positioned(
-                            top: screenHeight * 0.09, // Padding below the quotation mark
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: Text(
-                                'Navigate MUBS with ease,\n your success is our guide.',
-                                style: TextStyle(
+                            SizedBox(width: screenWidth * 0.15), // Responsive spacing
+                            Container(
+                              width: screenWidth * 0.15,
+                              height: screenWidth * 0.15,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.phone,
                                   color: Colors.black,
-                                  fontSize: screenWidth * 0.042, // Responsive font size
-                                  fontFamily: 'Urbanist',
+                                  size: screenWidth * 0.08,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
-                          ),
-                          // Text "Ambasize Jackline" below the quote
-                          Positioned(
-                            top: screenHeight * 0.19, // Padding below the quote
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: Text(
-                                'Ambasize Jackline',
-                                style: TextStyle(
+                            SizedBox(width: screenWidth * 0.15), // Responsive spacing
+                            Container(
+                              width: screenWidth * 0.15,
+                              height: screenWidth * 0.15,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.forum,
                                   color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: screenWidth * 0.05, // Responsive font size
-                                  fontFamily: 'Epunda Slab',
+                                  size: screenWidth * 0.08,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -244,9 +290,93 @@ class _AboutScreenState extends State<AboutScreen> {
       ),
     );
   }
+
+  Widget _buildGlassyRectangle(double screenWidth, double screenHeight, int index) {
+    // Define different content for each rectangle
+    final contents = [
+      'Navigate MUBS with ease,\n your success is our guide.',
+      'Explore new opportunities,\n grow with every step.',
+      'Connect with peers,\n build your future today.',
+      'Lead with confidence,\n inspire with action.',
+    ];
+
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: screenHeight * 0.25,
+            width: screenWidth * 0.8,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Quote symbol
+                Positioned(
+                  top: 5,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Text(
+                      '"',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: screenWidth * 0.2,
+                        fontFamily: 'Epunda Slab',
+                      ),
+                    ),
+                  ),
+                ),
+                // Quote text
+                Positioned(
+                  top: screenHeight * 0.09,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Text(
+                      contents[index % contents.length], // Cycle through contents
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: screenWidth * 0.042,
+                        fontFamily: 'Urbanist',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                // Author name
+                Positioned(
+                  bottom: 10,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Text(
+                      'Ambasize Jackline',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.05,
+                        fontFamily: 'Epunda Slab',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-// Custom painter for wavy cloud-like top
+// Custom painter stays the same
 class WaveCloudPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -255,24 +385,23 @@ class WaveCloudPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    path.moveTo(0, 0); // Start at the top-left
+    path.moveTo(0, 0);
 
-    // Create a wavy pattern
-    final waveHeight = size.height * 0.1; // 10% of container height for wave amplitude
-    final waveCount = (size.width / (size.width * 0.1)).floor(); // Number of waves based on width
+    final waveHeight = size.height * 0.1;
+    final waveCount = (size.width / (size.width * 0.1)).floor();
     for (int i = 0; i <= waveCount; i++) {
       final x = i * size.width * 0.1;
       path.quadraticBezierTo(
-        x + size.width * 0.05, // Control point x
-        i.isEven ? -waveHeight : waveHeight, // Vary y for wave effect
-        x + size.width * 0.1, // End point x
-        0, // Back to baseline y
+        x + size.width * 0.05,
+        i.isEven ? -waveHeight : waveHeight,
+        x + size.width * 0.1,
+        0,
       );
     }
 
-    path.lineTo(size.width, size.height); // Draw down to bottom-right
-    path.lineTo(0, size.height); // Draw to bottom-left
-    path.close(); // Close the path to fill
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
 
     canvas.drawPath(path, paint);
   }
