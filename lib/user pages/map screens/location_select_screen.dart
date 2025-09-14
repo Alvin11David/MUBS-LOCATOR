@@ -9,6 +9,9 @@ class LocationSelectScreen extends StatefulWidget {
 }
 
 class _LocationSelectScreenState extends State<LocationSelectScreen> {
+  // Simulate search history state (true if there are searched words, false otherwise)
+  bool hasSearchHistory = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,15 +173,28 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               Padding(
                 padding: EdgeInsets.only(
                   left: MediaQuery.of(context).size.width * 0.05,
+                  right: MediaQuery.of(context).size.width * 0.05,
                   top: MediaQuery.of(context).size.height * 0.02,
                 ),
-                child: Text(
-                  'Your Search History',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: MediaQuery.of(context).size.width * 0.05,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Your Search History',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: MediaQuery.of(context).size.width * 0.05,
+                      ),
+                    ),
+                    Text(
+                      'Clear all',
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(hasSearchHistory ? 1.0 : 0.5),
+                        fontSize: MediaQuery.of(context).size.width * 0.04,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
