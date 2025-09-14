@@ -65,6 +65,107 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   ),
                 ),
               ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width * 0.05,
+                  vertical: MediaQuery.of(context).size.height * 0.01,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height * 0.2,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: MediaQuery.of(context).size.height * 0.1, // Center vertically
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 1.2, // Divider thickness
+                              color: Colors.black,
+                            ),
+                          ),
+                          Positioned(
+                            top: MediaQuery.of(context).size.height * 0.02, // Above divider
+                            left: MediaQuery.of(context).size.width * 0.03,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: MediaQuery.of(context).size.width * 0.13,
+                                  height: MediaQuery.of(context).size.width * 0.13,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFF3E5891),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.my_location,
+                                      color: Colors.white,
+                                      size: MediaQuery.of(context).size.width * 0.08,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                                Text(
+                                  'Your Location',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: MediaQuery.of(context).size.width * 0.04,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: MediaQuery.of(context).size.height * 0.12, // Below divider
+                            left: MediaQuery.of(context).size.width * 0.03,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: MediaQuery.of(context).size.width * 0.13,
+                                  height: MediaQuery.of(context).size.width * 0.13,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFF3E5891),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Colors.white,
+                                      size: MediaQuery.of(context).size.width * 0.08,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                                Text(
+                                  'Choose on map',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: MediaQuery.of(context).size.width * 0.04,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
