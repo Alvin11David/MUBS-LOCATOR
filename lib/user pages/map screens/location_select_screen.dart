@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'dart:ui';
-
+import 'package:mubs_locator/components/bottom_navbar.dart';
 
 class LocationSelectScreen extends StatefulWidget {
   const LocationSelectScreen({super.key});
@@ -12,10 +11,18 @@ class LocationSelectScreen extends StatefulWidget {
 
 class _LocationSelectScreenState extends State<LocationSelectScreen> {
   bool hasSearchHistory = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Allows body to extend under the bottom navigation bar
       body: Container(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
@@ -56,11 +63,21 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                               size: MediaQuery.of(context).size.width * 0.06,
                             ),
                             SizedBox(width: MediaQuery.of(context).size.width * 0.03),
-                            Text(
-                              'Search buildings, departments etc',
-                              style: TextStyle(
-                                color: Colors.black.withOpacity(0.7),
-                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search buildings, departments etc',
+                                  hintStyle: TextStyle(
+                                    color: Colors.black.withOpacity(0.7),
+                                    fontSize: MediaQuery.of(context).size.width * 0.04,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.7),
+                                  fontSize: MediaQuery.of(context).size.width * 0.04,
+                                ),
                               ),
                             ),
                           ],

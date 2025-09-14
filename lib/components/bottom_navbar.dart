@@ -76,7 +76,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           borderRadius: BorderRadius.circular(28),
                           border: Border.all(
                             color: Colors.white, // White stroke
-                            width: 1, // Stroke width
+                            width: 1.2, // Stroke width
                           ),
                           boxShadow: [
                             BoxShadow(
