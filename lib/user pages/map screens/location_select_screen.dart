@@ -18,6 +18,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         color: const Color(0xFF93C5FD),
         child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
                 padding: EdgeInsets.symmetric(
@@ -163,6 +164,20 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                         ],
                       ),
                     ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: MediaQuery.of(context).size.width * 0.05,
+                  top: MediaQuery.of(context).size.height * 0.02,
+                ),
+                child: Text(
+                  'Your Search History',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: MediaQuery.of(context).size.width * 0.05,
                   ),
                 ),
               ),
