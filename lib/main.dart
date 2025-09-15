@@ -8,6 +8,7 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
+import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       routes: {
-        '/': (context) => const SplashScreen(),
+        '/': (context) => const SignUpScreen(),
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
