@@ -99,39 +99,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
           // White container with inputs
           Positioned(
             top: 210,
-            left: 8,
-            right: 8,
-            bottom: 4,
+            left: 4,
+            right: 4,
+            bottom: 3,
             child: Container(
-              // height: 520, // Removed to allow stretching to bottom
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Stack(
                 children: [
-                  // Sign Up title
-                  const Positioned(
-                    top: 20,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Text(
-                        'Sign Up',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          fontFamily: 'Epunda Slab',
-                        ),
-                      ),
-                    ),
-                  ),
-
                   // Subtitle
                   const Positioned(
-                    top: 60,
+                    top: 40,
                     left: 0,
                     right: 0,
                     child: Center(
@@ -139,7 +119,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         'Please enter the details to\ncontinue.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 18,
                           fontWeight: FontWeight.w300,
                           color: Colors.black,
                           fontFamily: 'Epunda Slab',
@@ -335,7 +315,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: _OrDivider(),
                   ),
 
-                  // Sign Up with Google button (updated as per your request)
+                  // Sign Up with Google button (icon on the left of the text)
                   Positioned(
                     top: 500,
                     left: 24,
@@ -366,6 +346,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           alignment: Alignment.center,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Image.asset(
                                 'assets/logo/googleicon.png',
@@ -376,7 +357,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               const SizedBox(width: 10),
                               const Text(
-                                "Sign Up with Google",
+                                "Google",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -393,7 +374,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Already have account? Sign In (bottom of container)
                   Positioned(
-                    bottom: 16,
+                    bottom: 30,
                     left: 0,
                     right: 0,
                     child: Row(
