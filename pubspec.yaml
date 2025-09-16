@@ -25,8 +25,10 @@ dependencies:
   firebase_auth:
   # IOS firestore
   cloud_firestore:
-  #Wave
+  # Wave
   wave:
+  # Image Select
+  image_picker:
 
 dev_dependencies:
   flutter_test:
