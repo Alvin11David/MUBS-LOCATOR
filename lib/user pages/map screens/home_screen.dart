@@ -15,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  LatLng _mubsMaingate = LatLng(0.3261311338525741, 32.61661293122109);
+  LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
 
@@ -114,6 +114,44 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
 
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _navigateToPlace(place);
+                                Navigator.pop(context);
+                              },
+                              icon: const Icon(Icons.navigation),
+                              label: const Text('Navigate'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                _sharePlace(place);
+                              },
+                              icon: const Icon(Icons.share),
+                              label: const Text('Share'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
                       // Description
                       Text(
                         'Description',
@@ -167,42 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 20),
 
                       // Action buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                _navigateToPlace(place);
-                                Navigator.pop(context);
-                              },
-                              icon: const Icon(Icons.navigation),
-                              label: const Text('Navigate'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                _sharePlace(place);
-                              },
-                              icon: const Icon(Icons.share),
-                              label: const Text('Share'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      
 
                       // Bottom padding for safe area
                       SizedBox(
@@ -221,10 +224,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _navigateToPlace(Place place) {
     if (mapController != null) {
+      // Ensure the place is within MUBS bounds before navigating
+      LatLng placeLocation = LatLng(place.latitude, place.longitude);
+
+      if (!_isWithinMubsBounds(placeLocation)) {
+        // Show warning if place is outside campus
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Location is outside MUBS campus area'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
       // Add marker for the selected place
       final placeMarker = Marker(
         markerId: MarkerId('selected_${place.id}'),
-        position: LatLng(place.latitude, place.longitude),
+        position: placeLocation,
         infoWindow: InfoWindow(title: place.name, snippet: place.department),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       );
@@ -233,9 +250,12 @@ class _HomeScreenState extends State<HomeScreen> {
         markers.add(placeMarker);
       });
 
-      // Animate camera to the place
+      // Animate camera to the place with constrained zoom
       mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(place.latitude, place.longitude), 16),
+        CameraUpdate.newLatLngZoom(
+          placeLocation,
+          18.0, // Close zoom for details
+        ),
       );
     }
   }
@@ -310,6 +330,19 @@ class _HomeScreenState extends State<HomeScreen> {
     Share.share(shareText);
   }
 
+  bool _isWithinMubsBounds(LatLng location) {
+    // Example bounds, adjust to your campus area
+    const double minLat = 0.3260;
+    const double maxLat = 0.3490;
+    const double minLng = 32.5810;
+    const double maxLng = 32.6170;
+
+    return location.latitude >= minLat &&
+        location.latitude <= maxLat &&
+        location.longitude >= minLng &&
+        location.longitude <= maxLng;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -329,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             initialCameraPosition: CameraPosition(
               target: _mubsMaingate,
-              zoom: 18,
+              zoom: 13,
             ),
             markers: markers,
             mapType: MapType.normal,
