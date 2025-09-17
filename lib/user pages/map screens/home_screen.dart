@@ -67,153 +67,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           child: DraggableScrollableSheet(
-            initialChildSize: 0.4,
-            minChildSize: 0.3,
+            initialChildSize: 0.5,
+            minChildSize: 0.5,
             maxChildSize: 0.8,
             expand: false,
             builder: (context, scrollController) {
-              return SingleChildScrollView(
-                controller: scrollController,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Drag indicator
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Place name
-                      Text(
-                        place.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Department
-                      Text(
-                        place.department,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                _navigateToPlace(place);
-                                Navigator.pop(context);
-                              },
-                              icon: const Icon(Icons.navigation),
-                              label: const Text('Navigate'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                _sharePlace(place);
-                              },
-                              icon: const Icon(Icons.share),
-                              label: const Text('Share'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Description
-                      Text(
-                        'Description',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        place.description,
-                        style: const TextStyle(fontSize: 14, height: 1.5),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Coordinates info
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Location Coordinates',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Lat: ${place.latitude.toStringAsFixed(6)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            Text(
-                              'Long: ${place.longitude.toStringAsFixed(6)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Action buttons
-                      
-
-                      // Bottom padding for safe area
-                      SizedBox(
-                        height: MediaQuery.of(context).padding.bottom + 10,
-                      ),
-                    ],
-                  ),
-                ),
+              return _PlaceBottomSheetContent(
+                place: place,
+                scrollController: scrollController,
+                onDirectionsTap: () => _navigateToPlace(place),
+                onFeedbackSubmit: (String issueType, String issueTitle, String description) {
+                  _submitFeedback(place, issueType, issueTitle, description);
+                },
               );
             },
           ),
@@ -341,6 +206,26 @@ class _HomeScreenState extends State<HomeScreen> {
         location.latitude <= maxLat &&
         location.longitude >= minLng &&
         location.longitude <= maxLng;
+  }
+
+  // Add this method to handle feedback submission
+  void _submitFeedback(Place place, String issueType, String issueTitle, String description) {
+    // Implement your feedback submission logic here
+    print('Feedback submitted for ${place.name}:');
+    print('Issue Type: $issueType');
+    print('Title: $issueTitle');
+    print('Description: $description');
+    
+    // You can send this data to your backend API
+    // Example:
+    // await feedbackService.submitFeedback({
+    //   'placeId': place.id,
+    //   'placeName': place.name,
+    //   'issueType': issueType,
+    //   'issueTitle': issueTitle,
+    //   'description': description,
+    //   'timestamp': DateTime.now().toIso8601String(),
+    // });
   }
 
   @override
@@ -518,5 +403,453 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+}
+
+class _PlaceBottomSheetContent extends StatefulWidget {
+  final Place place;
+  final ScrollController scrollController;
+  final VoidCallback onDirectionsTap;
+  final Function(String, String, String) onFeedbackSubmit;
+
+  const _PlaceBottomSheetContent({
+    Key? key,
+    required this.place,
+    required this.scrollController,
+    required this.onDirectionsTap,
+    required this.onFeedbackSubmit,
+  }) : super(key: key);
+
+  @override
+  State<_PlaceBottomSheetContent> createState() => _PlaceBottomSheetContentState();
+}
+
+class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
+  int _selectedTabIndex = 0; // 0: Details, 1: Directions, 2: Feedback
+  
+  // Feedback form controllers
+  final TextEditingController _issueTitleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  String _selectedIssueType = 'General';
+  
+  final List<String> _issueTypes = [
+    'General',
+    'Location Incorrect',
+    'Missing Information',
+    'Accessibility Issue',
+    'Facility Issue',
+    'Other'
+  ];
+
+  @override
+  void dispose() {
+    _issueTitleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag indicator
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Place name
+            Text(
+              widget.place.name,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Department
+            Text(
+              widget.place.department,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Tab buttons
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTabButton(
+                    index: 0,
+                    icon: Icons.info_outline,
+                    label: 'Details',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTabButton(
+                    index: 1,
+                    icon: Icons.directions,
+                    label: 'Directions',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildTabButton(
+                    index: 2,
+                    icon: Icons.feedback_outlined,
+                    label: 'Feedback',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Tab content
+            _buildTabContent(),
+
+            // Bottom padding for safe area
+            SizedBox(
+              height: MediaQuery.of(context).padding.bottom + 10,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final bool isSelected = _selectedTabIndex == index;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTabIndex = index;
+        });
+        
+        // Special handling for directions tab
+        if (index == 1) {
+          widget.onDirectionsTap();
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey[600],
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[600],
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent() {
+    switch (_selectedTabIndex) {
+      case 0:
+        return _buildDetailsContent();
+      case 1:
+        return _buildDirectionsContent();
+      case 2:
+        return _buildFeedbackContent();
+      default:
+        return _buildDetailsContent();
+    }
+  }
+
+  Widget _buildDetailsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Description
+        Text(
+          'Description',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          widget.place.description,
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        const SizedBox(height: 20),
+
+        // Coordinates info
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Location Coordinates',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Lat: ${widget.place.latitude.toStringAsFixed(6)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+              Text(
+                'Long: ${widget.place.longitude.toStringAsFixed(6)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDirectionsContent() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.navigation,
+            size: 48,
+            color: Theme.of(context).primaryColor,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Navigation Started',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'A marker has been added to the map for ${widget.place.name}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Submit Feedback',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Issue Type Dropdown
+        Text(
+          'Issue Type',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedIssueType,
+              isExpanded: true,
+              items: _issueTypes.map((String type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedIssueType = newValue;
+                  });
+                }
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Issue Title
+        Text(
+          'Issue Title',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _issueTitleController,
+          decoration: InputDecoration(
+            hintText: 'Enter a brief title for the issue',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Description
+        Text(
+          'Description',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _descriptionController,
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: 'Describe the issue in detail...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Submit Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              if (_issueTitleController.text.trim().isNotEmpty &&
+                  _descriptionController.text.trim().isNotEmpty) {
+                widget.onFeedbackSubmit(
+                  _selectedIssueType,
+                  _issueTitleController.text.trim(),
+                  _descriptionController.text.trim(),
+                );
+                
+                // Clear the form
+                _issueTitleController.clear();
+                _descriptionController.clear();
+                setState(() {
+                  _selectedIssueType = 'General';
+                });
+                
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Feedback submitted successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all required fields'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Submit Feedback',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
