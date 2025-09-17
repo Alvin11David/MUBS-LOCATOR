@@ -187,8 +187,8 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                         );
                       },
                       child: Container(
-                        width: screenWidth * 0.13, // Responsive size (13% of screen width)
-                        height: screenWidth * 0.13, // Square for circle
+                        width: screenWidth * 0.15, // Responsive size (13% of screen width)
+                        height: screenWidth * 0.15, // Square for circle
                         decoration: BoxDecoration(
                           color: Colors.black, // Fully black circle
                           shape: BoxShape.circle,
@@ -204,7 +204,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                   // Glassy rectangle with 30 border radius and white stroke to the right of the circle
                   Positioned(
                     bottom: screenHeight * 0.02, // Same vertical position as circle
-                    left: screenWidth * 0.19, // Adjusted to right of circle (0.05 + 0.13 + small gap)
+                    left: screenWidth * 0.20, // Adjusted to right of circle (0.05 + 0.13 + small gap)
                     child: GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, '/OnboardingScreen3');
@@ -215,7 +215,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                           filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Strong blur for glassy effect
                           child: Container(
                             width: screenWidth * 0.78, // Responsive width
-                            height: screenWidth * 0.13, // Same height as circle for responsiveness
+                            height: screenWidth * 0.15, // Same height as circle for responsiveness
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2), // Very glassy with low opacity
                               border: Border.all(
@@ -274,10 +274,10 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                   // White circle with black chevron_right icon on the left of the rectangle
                   Positioned(
                     bottom: screenHeight * 0.02, // Same vertical position as circle and rectangle
-                    left: screenWidth * 0.19, // Aligned with the left edge of the rectangle
+                    left: screenWidth * 0.20, // Aligned with the left edge of the rectangle
                     child: Container(
-                      width: screenWidth * 0.13, // Same size as the black circle for consistency
-                      height: screenWidth * 0.13, // Same height as circle and rectangle
+                      width: screenWidth * 0.15, // Same size as the black circle for consistency
+                      height: screenWidth * 0.15, // Same height as circle and rectangle
                       decoration: BoxDecoration(
                         color: Colors.white, // White circle
                         shape: BoxShape.circle,
