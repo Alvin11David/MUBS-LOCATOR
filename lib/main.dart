@@ -8,17 +8,21 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
-import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
+// Removed unused imports: splash_screen.dart and sign_up.dart
+import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart'; // Adjust path as needed
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  runApp(MaterialApp(
+    home: ProfileScreen(), // Temporary override
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    ),
+  ));
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
