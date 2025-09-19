@@ -8,6 +8,7 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/SignInScreen': (context) => const SignInScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
+        '/EditProfileScreen': (context) => const EditProfileScreen(),
       },
     );
   }
