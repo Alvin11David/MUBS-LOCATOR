@@ -16,11 +16,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
 
-  List<Place> places = [];
   Set<Marker> markers = {};
   List<Building> fetchedBuildings = [];
 
@@ -79,8 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  
-  void _showPlaceBottomSheet(BuildContext context, Place place) {
+  void _showBuildingBottomSheet(BuildContext context, Building building) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -100,14 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
             maxChildSize: 0.8,
             expand: false,
             builder: (context, scrollController) {
-              return _PlaceBottomSheetContent(
-                place: place,
+              return _BuildingBottomSheetContent(
+                building: building,
                 scrollController: scrollController,
-                onDirectionsTap: () => _navigateToPlace(place),
+                onDirectionsTap: () => _navigateToBuilding(building),
                 onFeedbackSubmit:
                     (String issueType, String issueTitle, String description) {
                       _submitFeedback(
-                        place,
+                        building,
                         issueType,
                         issueTitle,
                         description,
@@ -121,13 +119,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToPlace(Place place) {
+  void _navigateToBuilding(Building building) {
     if (mapController != null) {
-      // Ensure the place is within MUBS bounds before navigating
-      LatLng placeLocation = LatLng(place.latitude, place.longitude);
+      // Ensure the building is within MUBS bounds before navigating
+      LatLng buildingLocation = LatLng(
+        building.location.latitude,
+        building.location.longitude,
+      );
 
-      if (!_isWithinMubsBounds(placeLocation)) {
-        // Show warning if place is outside campus
+      if (!_isWithinMubsBounds(buildingLocation)) {
+        // Show warning if building is outside campus
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Location is outside MUBS campus area'),
@@ -137,22 +138,22 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Add marker for the selected place
-      final placeMarker = Marker(
-        markerId: MarkerId('selected_${place.id}'),
-        position: placeLocation,
-        infoWindow: InfoWindow(title: place.name, snippet: place.department),
+      // Add marker for the selected building
+      final buildingMarker = Marker(
+        markerId: MarkerId('selected_${building.id}'),
+        position: buildingLocation,
+        infoWindow: InfoWindow(title: building.name),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       );
 
       setState(() {
-        markers.add(placeMarker);
+        markers.add(buildingMarker);
       });
 
-      // Animate camera to the place with constrained zoom
+      // Animate camera to the building with constrained zoom
       mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(
-          placeLocation,
+          buildingLocation,
           18.0, // Close zoom for details
         ),
       );
@@ -166,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color textColor,
     required VoidCallback onPressed,
   }) {
-    return Container(
+    return SizedBox(
       width: 90,
       child: ElevatedButton(
         onPressed: onPressed,
@@ -194,24 +195,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _startNavigation(Place place) {
-    debugPrint("Starting navigation to: ${place.name}");
+  void _startNavigation(Building building) {
+    debugPrint("Starting navigation to: ${building.name}");
     // Implement start navigation functionality
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Starting navigation to ${place.name}'),
+        content: Text('Starting navigation to ${building.name}'),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  void _showFeedback(Place place) {
-    debugPrint("Showing feedback for: ${place.name}");
+  void _showFeedback(Building building) {
+    debugPrint("Showing feedback for: ${building.name}");
     // Implement feedback functionality
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Feedback for ${place.name}'),
+        title: Text('Feedback for ${building.name}'),
         content: Text('Feedback functionality would be implemented here.'),
         actions: [
           TextButton(
@@ -223,9 +224,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _sharePlace(Place place) {
+  void _shareBuilding(Building building) {
     final shareText =
-        '${place.name}\n${place.description}\nDepartment: ${place.department}\nLocation: (${place.latitude}, ${place.longitude})';
+        '${building.name}\n${building.description}\nDescription: ${building.description}\nLocation: (${building.location.latitude}, ${building.location.longitude})';
     Share.share(shareText);
   }
 
@@ -244,13 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Add this method to handle feedback submission
   void _submitFeedback(
-    Place place,
+    Building building,
     String issueType,
     String issueTitle,
     String description,
   ) {
     // Implement your feedback submission logic here
-    print('Feedback submitted for ${place.name}:');
+    print('Feedback submitted for ${building.name}:');
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
@@ -275,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: fetchAllData,
+            onPressed: createTheBuildings,
             icon: Icon(Icons.notifications_rounded),
           ),
         ],
@@ -314,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: TypeAheadField<Place>(
+              child: TypeAheadField<Building>(
                 controller: searchController,
                 builder: (context, textController, focusNode) {
                   return TextField(
@@ -347,27 +348,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 suggestionsCallback: (pattern) async {
                   if (pattern.isEmpty) return [];
 
-                  final matches = places.map((place) {
+                  final matches = fetchedBuildings.map((building) {
                     final nameScore = StringSimilarity.compareTwoStrings(
-                      place.name.toLowerCase(),
+                      building.name.toLowerCase(),
                       pattern.toLowerCase(),
                     );
-                    final deptScore = StringSimilarity.compareTwoStrings(
-                      place.department.toLowerCase(),
-                      pattern.toLowerCase(),
-                    );
-                    final descScore = StringSimilarity.compareTwoStrings(
-                      place.description.toLowerCase(),
+                    final otherNameScore =
+                        (building.otherNames != null &&
+                            building.otherNames!.isNotEmpty)
+                        ? building.otherNames!
+                              .map(
+                                (name) => StringSimilarity.compareTwoStrings(
+                                  name.toLowerCase(),
+                                  pattern.toLowerCase(),
+                                ),
+                              )
+                              .fold<double>(
+                                0,
+                                (prev, curr) => curr > prev ? curr : prev,
+                              )
+                        : 0;
+
+                    final descriptionScore = StringSimilarity.compareTwoStrings(
+                      building.description.toLowerCase(),
                       pattern.toLowerCase(),
                     );
 
                     final maxScore = [
                       nameScore,
-                      deptScore,
-                      descScore,
+                      otherNameScore,
+                      descriptionScore,
                     ].reduce((a, b) => a > b ? a : b);
 
-                    return {'place': place, 'score': maxScore};
+                    return {'building': building, 'score': maxScore};
                   }).toList();
 
                   matches.sort(
@@ -378,10 +391,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return matches
                       .where((m) => (m['score'] as double) > 0.1)
                       .take(10) // Limit to top 10 results
-                      .map((m) => m['place'] as Place)
+                      .map((m) => m['building'] as Building)
                       .toList();
                 },
-                itemBuilder: (context, Place suggestion) {
+                itemBuilder: (context, Building suggestion) {
                   return Container(
                     padding: const EdgeInsets.all(12),
                     child: Row(
@@ -404,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               Text(
-                                suggestion.department,
+                                suggestion.description,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -417,10 +430,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                onSelected: (Place suggestion) {
+                onSelected: (Building suggestion) {
                   debugPrint("Selected: ${suggestion.name}");
                   searchController.text = suggestion.name;
-                  _showPlaceBottomSheet(context, suggestion);
+                  _showBuildingBottomSheet(context, suggestion);
                 },
                 errorBuilder: (context, error) => Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -448,26 +461,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _PlaceBottomSheetContent extends StatefulWidget {
-  final Place place;
+class _BuildingBottomSheetContent extends StatefulWidget {
+  final Building building;
   final ScrollController scrollController;
   final VoidCallback onDirectionsTap;
   final Function(String, String, String) onFeedbackSubmit;
 
-  const _PlaceBottomSheetContent({
-    Key? key,
-    required this.place,
+  const _BuildingBottomSheetContent({
+    super.key,
+    required this.building,
     required this.scrollController,
     required this.onDirectionsTap,
     required this.onFeedbackSubmit,
-  }) : super(key: key);
+  });
 
   @override
-  State<_PlaceBottomSheetContent> createState() =>
-      _PlaceBottomSheetContentState();
+  State<_BuildingBottomSheetContent> createState() =>
+      _BuildingBottomSheetContentState();
 }
 
-class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
+class _BuildingBottomSheetContentState
+    extends State<_BuildingBottomSheetContent> {
   int _selectedTabIndex = 0; // 0: Details, 1: Directions, 2: Feedback
 
   // Feedback form controllers
@@ -514,16 +528,16 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
             ),
             const SizedBox(height: 20),
 
-            // Place name
+            // Building name
             Text(
-              widget.place.name,
+              widget.building.name,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
 
-            // Department
+            // Description
             Text(
-              widget.place.department,
+              widget.building.description,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
@@ -650,7 +664,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
         ),
         const SizedBox(height: 8),
         Text(
-          widget.place.description,
+          widget.building.description,
           style: const TextStyle(fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 20),
@@ -674,11 +688,11 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Lat: ${widget.place.latitude.toStringAsFixed(6)}',
+                'Lat: ${widget.building.location.latitude.toStringAsFixed(6)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
               Text(
-                'Long: ${widget.place.longitude.toStringAsFixed(6)}',
+                'Long: ${widget.building.location.longitude.toStringAsFixed(6)}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
             ],
@@ -713,7 +727,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
           ),
           const SizedBox(height: 8),
           Text(
-            'A marker has been added to the map for ${widget.place.name}',
+            'A marker has been added to the map for ${widget.building.name}',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),

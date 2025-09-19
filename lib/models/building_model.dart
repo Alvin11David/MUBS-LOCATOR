@@ -1,39 +1,10 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-// To be deleted.. and is just for dummy data
-class Place {
-  final int id;
-  final String name;
-  final String department;
-  final String description;
-  final double latitude;
-  final double longitude;
-
-  Place({
-    required this.id,
-    required this.name,
-    required this.department,
-    required this.description,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  factory Place.fromJson(Map<String, dynamic> map) {
-    return Place(
-      id: map['id'],
-      name: map['name'],
-      department: map['department'],
-      description: map['description'],
-      latitude: map['latitude'],
-      longitude: map['longitude'],
-    );
-  }
-}
-
 // Final Model for the Buildings
 class Building {
   final String id;
   final String name;
+  final List<String>? otherNames;
   final String description;
   final String? coverImage;
   final List<String>? otherImages;
@@ -43,6 +14,7 @@ class Building {
     required this.id,
     required this.name,
     required this.description,
+    this.otherNames,
     this.coverImage,
     this.otherImages,
     required this.location,
@@ -54,6 +26,7 @@ class Building {
       name: json['name'],
       description: json['description'],
       coverImage: json['coverImage'],
+      otherNames: List<String>.from(json['otherNames'] ?? []),
       otherImages: List<String>.from(json['otherImages'] ?? []),
       location: LatLng(
         json['location']['latitude'],
@@ -64,8 +37,8 @@ class Building {
 
   Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
       'name': name,
+      'otherNames': otherNames,
       'description': description,
       'coverImage': coverImage,
       'otherImages': otherImages,
