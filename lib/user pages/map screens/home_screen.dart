@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:mubs_locator/models/places_model.dart';
+import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -21,11 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Place> places = [];
   Set<Marker> markers = {};
+  List<Building> fetchedBuildings = [];
 
   @override
   void initState() {
     super.initState();
-    loadPlaces();
+    fetchAllData();
     _initializeMarkers();
   }
 
@@ -42,16 +44,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> loadPlaces() async {
-    final String jsonString = await rootBundle.loadString(
-      'assets/data/places.json',
-    );
-    final List<dynamic> jsonList = json.decode(jsonString);
-    setState(() {
-      places = jsonList.map((json) => Place.fromJson(json)).toList();
-    });
+  Future<void> fetchAllData() async {
+    try {
+      BuildingRepository buildingRepository = BuildingRepository();
+
+      // Await the async call (assuming getAllBuildings is async)
+      final buildings = await buildingRepository.getAllBuildings();
+      fetchedBuildings.addAll(buildings);
+      print(fetchedBuildings);
+
+      // You can add logging or state management here
+      print("✅ Successfully fetched ${buildings.length} buildings.");
+    } catch (e, stackTrace) {
+      // Handle any errors properly
+      print("❌ Failed to fetch buildings: $e");
+      print(stackTrace);
+
+      // Optionally rethrow or handle gracefully
+      rethrow;
+    }
   }
 
+  Future<void> createTheBuildings() async {
+    try {
+      List<Building> buildings = mubsBuildings;
+      BuildingRepository buildingRepository = BuildingRepository();
+
+      for (var item in buildings) {
+        buildingRepository.addBuilding(item);
+        print('Added building: ${item.name} to Firestore');
+      }
+    } catch (e) {
+      print('Error creating buildings: $e');
+    }
+  }
+
+  
   void _showPlaceBottomSheet(BuildContext context, Place place) {
     showModalBottomSheet(
       context: context,
@@ -76,9 +104,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 place: place,
                 scrollController: scrollController,
                 onDirectionsTap: () => _navigateToPlace(place),
-                onFeedbackSubmit: (String issueType, String issueTitle, String description) {
-                  _submitFeedback(place, issueType, issueTitle, description);
-                },
+                onFeedbackSubmit:
+                    (String issueType, String issueTitle, String description) {
+                      _submitFeedback(
+                        place,
+                        issueType,
+                        issueTitle,
+                        description,
+                      );
+                    },
               );
             },
           ),
@@ -209,13 +243,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Add this method to handle feedback submission
-  void _submitFeedback(Place place, String issueType, String issueTitle, String description) {
+  void _submitFeedback(
+    Place place,
+    String issueType,
+    String issueTitle,
+    String description,
+  ) {
     // Implement your feedback submission logic here
     print('Feedback submitted for ${place.name}:');
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
-    
+
     // You can send this data to your backend API
     // Example:
     // await feedbackService.submitFeedback({
@@ -235,7 +274,10 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text('Good morning, User'),
         centerTitle: true,
         actions: [
-          IconButton(onPressed: () {}, icon: Icon(Icons.notifications_rounded)),
+          IconButton(
+            onPressed: fetchAllData,
+            icon: Icon(Icons.notifications_rounded),
+          ),
         ],
       ),
       drawer: Drawer(),
@@ -421,24 +463,25 @@ class _PlaceBottomSheetContent extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<_PlaceBottomSheetContent> createState() => _PlaceBottomSheetContentState();
+  State<_PlaceBottomSheetContent> createState() =>
+      _PlaceBottomSheetContentState();
 }
 
 class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
   int _selectedTabIndex = 0; // 0: Details, 1: Directions, 2: Feedback
-  
+
   // Feedback form controllers
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
-  
+
   final List<String> _issueTypes = [
     'General',
     'Location Incorrect',
     'Missing Information',
     'Accessibility Issue',
     'Facility Issue',
-    'Other'
+    'Other',
   ];
 
   @override
@@ -474,10 +517,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
             // Place name
             Text(
               widget.place.name,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
 
@@ -526,9 +566,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
             _buildTabContent(),
 
             // Bottom padding for safe area
-            SizedBox(
-              height: MediaQuery.of(context).padding.bottom + 10,
-            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
           ],
         ),
       ),
@@ -541,13 +579,13 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
     required String label,
   }) {
     final bool isSelected = _selectedTabIndex == index;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedTabIndex = index;
         });
-        
+
         // Special handling for directions tab
         if (index == 1) {
           widget.onDirectionsTap();
@@ -560,7 +598,9 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
           color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Colors.grey[300]!,
             width: 1,
           ),
         ),
@@ -606,10 +646,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
         // Description
         Text(
           'Description',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Text(
@@ -638,17 +675,11 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
               const SizedBox(height: 4),
               Text(
                 'Lat: ${widget.place.latitude.toStringAsFixed(6)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
               Text(
                 'Long: ${widget.place.longitude.toStringAsFixed(6)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
             ],
           ),
@@ -684,10 +715,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
           Text(
             'A marker has been added to the map for ${widget.place.name}',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
         ],
       ),
@@ -700,20 +728,14 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
       children: [
         Text(
           'Submit Feedback',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
 
         // Issue Type Dropdown
         Text(
           'Issue Type',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         Container(
@@ -728,10 +750,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
               value: _selectedIssueType,
               isExpanded: true,
               items: _issueTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
+                return DropdownMenuItem<String>(value: type, child: Text(type));
               }).toList(),
               onChanged: (String? newValue) {
                 if (newValue != null) {
@@ -748,19 +767,14 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
         // Issue Title
         Text(
           'Issue Title',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _issueTitleController,
           decoration: InputDecoration(
             hintText: 'Enter a brief title for the issue',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
@@ -772,10 +786,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
         // Description
         Text(
           'Description',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -783,9 +794,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
           maxLines: 4,
           decoration: InputDecoration(
             hintText: 'Describe the issue in detail...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
@@ -806,14 +815,14 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
                   _issueTitleController.text.trim(),
                   _descriptionController.text.trim(),
                 );
-                
+
                 // Clear the form
                 _issueTitleController.clear();
                 _descriptionController.clear();
                 setState(() {
                   _selectedIssueType = 'General';
                 });
-                
+
                 // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -821,7 +830,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
                     backgroundColor: Colors.green,
                   ),
                 );
-                
+
                 Navigator.pop(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -842,10 +851,7 @@ class _PlaceBottomSheetContentState extends State<_PlaceBottomSheetContent> {
             ),
             child: const Text(
               'Submit Feedback',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
