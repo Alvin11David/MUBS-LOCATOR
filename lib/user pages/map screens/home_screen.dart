@@ -687,16 +687,14 @@ class _BuildingBottomSheetContentState
           _selectedTabIndex = index;
         });
 
-        if (index == 1) {
-          widget.onDirectionsTap();
-          Navigator.pop(context);
-        }
+        // Removed the automatic navigation trigger
+        // Now only changes the tab, doesn't immediately start navigation
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected
                 ? Theme.of(context).primaryColor
@@ -704,14 +702,17 @@ class _BuildingBottomSheetContentState
             width: 1,
           ),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey[600],
-              size: 20,
+            Padding(
+              padding: const EdgeInsets.only(left: 12.0, right: 4.0),
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.grey[600],
+                size: 20,
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
@@ -802,7 +803,7 @@ class _BuildingBottomSheetContentState
           ),
           const SizedBox(height: 12),
           Text(
-            'Navigation Started',
+            'Get Directions',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -811,9 +812,41 @@ class _BuildingBottomSheetContentState
           ),
           const SizedBox(height: 8),
           Text(
-            'A marker has been added to the map for ${widget.building.name}',
+            'Navigate to ${widget.building.name}',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+          ),
+          const SizedBox(height: 20),
+          
+          // Start Navigation Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                // This is where the actual navigation starts
+                widget.onDirectionsTap();
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.navigation, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Start Navigation',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
