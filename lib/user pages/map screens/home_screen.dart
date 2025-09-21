@@ -123,25 +123,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showBuildingBottomSheet(BuildContext context, Building building) {
-    final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: true,
-      enableDrag: true,
-      useSafeArea: true,
-      constraints: BoxConstraints(
-        maxHeight: screenHeight * 0.6, // Cover half of the screen
-      ),
-      builder: (BuildContext context) {
-        return AnimatedPadding(
-          padding: mediaQuery.viewInsets,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          child: Container(
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    isDismissible: true,
+    enableDrag: true,
+    useSafeArea: true,
+    builder: (BuildContext context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.6, // Start at 60% of screen height
+        minChildSize: 0.3,     // Can be dragged down to 30%
+        maxChildSize: 0.9,     // Can be expanded to 90%
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -156,38 +152,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: DraggableScrollableSheet(
-              initialChildSize: 1.0, // Take full height of the container
-              minChildSize: 0.5, // Can be dragged up to half the screen
-              maxChildSize: 1.0, // Can be expanded to full height
-              expand: false,
-              builder: (context, scrollController) {
-                return _BuildingBottomSheetContent(
-                  building: building,
-                  scrollController: scrollController,
-                  onDirectionsTap: () => _navigateToBuilding(building),
-                  onFeedbackSubmit:
-                      (
-                        String issueType,
-                        String issueTitle,
-                        String description,
-                      ) {
-                        _submitFeedback(
-                          building,
-                          issueType,
-                          issueTitle,
-                          description,
-                        );
-                      },
+            child: _BuildingBottomSheetContent(
+              building: building,
+              scrollController: scrollController,
+              onDirectionsTap: () => _navigateToBuilding(building),
+              onFeedbackSubmit: (
+                String issueType,
+                String issueTitle,
+                String description,
+              ) {
+                _submitFeedback(
+                  building,
+                  issueType,
+                  issueTitle,
+                  description,
                 );
               },
             ),
-          ),
-        );
-      },
-    );
-  }
-
+          );
+        },
+      );
+    },
+  );
+}
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
       LatLng buildingLocation = LatLng(
