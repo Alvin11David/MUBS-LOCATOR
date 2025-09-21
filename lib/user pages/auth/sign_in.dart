@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -11,6 +12,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool isButtonEnabled = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -25,6 +27,37 @@ class _SignInScreenState extends State<SignInScreen> {
           _emailController.text.trim().isNotEmpty &&
           _passwordController.text.trim().isNotEmpty;
     });
+  }
+
+  Future<void> _signIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+      // If sign-in succeeds, go to HomeScreen
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/AboutScreen');
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Sign in failed';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -199,13 +232,8 @@ class _SignInScreenState extends State<SignInScreen> {
                             width: double.infinity,
                             height: screenHeight * 0.06,
                             child: GestureDetector(
-                              onTap: isButtonEnabled
-                                  ? () {
-                                      Navigator.pushNamed(
-                                        context,
-                                        '/HomeScreen',
-                                      );
-                                    }
+                              onTap: isButtonEnabled && !_isLoading
+                                  ? _signIn
                                   : null,
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
@@ -236,17 +264,24 @@ class _SignInScreenState extends State<SignInScreen> {
                                         ),
                                 ),
                                 alignment: Alignment.center,
-                                child: Text(
-                                  "Sign In",
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.05,
-                                    fontWeight: FontWeight.bold,
-                                    color: isButtonEnabled
-                                        ? Colors.black
-                                        : Colors.grey,
-                                    fontFamily: 'Epunda Slab',
-                                  ),
-                                ),
+                                child: _isLoading
+                                    ? CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.black,
+                                            ),
+                                      )
+                                    : Text(
+                                        "Sign In",
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.05,
+                                          fontWeight: FontWeight.bold,
+                                          color: isButtonEnabled
+                                              ? Colors.black
+                                              : Colors.grey,
+                                          fontFamily: 'Epunda Slab',
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
@@ -278,40 +313,23 @@ class _SignInScreenState extends State<SignInScreen> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
                                   border: Border.all(
-                                    color: const Color(
-                                      0xFFD59A00,
-                                    ), // Gold border
+                                    color: const Color(0xFFD59A00),
                                     width: 1,
                                   ),
                                   gradient: const LinearGradient(
                                     colors: [
-                                      Color.fromARGB(
-                                        255,
-                                        255,
-                                        255,
-                                        255,
-                                      ), // Light shade at 0%
-                                      Color.fromARGB(
-                                        255,
-                                        255,
-                                        255,
-                                        255,
-                                      ), // White shade
+                                      Color.fromARGB(255, 255, 255, 255),
+                                      Color.fromARGB(255, 255, 255, 255),
                                     ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(
-                                        0.2,
-                                      ), // Shadow color
+                                      color: Colors.black.withOpacity(0.2),
                                       spreadRadius: 2,
                                       blurRadius: 5,
-                                      offset: const Offset(
-                                        0,
-                                        3,
-                                      ), // Shadow offset (x, y)
+                                      offset: const Offset(0, 3),
                                     ),
                                   ],
                                 ),
@@ -325,9 +343,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                       height: screenHeight * 0.03,
                                       fit: BoxFit.contain,
                                     ),
-                                    const SizedBox(
-                                      width: 5,
-                                    ), // Spacing between icon and text
+                                    const SizedBox(width: 5),
                                     Text(
                                       "Google",
                                       style: TextStyle(
@@ -567,7 +583,7 @@ class OrDivider extends StatelessWidget {
       builder: (context, constraints) {
         double screenWidth = constraints.maxWidth;
         return SizedBox(
-          width: screenWidth * 0.8, // Responsive width (80% of container width)
+          width: screenWidth * 0.8,
           child: Row(
             children: [
               Expanded(child: Container(height: 1, color: Colors.grey)),
@@ -576,8 +592,8 @@ class OrDivider extends StatelessWidget {
                 child: Text(
                   'Or Sign In With',
                   style: TextStyle(
-                    color: const Color(0xFF6B7280), // Gray
-                    fontSize: screenWidth * 0.04, // Responsive font size
+                    color: const Color(0xFF6B7280),
+                    fontSize: screenWidth * 0.04,
                     fontFamily: 'Epunda Slab',
                     fontWeight: FontWeight.w400,
                   ),

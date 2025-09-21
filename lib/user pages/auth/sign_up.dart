@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'sign_in.dart';
-
-
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,13 +13,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   // Focus nodes for field navigation
   final FocusNode _fullNameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _confirmPasswordFocus = FocusNode();
+
+  // Firebase
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
+  // Password strength state
+  double _passwordStrengthProgress = 0.0; // Progress from 0.0 to 1.0
+  Color _strengthColor = Colors.white; // Color based on strength
 
   @override
   void dispose() {
@@ -33,6 +41,170 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _passwordFocus.dispose();
     _confirmPasswordFocus.dispose();
     super.dispose();
+  }
+
+  // Password strength calculation
+  void _checkPasswordStrength(String password) {
+    int strengthScore = 0;
+    if (password.isNotEmpty) strengthScore++; // Any input
+    if (password.length >= 6) strengthScore++; // Length ≥ 6
+    if (password.contains(RegExp(r'[a-z]'))) strengthScore++; // Lowercase
+    if (password.contains(RegExp(r'[0-9]'))) strengthScore++; // Numbers
+
+    print('Password: "$password"');
+    print(
+      'Strength Score: $strengthScore (NotEmpty: ${password.isNotEmpty}, Length>=6: ${password.length >= 6}, Lowercase: ${password.contains(RegExp(r'[a-z]'))}, Numbers: ${password.contains(RegExp(r'[0-9]'))})',
+    );
+    print('Progress: ${_passwordStrengthProgress}, Color: ${_strengthColor}');
+
+    setState(() {
+      // Map strength score to progress (0.0 to 1.0)
+      _passwordStrengthProgress = strengthScore / 4.0;
+      // Set color based on strength
+      if (strengthScore <= 1) {
+        _strengthColor = Colors.red; // Weak
+      } else if (strengthScore <= 3) {
+        _strengthColor = Colors.orange; // Medium
+      } else if (strengthScore == 4) {
+        _strengthColor = Colors.green; // Strong
+      }
+    });
+  }
+
+  // Validation function
+  String? _validateForm() {
+    print('Validating form...');
+    if (_fullNameController.text.trim().isEmpty) {
+      print('Validation failed: Full name empty');
+      return 'Please enter your full name';
+    }
+    if (_emailController.text.trim().isEmpty) {
+      print('Validation failed: Email empty');
+      return 'Please enter your email';
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      print('Validation failed: Invalid email');
+      return 'Please enter a valid email';
+    }
+    if (_passwordController.text.trim().isEmpty) {
+      print('Validation failed: Password empty');
+      return 'Please enter a password';
+    }
+    if (_passwordController.text.trim().length < 6) {
+      print('Validation failed: Password too short');
+      return 'Password must be at least 6 characters';
+    }
+    if (_confirmPasswordController.text.trim() !=
+        _passwordController.text.trim()) {
+      print('Validation failed: Passwords do not match');
+      return 'Passwords do not match';
+    }
+    print('Validation passed');
+    return null;
+  }
+
+  // Firebase signup function
+  Future<void> _signUp() async {
+    print('Sign up button pressed');
+    final error = _validateForm();
+    if (error != null) {
+      print('Form error: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    print(
+      'Attempting Firebase sign up for email: ${_emailController.text.trim()}',
+    );
+
+    try {
+      // Create user with email/password
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+      print('Firebase sign up successful: ${userCredential.user?.uid}');
+
+      // Update display name (optional)
+      if (userCredential.user != null) {
+        await userCredential.user!.updateDisplayName(
+          _fullNameController.text.trim(),
+        );
+        print('Display name updated to: ${_fullNameController.text.trim()}');
+      }
+
+      if (mounted) {
+        print('Navigating based on email');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Check if the email is adminuser@gmail.com
+        if (_emailController.text.trim().toLowerCase() ==
+            'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to SignInScreen');
+          Navigator.pushReplacementNamed(context, '/SignInScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'An account already exists for that email.';
+          break;
+        case 'weak-password':
+          message = 'The password provided is too weak.';
+          break;
+        case 'invalid-email':
+          message = 'The email address is not valid.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Email/password accounts are not enabled.';
+          break;
+        default:
+          message =
+              'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e, stackTrace) {
+      print('Signup error: $e\nStack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      print('Sign up process finished');
+    }
+  }
+
+  // Check if passwords match for enabling Sign Up button
+  bool _isSignUpEnabled() {
+    return _passwordController.text.trim() ==
+            _confirmPasswordController.text.trim() &&
+        _passwordController.text.trim().isNotEmpty &&
+        _passwordStrengthProgress == 1.0;
   }
 
   @override
@@ -62,7 +234,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   width: screenWidth * 0.2,
                   height: screenHeight * 0.1,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const SizedBox(),
                 ),
               ),
 
@@ -194,6 +367,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             focusNode: _passwordFocus,
                             nextFocusNode: _confirmPasswordFocus,
                             textInputAction: TextInputAction.next,
+                            onChanged: _checkPasswordStrength,
+                          ),
+                        ),
+
+                        // Password Strength Indicator
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.08,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Stack(
+                              children: [
+                                // Background of the strength indicator
+                                Container(
+                                  width: double.infinity,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        253,
+                                        253,
+                                      )!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                // Progress bar with strength color
+                                FractionallySizedBox(
+                                  widthFactor: _passwordStrengthProgress,
+                                  child: Container(
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: _strengthColor,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
@@ -221,35 +439,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             width: double.infinity,
                             height: screenHeight * 0.06,
                             child: GestureDetector(
-                              onTap: () {
-                                // Add your sign up logic here
-                              },
+                              onTap: _isLoading || !_isSignUpEnabled()
+                                  ? null
+                                  : _signUp,
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
                                   border: Border.all(
-                                    color: const Color(0xFF3B82F6),
+                                    color: _isLoading || !_isSignUpEnabled()
+                                        ? Colors.grey
+                                        : const Color(0xFF3B82F6),
                                     width: 1,
                                   ),
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFE0E7FF),
-                                      Color(0xFF93C5FD),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  gradient: _isLoading || !_isSignUpEnabled()
+                                      ? null
+                                      : const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE0E7FF),
+                                            Color(0xFF93C5FD),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
                                 ),
                                 alignment: Alignment.center,
-                                child: Text(
-                                  "Sign Up",
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.05,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'Epunda Slab',
-                                  ),
-                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.black,
+                                              ),
+                                        ),
+                                      )
+                                    : Text(
+                                        "Sign Up",
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.05,
+                                          fontWeight: FontWeight.bold,
+                                          color: _isSignUpEnabled()
+                                              ? Colors.black
+                                              : Colors.grey,
+                                          fontFamily: 'Epunda Slab',
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
@@ -261,7 +497,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.1,
                           ),
-                          child: _OrDivider(fontSize: screenWidth * 0.04, horizontalPadding: screenWidth * 0.02),
+                          child: _OrDivider(
+                            fontSize: screenWidth * 0.04,
+                            horizontalPadding: screenWidth * 0.02,
+                          ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
 
@@ -304,7 +543,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       width: screenWidth * 0.08,
                                       height: screenHeight * 0.03,
                                       fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const SizedBox(),
                                     ),
                                     SizedBox(width: screenWidth * 0.025),
                                     Text(
@@ -342,9 +583,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                                 GestureDetector(
                                   onTap: () {
-                                    Navigator.push(
+                                    Navigator.pushNamed(
                                       context,
-                                      MaterialPageRoute(builder: (context) => const SignInScreen()),
+                                      '/SignInScreen',
                                     );
                                   },
                                   child: Text(
@@ -465,16 +706,20 @@ class _ResponsivePasswordField extends StatefulWidget {
   final FocusNode? focusNode;
   final FocusNode? nextFocusNode;
   final TextInputAction? textInputAction;
+  final Function(String)? onChanged;
+
   const _ResponsivePasswordField({
     required this.controller,
     required this.label,
     this.focusNode,
     this.nextFocusNode,
     this.textInputAction,
+    this.onChanged,
   });
 
   @override
-  State<_ResponsivePasswordField> createState() => _ResponsivePasswordFieldState();
+  State<_ResponsivePasswordField> createState() =>
+      _ResponsivePasswordFieldState();
 }
 
 class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
@@ -488,6 +733,7 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
       focusNode: widget.focusNode,
       textInputAction: widget.textInputAction,
       obscureText: _isObscured,
+      onChanged: widget.onChanged,
       onFieldSubmitted: (_) {
         if (widget.nextFocusNode != null) {
           FocusScope.of(context).requestFocus(widget.nextFocusNode);
