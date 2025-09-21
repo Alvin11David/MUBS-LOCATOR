@@ -1,12 +1,14 @@
 import 'dart:convert';
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
-import 'package:share_plus/share_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,13 +23,33 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController searchController = TextEditingController();
 
   Set<Marker> markers = {};
+  Set<Polygon> polygons = {};
+  Set<Polyline> polylines = {};
+  final String _googleApiKey =
+      'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA'; // Replace with your actual API key
   List<Building> fetchedBuildings = [];
+
+  // Updated MUBS boundary coordinates - using your exact coordinates
+  final List<LatLng> _mubsBounds = [
+    LatLng(0.32665770214412915, 32.615554267866116),
+    LatLng(0.329929943362535, 32.61561864088474),
+    LatLng(0.33011233054641215, 32.616401845944665),
+    LatLng(0.3309920804452059, 32.61645549012686),
+    LatLng(0.3309491658180317, 32.61709922025041),
+    LatLng(0.32991921470477137, 32.61831157876784),
+    LatLng(0.32925403788744845, 32.61857979967877),
+    LatLng(0.3280202420604525, 32.619599039140326),
+    LatLng(0.32748380904471847, 32.62030714234519),
+    LatLng(0.32528443338059565, 32.61775367927309),
+    LatLng(0.32652895820572553, 32.61566155616781),
+  ];
 
   @override
   void initState() {
     super.initState();
     fetchAllData();
     _initializeMarkers();
+    _initializePolygons();
   }
 
   void _initializeMarkers() {
@@ -43,23 +65,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _initializePolygons() {
+    // Create the main MUBS campus polygon with blue border
+    polygons.add(
+      Polygon(
+        polygonId: PolygonId('mubs_campus'),
+        points: _mubsBounds,
+        strokeColor: Colors.blue,
+        strokeWidth: 2,
+        fillColor: Colors.transparent,
+        geodesic: true,
+      ),
+    );
+  }
+
+  List<LatLng> _createLargeOuterBounds() {
+    // Create a large rectangular boundary that encompasses the entire map view
+    // This ensures the blur effect covers all areas outside the campus
+    double minLat = _mubsBounds.map((p) => p.latitude).reduce(math.min) - 0.02;
+    double maxLat = _mubsBounds.map((p) => p.latitude).reduce(math.max) + 0.02;
+    double minLng = _mubsBounds.map((p) => p.longitude).reduce(math.min) - 0.02;
+    double maxLng = _mubsBounds.map((p) => p.longitude).reduce(math.max) + 0.02;
+
+    return [
+      LatLng(minLat, minLng),
+      LatLng(minLat, maxLng),
+      LatLng(maxLat, maxLng),
+      LatLng(maxLat, minLng),
+    ];
+  }
+
   Future<void> fetchAllData() async {
     try {
       BuildingRepository buildingRepository = BuildingRepository();
-
-      // Await the async call (assuming getAllBuildings is async)
       final buildings = await buildingRepository.getAllBuildings();
       fetchedBuildings.addAll(buildings);
-      print(fetchedBuildings);
-
-      // You can add logging or state management here
       print("✅ Successfully fetched ${buildings.length} buildings.");
     } catch (e, stackTrace) {
-      // Handle any errors properly
       print("❌ Failed to fetch buildings: $e");
       print(stackTrace);
-
-      // Optionally rethrow or handle gracefully
       rethrow;
     }
   }
@@ -79,193 +123,239 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showBuildingBottomSheet(BuildContext context, Building building) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxHeight: screenHeight * 0.6, // Cover half of the screen
+      ),
       builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
+        return AnimatedPadding(
+          padding: mediaQuery.viewInsets,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, -2),
+                ),
+              ],
             ),
-          ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.5,
-            minChildSize: 0.5,
-            maxChildSize: 0.8,
-            expand: false,
-            builder: (context, scrollController) {
-              return _BuildingBottomSheetContent(
-                building: building,
-                scrollController: scrollController,
-                onDirectionsTap: () => _navigateToBuilding(building),
-                onFeedbackSubmit:
-                    (String issueType, String issueTitle, String description) {
-                      _submitFeedback(
-                        building,
-                        issueType,
-                        issueTitle,
-                        description,
-                      );
-                    },
-              );
-            },
+            child: DraggableScrollableSheet(
+              initialChildSize: 1.0, // Take full height of the container
+              minChildSize: 0.5, // Can be dragged up to half the screen
+              maxChildSize: 1.0, // Can be expanded to full height
+              expand: false,
+              builder: (context, scrollController) {
+                return _BuildingBottomSheetContent(
+                  building: building,
+                  scrollController: scrollController,
+                  onDirectionsTap: () => _navigateToBuilding(building),
+                  onFeedbackSubmit:
+                      (
+                        String issueType,
+                        String issueTitle,
+                        String description,
+                      ) {
+                        _submitFeedback(
+                          building,
+                          issueType,
+                          issueTitle,
+                          description,
+                        );
+                      },
+                );
+              },
+            ),
           ),
         );
       },
     );
   }
 
-  void _navigateToBuilding(Building building) {
+  Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
-      // Ensure the building is within MUBS bounds before navigating
       LatLng buildingLocation = LatLng(
         building.location.latitude,
         building.location.longitude,
       );
 
-      if (!_isWithinMubsBounds(buildingLocation)) {
-        // Show warning if building is outside campus
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Location is outside MUBS campus area'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+      // Clear existing markers and polylines
+      markers.removeWhere((marker) => marker.markerId.value == 'destination');
+      polylines.clear();
 
-      // Add marker for the selected building
-      final buildingMarker = Marker(
-        markerId: MarkerId('selected_${building.id}'),
-        position: buildingLocation,
-        infoWindow: InfoWindow(title: building.name),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      // Add new marker for the building
+      markers.add(
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: buildingLocation,
+          infoWindow: InfoWindow(
+            title: building.name,
+            snippet: building.description,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
       );
 
-      setState(() {
-        markers.add(buildingMarker);
-      });
+      // Get directions
+      await _getDirections(buildingLocation);
 
-      // Animate camera to the building with constrained zoom
+      // Update the map
+      setState(() {});
+
+      // Animate camera to show both markers and route
+      final bounds = LatLngBounds(
+        southwest: LatLng(
+          _mubsMaingate.latitude < buildingLocation.latitude
+              ? _mubsMaingate.latitude
+              : buildingLocation.latitude,
+          _mubsMaingate.longitude < buildingLocation.longitude
+              ? _mubsMaingate.longitude
+              : buildingLocation.longitude,
+        ),
+        northeast: LatLng(
+          _mubsMaingate.latitude > buildingLocation.latitude
+              ? _mubsMaingate.latitude
+              : buildingLocation.latitude,
+          _mubsMaingate.longitude > buildingLocation.longitude
+              ? _mubsMaingate.longitude
+              : buildingLocation.longitude,
+        ),
+      );
+
       mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          buildingLocation,
-          18.0, // Close zoom for details
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          100, // padding
         ),
       );
     }
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color backgroundColor,
-    required Color textColor,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: 90,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
+  Future<void> _getDirections(LatLng destination) async {
+    final origin = _mubsMaingate;
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/directions/json?'
+      'origin=${origin.latitude},${origin.longitude}&'
+      'destination=${destination.latitude},${destination.longitude}&'
+      'key=$_googleApiKey&mode=walking',
     );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final points = data['routes'][0]['overview_polyline']['points'];
+          List<LatLng> routeCoords = _convertToLatLng(_decodePoly(points));
+          
+          setState(() {
+            polylines.clear();
+            polylines.add(
+              Polyline(
+                polylineId: const PolylineId('route'),
+                points: routeCoords,
+                color: Colors.blue,
+                width: 5,
+                startCap: Cap.roundCap,
+                endCap: Cap.roundCap,
+                jointType: JointType.round,
+              ),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      print('Error getting directions: $e');
+    }
   }
 
-  void _startNavigation(Building building) {
-    debugPrint("Starting navigation to: ${building.name}");
-    // Implement start navigation functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Starting navigation to ${building.name}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  List<LatLng> _decodePoly(String encoded) {
+    List<LatLng> poly = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      poly.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return poly;
   }
 
-  void _showFeedback(Building building) {
-    debugPrint("Showing feedback for: ${building.name}");
-    // Implement feedback functionality
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Feedback for ${building.name}'),
-        content: Text('Feedback functionality would be implemented here.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
+  List<LatLng> _convertToLatLng(List points) {
+    List<LatLng> result = [];
+    for (int i = 0; i < points.length; i++) {
+      if (points[i] is double) {
+        result.add(LatLng(points[i], points[i + 1]));
+        i++;
+      } else if (points[i] is LatLng) {
+        result.add(points[i]);
+      }
+    }
+    return result;
   }
 
-  void _shareBuilding(Building building) {
-    final shareText =
-        '${building.name}\n${building.description}\nDescription: ${building.description}\nLocation: (${building.location.latitude}, ${building.location.longitude})';
-    Share.share(shareText);
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    int intersectCount = 0;
+    for (int j = polygon.length - 1, i = 0; i < polygon.length; j = i++) {
+      if (((polygon[i].latitude <= point.latitude &&
+                  point.latitude < polygon[j].latitude) ||
+              (polygon[j].latitude <= point.latitude &&
+                  point.latitude < polygon[i].latitude)) &&
+          (point.longitude <
+              (polygon[j].longitude - polygon[i].longitude) *
+                      (point.latitude - polygon[i].latitude) /
+                      (polygon[j].latitude - polygon[i].latitude) +
+                  polygon[i].longitude)) {
+        intersectCount++;
+      }
+    }
+    return (intersectCount % 2) == 1;
   }
 
-  bool _isWithinMubsBounds(LatLng location) {
-    // Example bounds, adjust to your campus area
-    const double minLat = 0.3260;
-    const double maxLat = 0.3490;
-    const double minLng = 32.5810;
-    const double maxLng = 32.6170;
-
-    return location.latitude >= minLat &&
-        location.latitude <= maxLat &&
-        location.longitude >= minLng &&
-        location.longitude <= maxLng;
-  }
-
-  // Add this method to handle feedback submission
   void _submitFeedback(
     Building building,
     String issueType,
     String issueTitle,
     String description,
   ) {
-    // Implement your feedback submission logic here
     print('Feedback submitted for ${building.name}:');
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
-
-    // You can send this data to your backend API
-    // Example:
-    // await feedbackService.submitFeedback({
-    //   'placeId': place.id,
-    //   'placeName': place.name,
-    //   'issueType': issueType,
-    //   'issueTitle': issueTitle,
-    //   'description': description,
-    //   'timestamp': DateTime.now().toIso8601String(),
-    // });
   }
 
   @override
@@ -284,21 +374,26 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: Drawer(),
       body: Stack(
         children: [
+          // Google Map
           GoogleMap(
             onMapCreated: (GoogleMapController controller) {
               mapController = controller;
             },
             initialCameraPosition: CameraPosition(
               target: _mubsMaingate,
-              zoom: 13,
+              zoom: 18.5, // Adjusted zoom to better show the campus
             ),
             markers: markers,
+            polygons: polygons,
+            polylines: polylines,
             mapType: MapType.normal,
             zoomGesturesEnabled: true,
             scrollGesturesEnabled: true,
             tiltGesturesEnabled: true,
             rotateGesturesEnabled: true,
           ),
+
+          // Search bar positioned on top
           Positioned(
             top: 16,
             left: 16,
@@ -390,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   return matches
                       .where((m) => (m['score'] as double) > 0.1)
-                      .take(10) // Limit to top 10 results
+                      .take(10)
                       .map((m) => m['building'] as Building)
                       .toList();
                 },
@@ -461,6 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// Keep all your existing _BuildingBottomSheetContent class unchanged
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
   final ScrollController scrollController;
@@ -468,7 +564,6 @@ class _BuildingBottomSheetContent extends StatefulWidget {
   final Function(String, String, String) onFeedbackSubmit;
 
   const _BuildingBottomSheetContent({
-    super.key,
     required this.building,
     required this.scrollController,
     required this.onDirectionsTap,
@@ -482,9 +577,7 @@ class _BuildingBottomSheetContent extends StatefulWidget {
 
 class _BuildingBottomSheetContentState
     extends State<_BuildingBottomSheetContent> {
-  int _selectedTabIndex = 0; // 0: Details, 1: Directions, 2: Feedback
-
-  // Feedback form controllers
+  int _selectedTabIndex = 0;
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
@@ -600,7 +693,6 @@ class _BuildingBottomSheetContentState
           _selectedTabIndex = index;
         });
 
-        // Special handling for directions tab
         if (index == 1) {
           widget.onDirectionsTap();
           Navigator.pop(context);
@@ -657,7 +749,6 @@ class _BuildingBottomSheetContentState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Description
         Text(
           'Description',
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -669,7 +760,6 @@ class _BuildingBottomSheetContentState
         ),
         const SizedBox(height: 20),
 
-        // Coordinates info
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -746,7 +836,6 @@ class _BuildingBottomSheetContentState
         ),
         const SizedBox(height: 16),
 
-        // Issue Type Dropdown
         Text(
           'Issue Type',
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -778,7 +867,6 @@ class _BuildingBottomSheetContentState
         ),
         const SizedBox(height: 16),
 
-        // Issue Title
         Text(
           'Issue Title',
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -797,7 +885,6 @@ class _BuildingBottomSheetContentState
         ),
         const SizedBox(height: 16),
 
-        // Description
         Text(
           'Description',
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -817,7 +904,6 @@ class _BuildingBottomSheetContentState
         ),
         const SizedBox(height: 20),
 
-        // Submit Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -830,14 +916,12 @@ class _BuildingBottomSheetContentState
                   _descriptionController.text.trim(),
                 );
 
-                // Clear the form
                 _issueTitleController.clear();
                 _descriptionController.clear();
                 setState(() {
                   _selectedIssueType = 'General';
                 });
 
-                // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Feedback submitted successfully!'),

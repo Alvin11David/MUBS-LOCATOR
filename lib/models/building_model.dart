@@ -6,8 +6,7 @@ class Building {
   final String name;
   final List<String>? otherNames;
   final String description;
-  final String? coverImage;
-  final List<String>? otherImages;
+  final List<String>? images;
   final LatLng location;
 
   Building({
@@ -15,8 +14,7 @@ class Building {
     required this.name,
     required this.description,
     this.otherNames,
-    this.coverImage,
-    this.otherImages,
+    this.images,
     required this.location,
   });
 
@@ -25,9 +23,8 @@ class Building {
       id: docId,
       name: json['name'],
       description: json['description'],
-      coverImage: json['coverImage'],
       otherNames: List<String>.from(json['otherNames'] ?? []),
-      otherImages: List<String>.from(json['otherImages'] ?? []),
+      images: List<String>.from(json['images'] ?? []),
       location: LatLng(
         json['location']['latitude'],
         json['location']['longitude'],
@@ -40,8 +37,7 @@ class Building {
       'name': name,
       'otherNames': otherNames,
       'description': description,
-      'coverImage': coverImage,
-      'otherImages': otherImages,
+      'images': images,
       'location': {
         'latitude': location.latitude,
         'longitude': location.longitude,
