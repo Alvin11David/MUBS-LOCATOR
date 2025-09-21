@@ -600,81 +600,87 @@ class _BuildingBottomSheetContentState
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag indicator
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag indicator
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Building name
-            Text(
-              widget.building.name,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-
-            // Description
-            Text(
-              widget.building.description,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+              // Building name
+              Text(
+                widget.building.name,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-            // Tab buttons
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTabButton(
-                    index: 0,
-                    icon: Icons.info_outline,
-                    label: 'Details',
-                  ),
+              // Description
+              Text(
+                widget.building.description,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTabButton(
-                    index: 1,
-                    icon: Icons.directions,
-                    label: 'Directions',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTabButton(
-                    index: 2,
-                    icon: Icons.feedback_outlined,
-                    label: 'Feedback',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+              ),
+              const SizedBox(height: 16),
 
-            // Tab content
-            _buildTabContent(),
+              // Tab buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton(
+                      index: 0,
+                      icon: Icons.info_outline,
+                      label: 'Details',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildTabButton(
+                      index: 1,
+                      icon: Icons.directions,
+                      label: 'Directions',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildTabButton(
+                      index: 2,
+                      icon: Icons.feedback_outlined,
+                      label: 'Feedback',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-            // Bottom padding for safe area
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
-          ],
+              // Tab content
+              _buildTabContent(),
+
+              // Bottom padding for safe area
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+            ],
+          ),
         ),
       ),
     );
