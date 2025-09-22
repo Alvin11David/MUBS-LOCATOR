@@ -4,6 +4,7 @@ import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
+import 'package:mubs_locator/user%20pages/auth/otp_screen.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
@@ -39,12 +40,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/OnboardingScreen1', // Start with onboarding
+      initialRoute: '/SplashScreen', // Start with splash screen
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
         '/SignInScreen': (context) => const SignInScreen(),
+        '/SplashScreen': (context) => const SplashScreen(),
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
@@ -52,7 +54,8 @@ class MyApp extends StatelessWidget {
         '/EditProfileScreen': (context) => const EditProfileScreen(),
         '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
         '/LocationManagementScreen': (context) => const LocationManagementScreen(),
-        '/ProfileScreen': (context) => const ProfileScreen(), // Added profile screen route
+        '/ProfileScreen': (context) => const ProfileScreen(),
+        '/OTPScreen': (context) => const OTP_Screen(email: ''),
       },
     );
   }

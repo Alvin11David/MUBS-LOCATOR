@@ -154,8 +154,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           // Mailbox icon in a circle
                           Container(
                             margin: EdgeInsets.only(top: screenHeight * 0.02),
-                            width: 100,
-                            height: 100,
+                            width: 80,
+                            height: 80,
                             decoration: const BoxDecoration(
                               color: Color(0xFF3B578F),
                               shape: BoxShape.circle,
@@ -298,8 +298,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     onTap: isButtonEnabled
                                         ? () {
                                             // Navigate to OTP verification screen
-                                            print(
-                                              'Email submitted: ${_emailController.text}',
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/OTPScreen',
                                             );
                                           }
                                         : null,
