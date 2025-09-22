@@ -48,6 +48,19 @@ class _OTP_ScreenState extends State<OTP_Screen> {
     });
   }
 
+  void _checkOTPAndNavigate() {
+    // Check if all 4 fields have exactly one digit
+    bool isComplete = _controllers.every((controller) => controller.text.length == 1);
+    if (isComplete) {
+      // Navigate to ResetPasswordScreen, passing the email
+      Navigator.pushNamed(
+        context,
+        '/ResetPasswordScreen',
+        arguments: {'email': widget.email},
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -147,21 +160,21 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                         ),
                       ),
                       // Cone image at bottom left
-                    Positioned(
-                      bottom: 0,
-                      left: -screenWidth * 0.15,
-                      child: Image.asset(
-                        'assets/vectors/cone2.png',
-                        width: screenWidth * 0.3,
-                        height: screenWidth * 0.3,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.error,
-                          color: Colors.red,
-                          size: screenWidth * 0.1,
+                      Positioned(
+                        bottom: 0,
+                        left: -screenWidth * 0.15,
+                        child: Image.asset(
+                          'assets/vectors/cone2.png',
+                          width: screenWidth * 0.3,
+                          height: screenWidth * 0.3,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.error,
+                            color: Colors.red,
+                            size: screenWidth * 0.1,
+                          ),
                         ),
                       ),
-                    ),
                       // Scrollable content
                       SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
@@ -297,6 +310,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                               _focusNodes[index].unfocus();
                                               _focusNodes[index - 1].requestFocus();
                                             }
+                                            _checkOTPAndNavigate();
                                           },
                                         ),
                                       ),

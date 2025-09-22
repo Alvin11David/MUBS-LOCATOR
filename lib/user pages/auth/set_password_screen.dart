@@ -14,6 +14,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Password strength state
+  double _passwordStrengthProgress = 0.0; // Progress from 0.0 to 1.0
+  Color _strengthColor = Colors.white; // Color based on strength
+
   @override
   void initState() {
     super.initState();
@@ -25,7 +29,35 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
     setState(() {
-      isButtonEnabled = password.isNotEmpty && confirmPassword.isNotEmpty && password == confirmPassword;
+      isButtonEnabled = password.isNotEmpty && confirmPassword.isNotEmpty && password == confirmPassword && _passwordStrengthProgress == 1.0;
+    });
+  }
+
+  // Password strength calculation
+  void _checkPasswordStrength(String password) {
+    int strengthScore = 0;
+    if (password.isNotEmpty) strengthScore++; // Any input
+    if (password.length >= 6) strengthScore++; // Length ≥ 6
+    if (password.contains(RegExp(r'[a-z]'))) strengthScore++; // Lowercase
+    if (password.contains(RegExp(r'[0-9]'))) strengthScore++; // Numbers
+
+    print('Password: "$password"');
+    print(
+      'Strength Score: $strengthScore (NotEmpty: ${password.isNotEmpty}, Length>=6: ${password.length >= 6}, Lowercase: ${password.contains(RegExp(r'[a-z]'))}, Numbers: ${password.contains(RegExp(r'[0-9]'))})',
+    );
+    print('Progress: ${_passwordStrengthProgress}, Color: ${_strengthColor}');
+
+    setState(() {
+      // Map strength score to progress (0.0 to 1.0)
+      _passwordStrengthProgress = strengthScore / 4.0;
+      // Set color based on strength
+      if (strengthScore <= 1) {
+        _strengthColor = Colors.red; // Weak
+      } else if (strengthScore <= 3) {
+        _strengthColor = Colors.orange; // Medium
+      } else if (strengthScore == 4) {
+        _strengthColor = Colors.green; // Strong
+      }
     });
   }
 
@@ -220,6 +252,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   controller: _passwordController,
                                   keyboardType: TextInputType.text,
                                   obscureText: _obscurePassword,
+                                  onChanged: _checkPasswordStrength,
                                   validator: (value) {
                                     if (value == null || value.trim().isEmpty) {
                                       return 'Enter a new password';
@@ -279,7 +312,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       ),
                                     ),
                                     contentPadding: EdgeInsets.symmetric(
-                                      vertical: screenWidth * 0.05,
+                                      vertical: screenWidth * 0.04,
                                       horizontal: screenWidth * 0.05,
                                     ),
                                   ),
@@ -290,6 +323,49 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     fontSize: screenWidth * 0.045,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
+                                ),
+                                // Password Strength Indicator
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.08,
+                                    vertical: screenHeight * 0.01,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(30),
+                                    child: Stack(
+                                      children: [
+                                        // Background of the strength indicator
+                                        Container(
+                                          width: double.infinity,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(30),
+                                            border: Border.all(
+                                              color: const Color.fromARGB(
+                                                255,
+                                                255,
+                                                253,
+                                                253,
+                                              )!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                        // Progress bar with strength color
+                                        FractionallySizedBox(
+                                          widthFactor: _passwordStrengthProgress,
+                                          child: Container(
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: _strengthColor,
+                                              borderRadius: BorderRadius.circular(30),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                                 SizedBox(height: screenHeight * 0.03),
                                 // Confirm Password field
@@ -356,7 +432,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       ),
                                     ),
                                     contentPadding: EdgeInsets.symmetric(
-                                      vertical: screenWidth * 0.05,
+                                      vertical: screenWidth * 0.04,
                                       horizontal: screenWidth * 0.05,
                                     ),
                                   ),
