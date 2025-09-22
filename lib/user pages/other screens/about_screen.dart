@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -24,7 +26,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     // Auto-slide every 5 seconds
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_pageController.hasClients) {
-        _currentPage = (_currentPage + 1) % 4; // 4 rectangles
+        _currentPage = (_currentPage + 1) % 4;
         _pageController.animateToPage(
           _currentPage,
           duration: const Duration(milliseconds: 700),
@@ -33,7 +35,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
       }
     });
 
-    // Initialize ripple animation
+    // Ripple animation
     _rippleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -41,8 +43,8 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     _rippleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _rippleController, curve: Curves.easeInOut),
     )..addListener(() {
-      setState(() {});
-    });
+        setState(() {});
+      });
   }
 
   @override
@@ -51,6 +53,105 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     _pageController.dispose();
     _rippleController.dispose();
     super.dispose();
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'leenine173@gmail.com',
+    );
+
+    if (kIsWeb) {
+      await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+    } else {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch email app')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _launchPhoneDialer(String number) async {
+    final Uri phoneUri = Uri(
+      scheme: 'tel',
+      path: number,
+    );
+
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone dialer not supported on web')),
+        );
+      }
+    } else {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch phone dialer')),
+          );
+        }
+      }
+    }
+  }
+
+  void _showPhoneNumberDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Phone Number'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('0742195533'),
+              onTap: () {
+                Navigator.pop(context);
+                _launchPhoneDialer('0742195533');
+              },
+            ),
+            ListTile(
+              title: const Text('0789908689'),
+              onTap: () {
+                Navigator.pop(context);
+                _launchPhoneDialer('0789908689');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ✅ Fixed WhatsApp Launcher
+  Future<void> _launchWhatsApp() async {
+    const String whatsappNumber = '0780439952';
+    final String cleanNumber = '256${whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '')}';
+
+    final Uri whatsappAppUri = Uri.parse("whatsapp://send?phone=$cleanNumber");
+    final Uri whatsappWebUri = Uri.parse("https://wa.me/$cleanNumber");
+
+    // Try app first
+    if (!kIsWeb && await canLaunchUrl(whatsappAppUri)) {
+      await launchUrl(whatsappAppUri, mode: LaunchMode.externalApplication);
+    } 
+    // Fallback to browser
+    else if (await canLaunchUrl(whatsappWebUri)) {
+      await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
+    } 
+    else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch WhatsApp. Make sure it is installed.')),
+        );
+      }
+    }
   }
 
   @override
@@ -66,7 +167,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
           height: double.infinity,
           child: Stack(
             children: [
-              // ---- Back button ----
+              // Back button
               Positioned(
                 top: screenHeight * 0.02,
                 left: screenWidth * 0.04,
@@ -76,22 +177,15 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                     height: screenWidth * 0.15,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: screenWidth * 0.002,
-                      ),
+                      border: Border.all(color: Colors.white, width: screenWidth * 0.002),
                     ),
                     child: Center(
-                      child: Icon(
-                        Icons.chevron_left,
-                        color: Colors.black,
-                        size: screenWidth * 0.08,
-                      ),
+                      child: Icon(Icons.chevron_left, color: Colors.black, size: screenWidth * 0.08),
                     ),
                   ),
                 ),
               ),
-              // ---- Title ----
+              // Title
               Positioned(
                 top: screenHeight * 0.04,
                 left: 0,
@@ -108,7 +202,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
-              // ---- Image ----
+              // Image
               Positioned(
                 top: screenHeight * 0.10,
                 left: 0,
@@ -122,7 +216,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                   ),
                 ),
               ),
-              // Cloud-like rectangle with wavy top, gradient spread, and top shadow
+              // Bottom Section
               Positioned(
                 top: screenHeight * 0.10 + (screenWidth * 1.5 * (9 / 16)) * 0.6,
                 left: 0,
@@ -130,9 +224,8 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Shadow layer
                     Container(
-                      height: screenHeight * 0.6, // Extended to cover carousel area
+                      height: screenHeight * 0.6,
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(
@@ -144,14 +237,13 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ],
                       ),
                     ),
-                    // Wavy rectangle with gradient
                     ClipRect(
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 21.7, sigmaY: 21.7),
                         child: CustomPaint(
                           painter: WaveCloudPainter(),
                           child: Container(
-                            height: screenHeight * 0.6, // Extended to cover carousel area
+                            height: screenHeight * 0.6,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -167,9 +259,9 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    // Text "Ambasize Jackline" below the image
+                    // Name & Description
                     Positioned(
-                      top: -(screenHeight * 0.185 - (screenWidth * 1.5 * (9 / 16)) * 0.4),
+                      top: -(screenHeight * 0.186 - (screenWidth * 1.5 * (9 / 16)) * 0.4),
                       left: 0,
                       right: 0,
                       child: Center(
@@ -184,9 +276,8 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    // Text "I am a year 2 student pursuing a bachelor's degree in Leadership and Governance" below
                     Positioned(
-                      top: (screenHeight * 0.099999 - (screenWidth * 1.5 * (9 / 16)) * 0.35) + screenHeight * 0.08,
+                      top: (screenHeight * 0.08888 - (screenWidth * 1.5 * (9 / 16)) * 0.35) + screenHeight * 0.08,
                       left: 0,
                       right: 0,
                       child: Center(
@@ -195,20 +286,20 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.w200,
-                            fontSize: screenWidth * 0.05,
+                            fontSize: screenWidth * 0.04,
                             fontFamily: 'Urbanist',
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ),
-                    // ---- Carousel area ----
+                    // Carousel
                     Positioned(
-                      top: screenHeight * 0.14, // Adjusted to avoid overlap with text
+                      top: screenHeight * 0.11,
                       left: 0,
                       right: 0,
                       child: SizedBox(
-                        height: screenHeight * 0.4, // Adjusted height for carousel
+                        height: screenHeight * 0.4,
                         child: PageView.builder(
                           controller: _pageController,
                           itemCount: 4,
@@ -218,9 +309,9 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    // ---- "Get In Touch" text below the carousel ----
+                    // Get In Touch
                     Positioned(
-                      top: screenHeight * 0.49, // Below the carousel (0.14 + 0.4)
+                      top: screenHeight * 0.46,
                       left: 0,
                       right: 0,
                       child: Center(
@@ -229,68 +320,26 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                           style: TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
-                            fontSize: screenWidth * 0.05, // Responsive font size
+                            fontSize: screenWidth * 0.05,
                             fontFamily: 'Urbanist',
                           ),
                         ),
                       ),
                     ),
-                    // ---- Three white circles with icons below "Get In Touch" ----
+                    // Contact Buttons
                     Positioned(
-                      top: screenHeight * 0.55, // Below "Get In Touch" text
+                      top: screenHeight * 0.51,
                       left: 0,
                       right: 0,
                       child: Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              width: screenWidth * 0.15,
-                              height: screenWidth * 0.15,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.email,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: screenWidth * 0.15), // Responsive spacing
-                            Container(
-                              width: screenWidth * 0.15,
-                              height: screenWidth * 0.15,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.phone,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: screenWidth * 0.15), // Responsive spacing
-                            Container(
-                              width: screenWidth * 0.15,
-                              height: screenWidth * 0.15,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.forum,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
-                                ),
-                              ),
-                            ),
+                            _buildContactCircle(Icons.email, _launchEmail, screenWidth),
+                            SizedBox(width: screenWidth * 0.15),
+                            _buildContactCircle(Icons.phone, _showPhoneNumberDialog, screenWidth),
+                            SizedBox(width: screenWidth * 0.15),
+                            _buildContactCircle(Icons.forum, _launchWhatsApp, screenWidth),
                           ],
                         ),
                       ),
@@ -305,8 +354,21 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     );
   }
 
+  Widget _buildContactCircle(IconData icon, VoidCallback onTap, double screenWidth) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: screenWidth * 0.15,
+        height: screenWidth * 0.15,
+        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        child: Center(
+          child: Icon(icon, color: Colors.black, size: screenWidth * 0.08),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGlassyRectangle(double screenWidth, double screenHeight, int index) {
-    // Define different content for each rectangle
     final contents = [
       'Navigate MUBS with ease,\n your success is our guide.',
       'Explore new opportunities,\n grow with every step.',
@@ -328,14 +390,10 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                 width: screenWidth * 0.8,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                 ),
                 child: Stack(
                   children: [
-                    // Quote symbol
                     Positioned(
                       top: 5,
                       left: 0,
@@ -351,14 +409,13 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    // Quote text
                     Positioned(
                       top: screenHeight * 0.09,
                       left: 0,
                       right: 0,
                       child: Center(
                         child: Text(
-                          contents[index % contents.length], // Cycle through contents
+                          contents[index % contents.length],
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: screenWidth * 0.042,
@@ -368,7 +425,6 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    // Author name
                     Positioned(
                       bottom: 8,
                       left: 0,
@@ -396,22 +452,19 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
   }
 }
 
-// Custom painter for ripple effect
 class RipplePainter extends CustomPainter {
   final double animationValue;
-
   RipplePainter(this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = size.width * 0.4; // Maximum ripple radius
+    final maxRadius = size.width * 0.4;
     final currentRadius = maxRadius * animationValue;
     final paint = Paint()
       ..color = Colors.white.withOpacity(0.3 - (0.2 * animationValue))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-
     canvas.drawCircle(center, currentRadius, paint);
   }
 
@@ -419,10 +472,8 @@ class RipplePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// Custom painter for water wave effect inside the rectangle
 class WaterWavePainter extends CustomPainter {
   final double animationValue;
-
   WaterWavePainter(this.animationValue);
 
   @override
@@ -434,7 +485,7 @@ class WaterWavePainter extends CustomPainter {
     final path = Path();
     final waveHeight = size.height * 0.1;
     final waveCount = (size.width / (size.width * 0.2)).floor();
-    final offset = animationValue * size.width * 0.5; // Move waves based on animation
+    final offset = animationValue * size.width * 0.5;
 
     path.moveTo(0, size.height);
     for (int i = 0; i <= waveCount; i++) {
@@ -448,7 +499,6 @@ class WaterWavePainter extends CustomPainter {
     }
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
-
     canvas.drawPath(path, paint);
   }
 
@@ -456,7 +506,6 @@ class WaterWavePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// Custom painter stays the same
 class WaveCloudPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -482,7 +531,6 @@ class WaveCloudPainter extends CustomPainter {
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
-
     canvas.drawPath(path, paint);
   }
 

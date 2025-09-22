@@ -1,147 +1,148 @@
 import 'package:flutter/material.dart';
-// Remove the bottom navbar import for now to fix the path issue
-// import '../components/bottom_navbar.dart'; 
+import '/components/bottom_navbar.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          double screenWidth = constraints.maxWidth;
-          double screenHeight = constraints.maxHeight;
+      body: Stack(
+        children: [
+          // Main background
+          Container(
+            width: screenWidth,
+            height: screenHeight,
+            color: const Color(0xFF93C5FD),
+          ),
 
-          return Stack(
-            children: [
-              // Main background container - full screen with main blue color
-              Container(
-                width: screenWidth,
-                height: screenHeight,
-                color: const Color(0xFF3B82F6),
-                child: const SizedBox(),
-              ),
-
-              // Back button
-              Positioned(
-                top: screenHeight * 0.05,
-                left: screenWidth * 0.04,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: screenWidth * 0.12,
-                    height: screenWidth * 0.12,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.black,
-                        size: screenWidth * 0.05,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Profile section in outer container (main blue background)
-              Positioned(
-                top: screenHeight * 0.15,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    // Profile picture
-                    Container(
-                      width: screenWidth * 0.25,
-                      height: screenWidth * 0.25,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Container(
-                          color: Colors.grey[300],
-                          child: Icon(
-                            Icons.person,
-                            size: screenWidth * 0.12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    SizedBox(height: screenHeight * 0.015),
-                    
-                    // Name
-                    Text(
-                      'John Doe',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.06,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.005),
-                    Text(
-                      'example@gmail.com',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.04,
-                        color: Colors.black54,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Inner container that houses only the menu items (paler blue)
-              Positioned(
-                top: screenHeight * 0.4,
-                left: screenWidth * 0.05,
-                right: screenWidth * 0.05,
+          // Back button
+          Positioned(
+            top: screenHeight * 0.05,
+            left: screenWidth * 0.04,
+            child: SafeArea(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                },
                 child: Container(
-                  height: screenHeight * 0.6,
+                  width: screenWidth * 0.12,
+                  height: screenWidth * 0.12,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF93C5FD),
-                        const Color(0xFF93C5FD).withOpacity(0.7), // Paler shade
-                        const Color(0xFF93C5FD),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                    color: Colors.white.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1.5,
                     ),
-                    borderRadius: BorderRadius.circular(30),
                   ),
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.03,
-                      horizontal: screenWidth * 0.05,
+                  child: Center(
+                    child: Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.black,
+                      size: screenWidth * 0.05,
                     ),
-                    child: Column(
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Profile section
+          Positioned(
+            top: screenHeight * 0.01,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Container(
+                    width: screenWidth * 0.22,
+                    height: screenWidth * 0.22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Container(
+                        color: Colors.grey[300],
+                        child: Icon(
+                          Icons.person,
+                          size: screenWidth * 0.11,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.015),
+                  Text(
+                    'John Doe',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.055,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.005),
+                  Text(
+                    'example@gmail.com',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.038,
+                      color: Colors.black54,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Menu container
+          Positioned(
+            top: screenHeight * 0.35,
+            left: screenWidth * 0.04,
+            right: screenWidth * 0.04,
+            bottom: screenHeight * 0.008,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color.fromARGB(255, 214, 227, 242),
+                    const Color(0xFF93C5FD).withOpacity(0.7),
+                    const Color.fromARGB(255, 214, 227, 242),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.025,
+                      horizontal: screenWidth * 0.04,
+                    ),
+                    child: ListView(
+                      padding: EdgeInsets.only(bottom: screenHeight * 0.102),
+                      physics: const ClampingScrollPhysics(),
                       children: [
                         _buildMenuItem(
                           icon: Icons.person_outline,
@@ -154,9 +155,7 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        
-                        SizedBox(height: screenHeight * 0.02),
-                        
+                        SizedBox(height: screenHeight * 0.015),
                         _buildMenuItem(
                           icon: Icons.info_outline,
                           title: 'About the App',
@@ -168,9 +167,7 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        
-                        SizedBox(height: screenHeight * 0.02),
-                        
+                        SizedBox(height: screenHeight * 0.015),
                         _buildMenuItem(
                           icon: Icons.description_outlined,
                           title: 'Terms & Privacy',
@@ -182,9 +179,7 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        
-                        SizedBox(height: screenHeight * 0.02),
-                        
+                        SizedBox(height: screenHeight * 0.015),
                         _buildMenuItem(
                           icon: Icons.share_outlined,
                           title: 'Share App',
@@ -196,9 +191,7 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        
-                        SizedBox(height: screenHeight * 0.02),
-                        
+                        SizedBox(height: screenHeight * 0.015),
                         _buildMenuItem(
                           icon: Icons.logout_outlined,
                           title: 'Logout',
@@ -211,11 +204,17 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
+                  Positioned(
+                    bottom: screenHeight * 0.002,
+                    left: 0,
+                    right: 0,
+                    child: BottomNavBar(initialIndex: 3),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -232,38 +231,34 @@ class ProfileScreen extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.05,
-          vertical: screenHeight * 0.02,
+          horizontal: screenWidth * 0.04,
+          vertical: screenHeight * 0.016,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withOpacity(0.85),
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
-            color: const Color(0xFFD59A00), // Gold border
-            width: 2,
+            color: const Color(0xFFD59A00),
+            width: 1.8,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 5,
-              spreadRadius: 1,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              spreadRadius: 0.5,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: Colors.black,
-              size: screenWidth * 0.06,
-            ),
-            SizedBox(width: screenWidth * 0.04),
+            Icon(icon, color: Colors.black, size: screenWidth * 0.055),
+            SizedBox(width: screenWidth * 0.035),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
-                  fontSize: screenWidth * 0.045,
+                  fontSize: screenWidth * 0.042,
                   fontWeight: FontWeight.w500,
                   color: Colors.black,
                   fontFamily: 'Poppins',
@@ -273,7 +268,7 @@ class ProfileScreen extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               color: Colors.black.withOpacity(0.6),
-              size: screenWidth * 0.04,
+              size: screenWidth * 0.035,
             ),
           ],
         ),
@@ -286,9 +281,7 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: Colors.white,
           title: const Text(
             'Logout',

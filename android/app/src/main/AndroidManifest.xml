@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <!-- Allow detecting if WhatsApp is installed -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.android.chrome" />
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
     <application
         android:label="mubs_locator"
         android:name="${applicationName}"
