@@ -18,8 +18,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _updateButtonState() {
+    final email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
     setState(() {
-      isButtonEnabled = _emailController.text.trim().isNotEmpty;
+      isButtonEnabled = emailRegex.hasMatch(email);
     });
   }
 
@@ -106,207 +108,280 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    vertical: screenHeight * 0.04,
-                    horizontal: screenWidth * 0.05,
-                  ),
-                  child: Column(
-                    children: [
-                      // Mailbox icon in a circle
-                      Container(
-                        margin: EdgeInsets.only(top: screenHeight * 0.02),
-                        width: 100,
-                        height: 100,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF3B578F),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.mail,
-                          color: Colors.white,
-                          size: 50,
+                child: Stack(
+                  children: [
+                    // Cone image at top right
+                    Positioned(
+                      top: 0,
+                      right: -screenWidth * 0.1,
+                      child: Image.asset(
+                        'assets/vectors/circular.png',
+                        width: screenWidth * 0.3,
+                        height: screenWidth * 0.3,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.error,
+                          color: Colors.red,
+                          size: screenWidth * 0.1,
                         ),
                       ),
-                      // "Forgot Your Password?" text
-                      SizedBox(height: screenHeight * 0.04),
-                      SizedBox(
-                        width: screenWidth * 0.8,
-                        child: Text(
-                          'Forgot Your Password?',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.07,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                            fontFamily: 'Epunda Slab',
+                    ),
+                    // Cone image at bottom left
+                    Positioned(
+                      bottom: 0,
+                      left: -screenWidth * 0.15,
+                      child: Image.asset(
+                        'assets/vectors/circular.png',
+                        width: screenWidth * 0.3,
+                        height: screenWidth * 0.3,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.error,
+                          color: Colors.red,
+                          size: screenWidth * 0.1,
+                        ),
+                      ),
+                    ),
+                    // Scrollable content
+                    SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenHeight * 0.04,
+                        horizontal: screenWidth * 0.05,
+                      ),
+                      child: Column(
+                        children: [
+                          // Mailbox icon in a circle
+                          Container(
+                            margin: EdgeInsets.only(top: screenHeight * 0.02),
+                            width: 100,
+                            height: 100,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF3B578F),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.mail,
+                              color: Colors.white,
+                              size: 50,
+                            ),
                           ),
-                        ),
-                      ),
-                      // "Please enter your email address below to receive an OTP code." text
-                      SizedBox(height: screenHeight * 0.02),
-                      SizedBox(
-                        width: screenWidth * 0.8,
-                        child: Text(
-                          'Please enter your email address below to receive an OTP code.',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.05,
-                            fontWeight: FontWeight.normal,
-                            color: Colors.black,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ),
-                      // Email input, submit button, and sign-in text
-                      SizedBox(height: screenHeight * 0.06), // Approximate top: 0.28
-                      Container(
-                        width: screenWidth * 0.9,
-                        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Enter your email address';
-                                }
-                                final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
-                                if (!emailRegex.hasMatch(value.trim())) {
-                                  return 'Please enter a Gmail address (e.g., username@gmail.com)';
-                                }
-                                return null;
-                              },
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                labelStyle: TextStyle(
-                                  color: Colors.black,
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: screenWidth * 0.05,
-                                ),
-                                hintText: 'Enter Your Gmail',
-                                hintStyle: TextStyle(
-                                  color: Colors.black,
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: screenWidth * 0.045,
-                                ),
-                                fillColor: const Color.fromARGB(255, 237, 236, 236),
-                                filled: true,
-                                prefixIcon: Padding(
-                                  padding: EdgeInsets.only(left: screenWidth * 0.02),
-                                  child: Icon(
-                                    Icons.mail,
-                                    color: const Color.fromARGB(255, 69, 141, 224),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                  borderSide: const BorderSide(color: Color(0xFFD59A00), width: 1),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                  borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: screenWidth * 0.05,
-                                  horizontal: screenWidth * 0.05,
-                                ),
-                              ),
+                          // "Forgot Your Password?" text
+                          SizedBox(height: screenHeight * 0.04),
+                          SizedBox(
+                            width: screenWidth * 0.8,
+                            child: Text(
+                              'Forgot Your Password?',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
+                                fontSize: screenWidth * 0.07,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                                fontFamily: 'Epunda Slab',
+                              ),
+                            ),
+                          ),
+                          // "Please enter your email address below to receive an OTP code." text
+                          SizedBox(height: screenHeight * 0.02),
+                          SizedBox(
+                            width: screenWidth * 0.8,
+                            child: Text(
+                              'Please enter your email address below to receive an OTP code.',
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.05,
+                                fontWeight: FontWeight.normal,
                                 color: Colors.black,
                                 fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w400,
-                                fontSize: screenWidth * 0.045,
                               ),
-                              cursorColor: const Color(0xFF3B82F6),
                             ),
-                            SizedBox(height: screenHeight * 0.03),
-                            SizedBox(
-                              width: double.infinity,
-                              height: screenHeight * 0.06,
-                              child: GestureDetector(
-                                onTap: isButtonEnabled
-                                    ? () {
-                                        // Navigate to OTP verification screen
-                                        print('Email submitted: ${_emailController.text}');
-                                      }
-                                    : null,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(30),
-                                    border: Border.all(
-                                      color: const Color(0xFF3B82F6),
-                                      width: 1,
-                                    ),
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFE0E7FF),
-                                        Color(0xFF93C5FD),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'Submit',
-                                    style: TextStyle(
+                          ),
+                          // Email input, submit button, and sign-in text
+                          SizedBox(
+                            height: screenHeight * 0.06,
+                          ), // Approximate top: 0.28
+                          Container(
+                            width: screenWidth * 0.9,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.08,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Enter your email address';
+                                    }
+                                    final emailRegex = RegExp(
+                                      r'^[\w\.-]+@gmail\.com$',
+                                    );
+                                    if (!emailRegex.hasMatch(value.trim())) {
+                                      return 'Please enter a Gmail address (e.g., username@gmail.com)';
+                                    }
+                                    return null;
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: 'Email',
+                                    labelStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w500,
                                       fontSize: screenWidth * 0.05,
-                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    hintText: 'Enter Your Gmail',
+                                    hintStyle: TextStyle(
                                       color: Colors.black,
-                                      fontFamily: 'Epunda Slab',
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: screenWidth * 0.045,
+                                    ),
+                                    fillColor: const Color.fromARGB(
+                                      255,
+                                      237,
+                                      236,
+                                      236,
+                                    ),
+                                    filled: true,
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: screenWidth * 0.02,
+                                      ),
+                                      child: Icon(
+                                        Icons.mail,
+                                        color: const Color.fromARGB(
+                                          255,
+                                          69,
+                                          141,
+                                          224,
+                                        ),
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFD59A00),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFF93C5FD),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      vertical: screenWidth * 0.05,
+                                      horizontal: screenWidth * 0.05,
                                     ),
                                   ),
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: screenWidth * 0.045,
+                                  ),
+                                  cursorColor: const Color(0xFF3B82F6),
                                 ),
-                              ),
-                            ),
-                            SizedBox(height: screenHeight * 0.03),
-                            SizedBox(
-                              width: screenWidth * 0.8,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Already have an account, ',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                      fontFamily: 'Epunda Slab',
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.pushNamed(context, '/SignInScreen');
-                                    },
-                                    child: Text(
-                                      'Sign In',
-                                      style: TextStyle(
-                                        fontSize: screenWidth * 0.04,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF93C5FD),
-                                        fontFamily: 'Epunda Slab',
+                                SizedBox(height: screenHeight * 0.03),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: screenHeight * 0.06,
+                                  child: GestureDetector(
+                                    onTap: isButtonEnabled
+                                        ? () {
+                                            // Navigate to OTP verification screen
+                                            print(
+                                              'Email submitted: ${_emailController.text}',
+                                            );
+                                          }
+                                        : null,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(
+                                          color: const Color(0xFF3B82F6),
+                                          width: 1,
+                                        ),
+                                        gradient: LinearGradient(
+                                          colors: isButtonEnabled
+                                              ? [
+                                                  Color(0xFFE0E7FF),
+                                                  Color(0xFF93C5FD),
+                                                ]
+                                              : [
+                                                  Colors.grey[300]!,
+                                                  Colors.grey[500]!,
+                                                ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'Submit',
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.05,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          fontFamily: 'Epunda Slab',
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                SizedBox(height: screenHeight * 0.03),
+                                SizedBox(
+                                  width: screenWidth * 0.8,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Already have an account, ',
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.04,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          fontFamily: 'Epunda Slab',
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/SignInScreen',
+                                          );
+                                        },
+                                        child: Text(
+                                          'Sign In',
+                                          style: TextStyle(
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF93C5FD),
+                                            fontFamily: 'Epunda Slab',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          SizedBox(
+                            height: screenHeight * 0.1,
+                          ), // Spacer for bottom padding
+                        ],
                       ),
-                      SizedBox(height: screenHeight * 0.1), // Spacer for bottom padding
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

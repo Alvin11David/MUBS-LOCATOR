@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
@@ -10,24 +13,24 @@ import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.d
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
-import 'package:mubs_locator/user%20pages/other screens/profile_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(MaterialApp(
-    home: ProfileScreen(), // Temporary override
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-    ),
-  ));
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Firebase init error: $e');
+  }
+  runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -36,15 +39,20 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      initialRoute: '/OnboardingScreen1', // Start with onboarding
       routes: {
-        '/': (context) => const ForgotPasswordScreen(),
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
         '/SignInScreen': (context) => const SignInScreen(),
+        '/SignUpScreen': (context) => const SignUpScreen(),
+        '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
+        '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
+        '/LocationManagementScreen': (context) => const LocationManagementScreen(),
+        '/ProfileScreen': (context) => const ProfileScreen(), // Added profile screen route
       },
     );
   }
@@ -91,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: _incrementCounter,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
