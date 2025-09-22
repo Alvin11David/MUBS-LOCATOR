@@ -5,6 +5,7 @@ import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
 import 'package:mubs_locator/user%20pages/auth/otp_screen.dart';
+import 'package:mubs_locator/user%20pages/auth/set_password_screen.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
@@ -56,6 +57,7 @@ class MyApp extends StatelessWidget {
         '/LocationManagementScreen': (context) => const LocationManagementScreen(),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
+        '/ResetPasswordScreen': (context) => const ResetPasswordScreen(),
       },
     );
   }
