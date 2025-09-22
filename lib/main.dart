@@ -12,6 +12,8 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
+import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +52,7 @@ class MyApp extends StatelessWidget {
         '/EditProfileScreen': (context) => const EditProfileScreen(),
         '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
         '/LocationManagementScreen': (context) => const LocationManagementScreen(),
+        '/ProfileScreen': (context) => const ProfileScreen(), // Added profile screen route
       },
     );
   }
