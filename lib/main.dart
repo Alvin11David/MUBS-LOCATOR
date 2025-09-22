@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
         '/AboutScreen': (context) => const AboutScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
         '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
+        '/LocationManagementScreen': (context) => const LocationManagementScreen(),
       },
     );
   }
