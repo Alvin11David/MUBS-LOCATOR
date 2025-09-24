@@ -10,6 +10,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool isButtonEnabled = false;
+  bool isLoading = false; // NEW: Track loading state
 
   @override
   void initState() {
@@ -25,6 +26,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
+  Future<void> _handleSubmit() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    // Simulate a network call (you can replace this with Firebase OTP logic)
+    await Future.delayed(const Duration(seconds: 2));
+
+    setState(() {
+      isLoading = false;
+    });
+
+    // Navigate to OTP verification screen after loading
+    Navigator.pushNamed(context, '/OTPScreen');
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -33,7 +50,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions for responsive sizing
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -110,7 +126,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // Cone image at top right
+                    // Cone image top right
                     Positioned(
                       top: 0,
                       right: -screenWidth * 0.1,
@@ -126,7 +142,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                       ),
                     ),
-                    // Cone image at bottom left
+                    // Cone image bottom left
                     Positioned(
                       bottom: 0,
                       left: -screenWidth * 0.15,
@@ -166,7 +182,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               size: 50,
                             ),
                           ),
-                          // "Forgot Your Password?" text
                           SizedBox(height: screenHeight * 0.04),
                           SizedBox(
                             width: screenWidth * 0.8,
@@ -176,14 +191,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: screenWidth * 0.07,
+                                fontSize: screenWidth * 0.05,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.black,
                                 fontFamily: 'Epunda Slab',
                               ),
                             ),
                           ),
-                          // "Please enter your email address below to receive an OTP code." text
                           SizedBox(height: screenHeight * 0.02),
                           SizedBox(
                             width: screenWidth * 0.8,
@@ -193,17 +207,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: screenWidth * 0.05,
+                                fontSize: screenWidth * 0.04,
                                 fontWeight: FontWeight.normal,
                                 color: Colors.black,
                                 fontFamily: 'Poppins',
                               ),
                             ),
                           ),
-                          // Email input, submit button, and sign-in text
-                          SizedBox(
-                            height: screenHeight * 0.06,
-                          ), // Approximate top: 0.28
+                          SizedBox(height: screenHeight * 0.06),
                           Container(
                             width: screenWidth * 0.9,
                             padding: EdgeInsets.symmetric(
@@ -233,14 +244,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.05,
+                                      fontSize: screenWidth * 0.045, // Reduced from 0.05
                                     ),
                                     hintText: 'Enter Your Gmail',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.045,
+                                      fontSize: screenWidth * 0.04, // Reduced from 0.045
                                     ),
                                     fillColor: const Color.fromARGB(
                                       255,
@@ -286,7 +297,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.045,
+                                    fontSize: screenWidth * 0.04, // Reduced from 0.045
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),
@@ -295,14 +306,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: isButtonEnabled
-                                        ? () {
-                                            // Navigate to OTP verification screen
-                                            Navigator.pushNamed(
-                                              context,
-                                              '/OTPScreen',
-                                            );
-                                          }
+                                    onTap: (isButtonEnabled && !isLoading)
+                                        ? _handleSubmit
                                         : null,
                                     child: Container(
                                       decoration: BoxDecoration(
@@ -314,8 +319,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         gradient: LinearGradient(
                                           colors: isButtonEnabled
                                               ? [
-                                                  Color(0xFFE0E7FF),
-                                                  Color(0xFF93C5FD),
+                                                  const Color(0xFFE0E7FF),
+                                                  const Color(0xFF93C5FD),
                                                 ]
                                               : [
                                                   Colors.grey[300]!,
@@ -326,15 +331,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         ),
                                       ),
                                       alignment: Alignment.center,
-                                      child: Text(
-                                        'Submit',
-                                        style: TextStyle(
-                                          fontSize: screenWidth * 0.05,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                          fontFamily: 'Epunda Slab',
-                                        ),
-                                      ),
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(Colors.black),
+                                                strokeWidth: 3,
+                                              ),
+                                            )
+                                          : Text(
+                                              'Submit',
+                                              style: TextStyle(
+                                                fontSize: screenWidth * 0.05,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                                fontFamily: 'Epunda Slab',
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ),
@@ -376,9 +392,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                            height: screenHeight * 0.1,
-                          ), // Spacer for bottom padding
+                          SizedBox(height: screenHeight * 0.1),
                         ],
                       ),
                     ),

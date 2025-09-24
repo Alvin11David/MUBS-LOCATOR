@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,23 +15,27 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<Color?> _backgroundColorAnimation;
   late Animation<Color?> _textColorAnimation;
 
+  // Variables to store onboarding & login status
+  bool _onboardingComplete = false;
+  User? _currentUser;
+
   @override
   void initState() {
     super.initState();
 
-    // ✅ Animation Controller for 5 seconds
+    // ✅ Animation Controller for 6 seconds
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..forward();
 
-    // ✅ Background color tween (starts black, turns white after 50%)
+    // ✅ Background color tween (black → white after 50%)
     _backgroundColorAnimation = ColorTween(
       begin: Colors.black,
       end: Colors.white,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut), // start after 2.5s
+      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
     ));
 
     // ✅ Text color tween (white → black after 50%)
@@ -41,15 +47,34 @@ class _SplashScreenState extends State<SplashScreen>
       curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
     ));
 
+    // ✅ Load onboarding & auth status
+    _loadAppStatus();
+
     // ✅ Navigate after animation finishes
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/OnboardingScreen1',
-        );
+        _navigateNext();
       }
     });
+  }
+
+  // ✅ Load onboarding & login status from SharedPreferences and Firebase
+  Future<void> _loadAppStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    _onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
+    _currentUser = FirebaseAuth.instance.currentUser;
+    setState(() {}); // update state just in case
+  }
+
+  // ✅ Navigate based on status
+  void _navigateNext() {
+    if (!_onboardingComplete) {
+      Navigator.pushReplacementNamed(context, '/OnboardingScreen1');
+    } else if (_currentUser != null) {
+      Navigator.pushReplacementNamed(context, '/LocationSelectScreen'); // or dashboard
+    } else {
+      Navigator.pushReplacementNamed(context, '/SignInScreen');
+    }
   }
 
   @override

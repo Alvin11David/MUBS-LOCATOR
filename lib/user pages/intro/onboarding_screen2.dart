@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
 
@@ -11,7 +12,8 @@ class OnboardingScreen2 extends StatefulWidget {
   State<OnboardingScreen2> createState() => _OnboardingScreen2State();
 }
 
-class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTickerProviderStateMixin {
+class _OnboardingScreen2State extends State<OnboardingScreen2>
+    with SingleTickerProviderStateMixin {
   late final ValueNotifier<double> _animationValue;
   late final AnimationController _controller;
 
@@ -21,8 +23,8 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
     _animationValue = ValueNotifier(0.0);
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2), // Animation cycle duration
-    )..repeat(); // Repeat the animation indefinitely
+      duration: const Duration(seconds: 2),
+    )..repeat();
     _controller.addListener(() {
       _animationValue.value = _controller.value;
     });
@@ -33,6 +35,12 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
     _controller.dispose();
     _animationValue.dispose();
     super.dispose();
+  }
+
+  // ✅ Mark onboarding as completed
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboardingComplete', true);
   }
 
   @override
@@ -55,24 +63,24 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
 
               return Stack(
                 children: [
-                  // Logo and MUBS Locator at top left
+                  // Logo
                   Positioned(
-                    top: screenHeight * 0.02, // 2% from top for padding
-                    left: screenWidth * 0.02, // 2% from left for padding
+                    top: screenHeight * 0.02,
+                    left: screenWidth * 0.02,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
                           'assets/logo/logo.png',
-                          width: screenWidth * 0.1, // 10% of screen width
-                          height: screenHeight * 0.1, // 10% of screen height
+                          width: screenWidth * 0.1,
+                          height: screenHeight * 0.1,
                           fit: BoxFit.contain,
                         ),
-                        SizedBox(width: 4), // Small width of 4 pixels
+                        SizedBox(width: 4),
                         Text(
                           'MUBS Locator',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.04, // Responsive font size
+                            fontSize: screenWidth * 0.04,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontFamily: 'Urbanist',
@@ -81,34 +89,40 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                       ],
                     ),
                   ),
-                  // Skip button at top right
+                  // Skip button
                   Positioned(
-                    top: screenHeight * 0.02, // 2% from top for padding
-                    right: screenWidth * 0.02, // 2% from right for padding
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.03,
-                        vertical: screenHeight * 0.01,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Skip',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.04, // Responsive font size
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'Urbanist',
+                    top: screenHeight * 0.02,
+                    right: screenWidth * 0.02,
+                    child: GestureDetector(
+                      onTap: () async {
+                        await _completeOnboarding();
+                        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.03,
+                          vertical: screenHeight * 0.01,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Skip',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Urbanist',
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  // Locate any building fast text at center left
+                  // Text content
                   Positioned(
-                    top: screenHeight * 0.6, // Centered vertically, adjusted for alignment
-                    left: screenWidth * 0.05, // 5% from left for padding
+                    top: screenHeight * 0.6,
+                    left: screenWidth * 0.05,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -116,29 +130,27 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                           'Navigate Campus\nEasily.',
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                            fontSize: screenWidth * 0.08, // Responsive font size
+                            fontSize: screenWidth * 0.08,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontFamily: 'Abril Fatface',
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.02), // Small spacing between texts
+                        SizedBox(height: screenHeight * 0.02),
                         Text(
                           'Never get lost. Find the\nquickest path to your\ndestination.',
                           textAlign: TextAlign.left,
                           style: TextStyle(
-                            fontSize: screenWidth * 0.05, // Responsive font size (smaller for subtitle)
+                            fontSize: screenWidth * 0.05,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontFamily: 'Montserrat',
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.03), // Spacing for page indicator
-                        // Page indicator: 3 rounded rectangles
+                        SizedBox(height: screenHeight * 0.03),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Active (first one)
                             Container(
                               width: screenWidth * 0.06,
                               height: screenHeight * 0.01,
@@ -147,8 +159,7 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            SizedBox(width: screenWidth * 0.02), // Spacing between indicators
-                            // Inactive
+                            SizedBox(width: screenWidth * 0.02),
                             Container(
                               width: screenWidth * 0.04,
                               height: screenHeight * 0.01,
@@ -158,7 +169,6 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.02),
-                            // Inactive
                             Container(
                               width: screenWidth * 0.04,
                               height: screenHeight * 0.01,
@@ -172,10 +182,10 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                       ],
                     ),
                   ),
-                  // Next button: fully black circle with white chevron, navigates to OnboardingScreen1
+                  // Back button
                   Positioned(
-                    bottom: screenHeight * 0.02, // 2% from bottom for padding
-                    left: screenWidth * 0.05, // 5% from left for padding
+                    bottom: screenHeight * 0.02,
+                    left: screenWidth * 0.05,
                     child: GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -187,58 +197,58 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                         );
                       },
                       child: Container(
-                        width: screenWidth * 0.15, // Responsive size (13% of screen width)
-                        height: screenWidth * 0.15, // Square for circle
+                        width: screenWidth * 0.15,
+                        height: screenWidth * 0.15,
                         decoration: BoxDecoration(
-                          color: Colors.black, // Fully black circle
+                          color: Colors.black,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.chevron_left,
                           color: Colors.white,
-                          size: screenWidth * 0.08, // Responsive icon size
+                          size: screenWidth * 0.08,
                         ),
                       ),
                     ),
                   ),
-                  // Glassy rectangle with 30 border radius and white stroke to the right of the circle
+                  // Next/Start button
                   Positioned(
-                    bottom: screenHeight * 0.02, // Same vertical position as circle
-                    left: screenWidth * 0.20, // Adjusted to right of circle (0.05 + 0.13 + small gap)
+                    bottom: screenHeight * 0.02,
+                    left: screenWidth * 0.20,
                     child: GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         Navigator.pushNamed(context, '/OnboardingScreen3');
                       },
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30), // 30 border radius
+                        borderRadius: BorderRadius.circular(30),
                         child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Strong blur for glassy effect
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
-                            width: screenWidth * 0.78, // Responsive width
-                            height: screenWidth * 0.15, // Same height as circle for responsiveness
+                            width: screenWidth * 0.78,
+                            height: screenWidth * 0.15,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2), // Very glassy with low opacity
+                              color: Colors.white.withOpacity(0.2),
                               border: Border.all(
-                                color: Colors.white, // White stroke
-                                width: 1, // Stroke width (adjust as needed)
+                                color: Colors.white,
+                                width: 1,
                               ),
-                              borderRadius: BorderRadius.circular(30), // Ensure border radius matches
+                              borderRadius: BorderRadius.circular(30),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Pushes "Start" left, chevrons right
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Padding(
-                                  padding: EdgeInsets.only(left: screenWidth * 0.3), // Shift "Start" right
+                                  padding:
+                                      EdgeInsets.only(left: screenWidth * 0.3),
                                   child: Text(
                                     'Start',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.06, // Responsive font size
+                                      fontSize: screenWidth * 0.06,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
                                   ),
                                 ),
-                                // Animated chevrons on the right
                                 AnimatedBuilder(
                                   animation: _controller,
                                   builder: (context, child) {
@@ -246,16 +256,22 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                                       children: [
                                         for (int i = 0; i < 3; i++)
                                           Padding(
-                                            padding: EdgeInsets.only(right: screenWidth * 0.02),
+                                            padding: EdgeInsets.only(
+                                                right: screenWidth * 0.02),
                                             child: Transform.scale(
-                                              scale: 1.5, // Slightly larger icons
+                                              scale: 1.5,
                                               child: Icon(
                                                 Icons.chevron_right,
-                                                size: screenWidth * 0.08, // Responsive icon size
+                                                size: screenWidth * 0.08,
                                                 color: Color.lerp(
-                                                  Colors.white, // Start color
-                                                  Colors.orange, // End color
-                                                  math.sin(_animationValue.value * math.pi * 2 + i * math.pi / 3) * 0.5 + 0.5, // Wave effect
+                                                  Colors.white,
+                                                  Colors.orange,
+                                                  math.sin(_animationValue.value *
+                                                              math.pi *
+                                                              2 +
+                                                          i * math.pi / 3) *
+                                                      0.5 +
+                                                      0.5,
                                                 ),
                                               ),
                                             ),
@@ -271,25 +287,24 @@ class _OnboardingScreen2State extends State<OnboardingScreen2> with SingleTicker
                       ),
                     ),
                   ),
-                  // White circle with black chevron_right icon on the left of the rectangle
+                  // White circle left of the rectangle
                   Positioned(
-                    bottom: screenHeight * 0.02, // Same vertical position as circle and rectangle
-                    left: screenWidth * 0.20, // Aligned with the left edge of the rectangle
+                    bottom: screenHeight * 0.02,
+                    left: screenWidth * 0.20,
                     child: Container(
-                      width: screenWidth * 0.15, // Same size as the black circle for consistency
-                      height: screenWidth * 0.15, // Same height as circle and rectangle
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
                       decoration: BoxDecoration(
-                        color: Colors.white, // White circle
+                        color: Colors.white,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.chevron_right, // Black chevron_right icon
+                        Icons.chevron_right,
                         color: Colors.black,
-                        size: screenWidth * 0.08, // Responsive icon size
+                        size: screenWidth * 0.08,
                       ),
                     ),
                   ),
-                  Container(), // Placeholder for future content
                 ],
               );
             },

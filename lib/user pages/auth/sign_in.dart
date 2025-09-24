@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Added for storing login state
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -13,12 +14,14 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool isButtonEnabled = false;
   bool _isLoading = false;
+  bool _isForgotPasswordTapped = false; // State for tap feedback
 
   @override
   void initState() {
     super.initState();
     _emailController.addListener(_updateButtonState);
     _passwordController.addListener(_updateButtonState);
+    _checkLoginState(); // Check if user is already logged in
   }
 
   void _updateButtonState() {
@@ -29,6 +32,17 @@ class _SignInScreenState extends State<SignInScreen> {
     });
   }
 
+  Future<void> _checkLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedIn = prefs.getBool('isLoggedIn') ?? false;
+    if (loggedIn) {
+      // Navigate to HomeScreen if already logged in
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/AboutScreen');
+      }
+    }
+  }
+
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
@@ -37,7 +51,10 @@ class _SignInScreenState extends State<SignInScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
           );
-      // If sign-in succeeds, go to HomeScreen
+      // If sign-in succeeds, store login state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/AboutScreen');
       }
@@ -70,8 +87,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset:
-          false, // Prevents resizing when keyboard appears
+      resizeToAvoidBottomInset: false, 
       body: LayoutBuilder(
         builder: (context, constraints) {
           double screenWidth = constraints.maxWidth;
@@ -79,15 +95,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
           return Stack(
             children: [
-              // Background
               Container(
                 width: screenWidth,
                 height: screenHeight,
                 color: const Color(0xFF93C5FD),
                 child: const SizedBox(),
               ),
-
-              // Logo at center top
               Positioned(
                 top: screenHeight * 0.05,
                 left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -98,8 +111,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-
-              // Ambasize top left
               Positioned(
                 top: screenHeight * 0.04,
                 left: screenWidth * 0.02,
@@ -113,8 +124,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-
-              // Jackline top right
               Positioned(
                 top: screenHeight * 0.09,
                 right: screenWidth * 0.02,
@@ -128,8 +137,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-
-              // "Let's get you signed in"
               Positioned(
                 top: screenHeight * 0.17,
                 left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -144,14 +151,12 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-
-              // White container with inputs (fixed height, scrollable content)
               Positioned(
                 top: screenHeight * 0.31,
                 left: screenWidth * 0.02,
                 right: screenWidth * 0.02,
                 child: Container(
-                  height: screenHeight * 0.69, // Fixed height
+                  height: screenHeight * 0.69, 
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(30),
@@ -164,7 +169,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Subtitle
                         SizedBox(
                           width: screenWidth * 0.8,
                           child: Text(
@@ -181,34 +185,28 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // Email Field
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.08,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                           child: EmailField(controller: _emailController),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // Password Field
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.08,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                           child: PasswordField(controller: _passwordController),
                         ),
                         SizedBox(height: screenHeight * 0.01),
-
-                        // Forgot Password text
                         Padding(
                           padding: EdgeInsets.only(right: screenWidth * 0.091),
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: GestureDetector(
-                              onTap: () {
-                                Navigator.pushNamed(context, '/');
+                              onTapDown: (_) { setState(() { _isForgotPasswordTapped = true; }); },
+                              onTapUp: (_) {
+                                setState(() { _isForgotPasswordTapped = false; });
+                                Navigator.pushNamed(context, '/ForgotPasswordScreen');
                               },
+                              onTapCancel: () { setState(() { _isForgotPasswordTapped = false; }); },
+                              onTap: () {},
                               child: Text(
                                 "Forgot Password?",
                                 style: TextStyle(
@@ -216,69 +214,52 @@ class _SignInScreenState extends State<SignInScreen> {
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
                                   fontFamily: 'Poppins',
+                                  decoration: _isForgotPasswordTapped
+                                      ? TextDecoration.underline
+                                      : TextDecoration.none,
+                                  decorationColor: Colors.black,
                                 ),
                               ),
                             ),
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // Sign In button
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.08,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                           child: SizedBox(
                             width: double.infinity,
                             height: screenHeight * 0.06,
                             child: GestureDetector(
-                              onTap: isButtonEnabled && !_isLoading
-                                  ? _signIn
-                                  : null,
+                              onTap: isButtonEnabled && !_isLoading ? _signIn : null,
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
                                   border: Border.all(
-                                    color: isButtonEnabled
-                                        ? const Color(0xFF3B82F6)
-                                        : Colors.grey,
+                                    color: isButtonEnabled ? const Color(0xFF3B82F6) : Colors.grey,
                                     width: 1,
                                   ),
                                   gradient: isButtonEnabled
                                       ? const LinearGradient(
-                                          colors: [
-                                            Color(0xFFE0E7FF),
-                                            Color(0xFF93C5FD),
-                                          ],
+                                          colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         )
                                       : const LinearGradient(
-                                          colors: [
-                                            Color(0xFFE5E7EB),
-                                            Color(0xFFD1D5DB),
-                                          ],
+                                          colors: [Color(0xFFE5E7EB), Color(0xFFD1D5DB)],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                 ),
                                 alignment: Alignment.center,
                                 child: _isLoading
-                                    ? CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.black,
-                                            ),
-                                      )
+                                    ? CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.black))
                                     : Text(
                                         "Sign In",
                                         style: TextStyle(
                                           fontSize: screenWidth * 0.05,
                                           fontWeight: FontWeight.bold,
-                                          color: isButtonEnabled
-                                              ? Colors.black
-                                              : Colors.grey,
+                                          color: isButtonEnabled ? Colors.black : Colors.grey,
                                           fontFamily: 'Epunda Slab',
                                         ),
                                       ),
@@ -287,40 +268,24 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // Or Divider
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.1,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
                           child: OrDivider(),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // Sign In with Google button
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.1,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
                           child: SizedBox(
                             width: double.infinity,
                             height: screenHeight * 0.06,
                             child: GestureDetector(
-                              onTap: () {
-                                // Add navigation or action here
-                              },
+                              onTap: () {},
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: const Color(0xFFD59A00),
-                                    width: 1,
-                                  ),
+                                  border: Border.all(color: const Color(0xFFD59A00), width: 1),
                                   gradient: const LinearGradient(
-                                    colors: [
-                                      Color.fromARGB(255, 255, 255, 255),
-                                      Color.fromARGB(255, 255, 255, 255),
-                                    ],
+                                    colors: [Color.fromARGB(255, 255, 255, 255), Color.fromARGB(255, 255, 255, 255)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -360,8 +325,6 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.03),
-
-                        // "Don't have an account, Sign Up" text
                         Center(
                           child: SizedBox(
                             width: screenWidth * 0.8,
@@ -379,10 +342,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                                 GestureDetector(
                                   onTap: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/SignUpScreen',
-                                    );
+                                    Navigator.pushNamed(context, '/SignUpScreen');
                                   },
                                   child: Text(
                                     "Sign Up",
@@ -417,13 +377,9 @@ class EmailField extends StatelessWidget {
   const EmailField({super.key, required this.controller});
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Enter your email address';
-    }
+    if (value == null || value.trim().isEmpty) return 'Enter your email address';
     final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
-    if (!emailRegex.hasMatch(value.trim())) {
-      return 'Please enter a Gmail address (e.g., username@gmail.com)';
-    }
+    if (!emailRegex.hasMatch(value.trim())) return 'Please enter a Gmail address (e.g., username@gmail.com)';
     return null;
   }
 
@@ -455,10 +411,7 @@ class EmailField extends StatelessWidget {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(
-                Icons.mail,
-                color: const Color.fromARGB(255, 69, 141, 224),
-              ),
+              child: Icon(Icons.mail, color: const Color.fromARGB(255, 69, 141, 224)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
@@ -506,12 +459,7 @@ class _PasswordFieldState extends State<PasswordField> {
         return TextFormField(
           controller: widget.controller,
           obscureText: _isObscured,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Enter your password';
-            }
-            return null;
-          },
+          validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
           decoration: InputDecoration(
             labelText: 'Password',
             labelStyle: TextStyle(
@@ -531,20 +479,13 @@ class _PasswordFieldState extends State<PasswordField> {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(
-                Icons.lock,
-                color: const Color.fromARGB(255, 73, 122, 220),
-              ),
+              child: Icon(Icons.lock, color: const Color.fromARGB(255, 73, 122, 220)),
             ),
             suffixIcon: IconButton(
-              icon: Icon(
-                _isObscured ? Icons.visibility_off : Icons.visibility,
-                color: const Color.fromARGB(255, 86, 156, 235),
-              ),
+              icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility,
+                  color: const Color.fromARGB(255, 86, 156, 235)),
               onPressed: () {
-                setState(() {
-                  _isObscured = !_isObscured;
-                });
+                setState(() { _isObscured = !_isObscured; });
               },
             ),
             enabledBorder: OutlineInputBorder(

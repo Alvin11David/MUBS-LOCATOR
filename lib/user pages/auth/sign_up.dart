@@ -655,14 +655,14 @@ class _ResponsiveTextField extends StatelessWidget {
           color: Colors.black,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
-          fontSize: screenWidth * 0.05,
+          fontSize: screenWidth * 0.045, // Reduced from 0.05
         ),
         hintText: hint,
         hintStyle: TextStyle(
           color: Colors.black,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w400,
-          fontSize: screenWidth * 0.045,
+          fontSize: screenWidth * 0.045, // Reduced from 0.045
         ),
         fillColor: const Color.fromARGB(255, 237, 236, 236),
         filled: true,
@@ -692,7 +692,7 @@ class _ResponsiveTextField extends StatelessWidget {
         color: Colors.black,
         fontFamily: 'Poppins',
         fontWeight: FontWeight.w400,
-        fontSize: screenWidth * 0.045,
+        fontSize: screenWidth * 0.04, // Reduced from 0.045
       ),
       cursorColor: const Color(0xFF3B82F6),
     );
@@ -747,14 +747,14 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
           color: Colors.black,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
-          fontSize: screenWidth * 0.05,
+          fontSize: screenWidth * 0.045, // Reduced from 0.05
         ),
         hintText: 'Enter Your ${widget.label}',
         hintStyle: TextStyle(
           color: Colors.black,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w400,
-          fontSize: screenWidth * 0.045,
+          fontSize: screenWidth * 0.045, // Reduced from 0.045
         ),
         fillColor: const Color.fromARGB(255, 237, 236, 236),
         filled: true,
@@ -793,7 +793,7 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
         color: Colors.black,
         fontFamily: 'Poppins',
         fontWeight: FontWeight.w400,
-        fontSize: screenWidth * 0.045,
+        fontSize: screenWidth * 0.04, // Reduced from 0.045
       ),
       cursorColor: const Color(0xFFD59A00),
     );

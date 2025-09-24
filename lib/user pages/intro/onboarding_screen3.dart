@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
@@ -12,27 +13,28 @@ class OnboardingScreen3 extends StatefulWidget {
   State<OnboardingScreen3> createState() => _OnboardingScreen3State();
 }
 
-class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProviderStateMixin {  // Changed to TickerProviderStateMixin
+class _OnboardingScreen3State extends State<OnboardingScreen3>
+    with TickerProviderStateMixin {
   late final ValueNotifier<double> _animationValue;
   late final AnimationController _controller;
   late final AnimationController _indicatorController;
-  int currentPage = 3; // 1 for Screen1, 2 for Screen2, 3 for Screen3
+  int currentPage = 3;
 
   @override
   void initState() {
     super.initState();
     _animationValue = ValueNotifier(0.0);
     _controller = AnimationController(
-      vsync: this,  // Now supports multiple controllers
-      duration: const Duration(seconds: 2), // Animation cycle duration
+      vsync: this,
+      duration: const Duration(seconds: 2),
     )..repeat();
     _controller.addListener(() {
       _animationValue.value = _controller.value;
     });
 
     _indicatorController = AnimationController(
-      vsync: this,  // Now supports multiple controllers
-      duration: const Duration(milliseconds: 300), // Animation duration for indicators
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
     );
   }
 
@@ -42,6 +44,12 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
     _animationValue.dispose();
     _indicatorController.dispose();
     super.dispose();
+  }
+
+  // ✅ Mark onboarding as completed
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboardingComplete', true);
   }
 
   @override
@@ -62,19 +70,21 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
               double screenWidth = constraints.maxWidth;
               double screenHeight = constraints.maxHeight;
 
-              // Create the indicator animation inside LayoutBuilder where screenWidth is available
               final Animation<double> indicatorAnimation = Tween<double>(
-                begin: screenWidth * 0.04, // Inactive width
-                end: screenWidth * 0.06, // Active width
+                begin: screenWidth * 0.04,
+                end: screenWidth * 0.06,
               ).animate(
-                CurvedAnimation(parent: _indicatorController, curve: Curves.easeInOut),
+                CurvedAnimation(
+                  parent: _indicatorController,
+                  curve: Curves.easeInOut,
+                ),
               )..addListener(() {
-                setState(() {});
-              });
+                  setState(() {});
+                });
 
               return Stack(
                 children: [
-                  // Logo and MUBS Locator at top left
+                  // Logo
                   Positioned(
                     top: screenHeight * 0.02,
                     left: screenWidth * 0.02,
@@ -100,31 +110,37 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                       ],
                     ),
                   ),
-                  // Skip button at top right
+                  // Skip button
                   Positioned(
                     top: screenHeight * 0.02,
                     right: screenWidth * 0.02,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.03,
-                        vertical: screenHeight * 0.01,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'Skip',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.04,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'Urbanist',
+                    child: GestureDetector(
+                      onTap: () async {
+                        await _completeOnboarding();
+                        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.03,
+                          vertical: screenHeight * 0.01,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Skip',
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Urbanist',
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  // Locate any building fast text at center left
+                  // Text content
                   Positioned(
                     top: screenHeight * 0.6,
                     left: screenWidth * 0.05,
@@ -153,11 +169,10 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.076),
-                        // Page indicator: 3 rounded rectangles with animation
+                        // Page indicators
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Indicator for Screen1
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               width: currentPage == 1 ? indicatorAnimation.value : screenWidth * 0.04,
@@ -168,7 +183,6 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.02),
-                            // Indicator for Screen2
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               width: currentPage == 2 ? indicatorAnimation.value : screenWidth * 0.04,
@@ -179,7 +193,6 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.02),
-                            // Indicator for Screen3
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               width: currentPage == 3 ? indicatorAnimation.value : screenWidth * 0.04,
@@ -194,7 +207,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                       ],
                     ),
                   ),
-                  // Next button: fully black circle with white chevron, navigates to OnboardingScreen2
+                  // Back button
                   Positioned(
                     bottom: screenHeight * 0.02,
                     left: screenWidth * 0.05,
@@ -238,14 +251,14 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                       ),
                     ),
                   ),
-                  // Glassy rectangle with 30 border radius and white stroke to the right of the circle
+                  // Start button (final)
                   Positioned(
                     bottom: screenHeight * 0.02,
                     left: screenWidth * 0.20,
                     child: GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/AboutScreen'); // Placeholder for next screen
-                        // Optionally, animate indicators back to start or handle completion
+                      onTap: () async {
+                        await _completeOnboarding();
+                        Navigator.pushReplacementNamed(context, '/SignInScreen');
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(30),
@@ -256,10 +269,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                             height: screenWidth * 0.15,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1,
-                              ),
+                              border: Border.all(color: Colors.white, width: 1),
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: Row(
@@ -276,7 +286,6 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                                     ),
                                   ),
                                 ),
-                                // Animated chevrons on the right
                                 AnimatedBuilder(
                                   animation: _controller,
                                   builder: (context, child) {
@@ -309,7 +318,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                       ),
                     ),
                   ),
-                  // White circle with black chevron_right icon on the left of the rectangle
+                  // White circle left of the rectangle
                   Positioned(
                     bottom: screenHeight * 0.02,
                     left: screenWidth * 0.20,
@@ -327,7 +336,6 @@ class _OnboardingScreen3State extends State<OnboardingScreen3> with TickerProvid
                       ),
                     ),
                   ),
-                  Container(), // Placeholder for future content
                 ],
               );
             },
