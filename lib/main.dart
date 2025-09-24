@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) => const ResetPasswordScreen(),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
+        '/AddPlaceScreen': (context) => const AddPlaceScreen()
       },
     );
   }
