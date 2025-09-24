@@ -459,7 +459,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                   ],
                                 ),
                                 ...List.generate(
-                                  20,
+                                  20, // Generate all 20 data rows
                                   (index) => TableRow(
                                     children: [
                                       Padding(
@@ -494,14 +494,64 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                         padding: EdgeInsets.all(
                                           screenWidth * 0.02,
                                         ),
-                                        child: Text(
-                                          '',
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: screenWidth * 0.035,
-                                            fontFamily: 'Poppins',
-                                          ),
-                                          textAlign: TextAlign.center,
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              width: screenWidth * 0.22,
+                                              height: screenWidth * 0.08,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.edit,
+                                                    color: Colors.white,
+                                                    size: screenWidth * 0.04,
+                                                  ),
+                                                  SizedBox(width: screenWidth * 0.015),
+                                                  Text(
+                                                    'Edit',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: screenWidth * 0.03,
+                                                      fontFamily: 'Poppins',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(height: screenWidth * 0.02),
+                                            Container(
+                                              width: screenWidth * 0.22,
+                                              height: screenWidth * 0.08,
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.delete,
+                                                    color: Colors.black,
+                                                    size: screenWidth * 0.04,
+                                                  ),
+                                                  SizedBox(width: screenWidth * 0.015),
+                                                  Text(
+                                                    'Delete',
+                                                    style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: screenWidth * 0.03,
+                                                      fontFamily: 'Poppins',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
