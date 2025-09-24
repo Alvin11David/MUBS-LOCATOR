@@ -16,205 +16,217 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          // Main background
-          Container(
-            width: screenWidth,
-            height: screenHeight,
-            color: const Color(0xFF93C5FD),
-          ),
-
-          // Back button
-          Positioned(
-            top: screenHeight * 0.05,
-            left: screenWidth * 0.04,
-            child: SafeArea(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                },
+      body: SafeArea(
+        child: Container(
+          width: screenWidth,
+          height: screenHeight,
+          color: const Color(0xFF93C5FD), // Background color
+          child: Stack(
+            children: [
+              // Glassy water rectangle (top)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
                 child: Container(
-                  width: screenWidth * 0.12,
-                  height: screenWidth * 0.12,
+                  height: screenHeight * 0.15,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 1.5,
+                    color: Colors.white.withOpacity(0.2), // Glassy effect
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
                     ),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.arrow_back_ios,
-                      color: Colors.black,
-                      size: screenWidth * 0.05,
+                    border: Border.all(
+                      color: Colors.white, // White stroke
+                      width: 1, // Fixed stroke width
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-
-          // Profile section
-          Positioned(
-            top: screenHeight * 0.01,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  Container(
-                    width: screenWidth * 0.22,
-                    height: screenWidth * 0.22,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
+              // Profile picture circle
+              Positioned(
+                top: screenHeight * 0.015,
+                left: (screenWidth - screenWidth * 0.25) / 2, // Center horizontally
+                child: Container(
+                  width: screenWidth * 0.25,
+                  height: screenWidth * 0.25,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2), // Glassy effect
+                    border: Border.all(
+                      color: Colors.white, // White stroke
+                      width: screenWidth * 0.006, // Stroke width scales
                     ),
-                    child: ClipOval(
-                      child: Container(
-                        color: Colors.grey[300],
+                  ),
+                  child: ClipOval(
+                    child: Container(
+                      child: Icon(
+                        Icons.person,
+                        size: screenWidth * 0.11,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Back button
+              Positioned(
+                top: screenHeight * 0.02,
+                left: screenWidth * 0.04,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context); // Navigate to previous screen
+                  },
+                  child: ClipOval(
+                    child: Container(
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2), // Glassy effect
+                        border: Border.all(
+                          color: Colors.white, // White stroke
+                          width: screenWidth * 0.006, // Stroke width scales
+                        ),
+                      ),
+                      child: Center(
                         child: Icon(
-                          Icons.person,
-                          size: screenWidth * 0.11,
-                          color: Colors.grey[600],
+                          Icons.chevron_left, // Updated to chevron_left
+                          color: Colors.black,
+                          size: screenWidth * 0.08,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.015),
-                  Text(
-                    'John Doe',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.055,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.005),
-                  Text(
-                    'example@gmail.com',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.038,
-                      color: Colors.black54,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Menu container
-          Positioned(
-            top: screenHeight * 0.35,
-            left: screenWidth * 0.04,
-            right: screenWidth * 0.04,
-            bottom: screenHeight * 0.008,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color.fromARGB(255, 214, 227, 242),
-                    const Color(0xFF93C5FD).withOpacity(0.7),
-                    const Color.fromARGB(255, 214, 227, 242),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
                 ),
-                borderRadius: BorderRadius.circular(30),
               ),
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.025,
-                      horizontal: screenWidth * 0.04,
+              // Profile name and email
+              Positioned(
+                top: screenHeight * 0.19,
+                left: 0,
+                right: 0,
+                child: Column(
+                  children: [
+                    Text(
+                      'John Doe',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.06,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'Epunda Slab',
+                      ),
                     ),
-                    child: ListView(
-                      padding: EdgeInsets.only(bottom: screenHeight * 0.102),
-                      physics: const ClampingScrollPhysics(),
-                      children: [
-                        _buildMenuItem(
-                          icon: Icons.person_outline,
-                          title: 'Edit Profile',
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Edit Profile tapped')),
-                            );
-                          },
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        _buildMenuItem(
-                          icon: Icons.info_outline,
-                          title: 'About the App',
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('About the App tapped')),
-                            );
-                          },
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        _buildMenuItem(
-                          icon: Icons.description_outlined,
-                          title: 'Terms & Privacy',
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Terms & Privacy tapped')),
-                            );
-                          },
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        _buildMenuItem(
-                          icon: Icons.share_outlined,
-                          title: 'Share App',
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Share App tapped')),
-                            );
-                          },
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        _buildMenuItem(
-                          icon: Icons.logout_outlined,
-                          title: 'Logout',
-                          screenWidth: screenWidth,
-                          screenHeight: screenHeight,
-                          onTap: () {
-                            _showLogoutDialog(context);
-                          },
-                        ),
-                      ],
+                    SizedBox(height: screenHeight * 0.005),
+                    Text(
+                      'example@gmail.com',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.05,
+                        color: Colors.black,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w200,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Glassy water rectangle for menu
+              Positioned(
+                top: screenHeight * 0.31,
+                left: screenWidth * 0.02,
+                right: screenWidth * 0.02,
+                child: Container(
+                  height: screenHeight * 0.69,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2), // Glassy effect
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: Colors.white, // White stroke
+                      width: 1, // Fixed stroke width
                     ),
                   ),
-                  Positioned(
-                    bottom: screenHeight * 0.002,
-                    left: 0,
-                    right: 0,
-                    child: BottomNavBar(initialIndex: 3),
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.05,
+                          vertical: screenHeight * 0.02,
+                        ),
+                        child: ListView(
+                          padding: EdgeInsets.only(bottom: screenHeight * 0.102),
+                          physics: const ClampingScrollPhysics(),
+                          children: [
+                            _buildMenuItem(
+                              icon: Icons.person_outline,
+                              title: 'Edit Profile',
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Edit Profile tapped')),
+                                );
+                              },
+                            ),
+                            SizedBox(height: screenHeight * 0.020),
+                            _buildMenuItem(
+                              icon: Icons.info_outline,
+                              title: 'About the App',
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('About the App tapped')),
+                                );
+                              },
+                            ),
+                            SizedBox(height: screenHeight * 0.020),
+                            _buildMenuItem(
+                              icon: Icons.description_outlined,
+                              title: 'Terms & Privacy',
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Terms & Privacy tapped')),
+                                );
+                              },
+                            ),
+                            SizedBox(height: screenHeight * 0.020),
+                            _buildMenuItem(
+                              icon: Icons.share_outlined,
+                              title: 'Share App',
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Share App tapped')),
+                                );
+                              },
+                            ),
+                            SizedBox(height: screenHeight * 0.020),
+                            _buildMenuItem(
+                              icon: Icons.logout_outlined,
+                              title: 'Logout',
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                _showLogoutDialog(context);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        bottom: screenHeight * 0.002,
+                        left: 0,
+                        right: 0,
+                        child: BottomNavBar(initialIndex: 3),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -266,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             Icon(
-              Icons.arrow_forward_ios,
+              Icons.chevron_right, // Corrected to chevron_right for menu items
               color: Colors.black.withOpacity(0.6),
               size: screenWidth * 0.035,
             ),

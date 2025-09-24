@@ -130,22 +130,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Positioned(
                 top: screenHeight * 0.02, // 2% of screen height for top padding
                 left: screenWidth * 0.04, // 4% of screen width for left padding
-                child: ClipOval(
-                  child: Container(
-                    width: screenWidth * 0.15, // Circle size is 15% of screen width
-                    height: screenWidth * 0.15, // Keep aspect ratio
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
-                      border: Border.all(
-                        color: Colors.white, // White stroke
-                        width: screenWidth * 0.006, // Stroke width scales with screen
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context); // Navigate to previous screen
+                  },
+                  child: ClipOval(
+                    child: Container(
+                      width: screenWidth * 0.15, // Circle size is 15% of screen width
+                      height: screenWidth * 0.15, // Keep aspect ratio
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
+                        border: Border.all(
+                          color: Colors.white, // White stroke
+                          width: screenWidth * 0.006, // Stroke width scales with screen
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.chevron_left,
-                        color: Colors.black, // Black icon color
-                        size: screenWidth * 0.08, // Icon size is 8% of screen width
+                      child: Center(
+                        child: Icon(
+                          Icons.chevron_left,
+                          color: Colors.black, // Black icon color
+                          size: screenWidth * 0.08, // Icon size is 8% of screen width
+                        ),
                       ),
                     ),
                   ),
