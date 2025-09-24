@@ -205,7 +205,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             'Reset Your Password',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: screenWidth * 0.07,
+                              fontSize: screenWidth * 0.05,
                               fontWeight: FontWeight.w700,
                               color: Colors.black,
                               fontFamily: 'Epunda Slab',
@@ -216,7 +216,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             'Create a new password for your\naccount below.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: screenWidth * 0.05,
+                              fontSize: screenWidth * 0.04,
                               color: Colors.black,
                               fontFamily: 'Poppins',
                             ),
@@ -227,13 +227,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                             child: Column(
                               children: [
-                                // New Password field (Height increased)
+                                // New Password field
                                 TextFormField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
                                   onChanged: _checkPasswordStrength,
                                   decoration: InputDecoration(
                                     labelText: 'New Password',
+                                    labelStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                    ),
+                                    hintText: 'Enter New Password',
+                                    hintStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
                                     prefixIcon: Icon(Icons.lock, color: Color(0xFF458DE0)),
@@ -248,15 +261,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                         });
                                       },
                                     ),
-                                    border: OutlineInputBorder(
+                                    enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
                                       borderSide: BorderSide(color: Color(0xFFD59A00)),
                                     ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                    ),
                                     contentPadding: EdgeInsets.symmetric(
-                                      vertical: screenWidth * 0.04, // Increased vertical padding for taller field
+                                      vertical: screenWidth * 0.04,
                                       horizontal: screenWidth * 0.05,
                                     ),
                                   ),
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                  ),
+                                  cursorColor: const Color(0xFF3B82F6),
                                 ),
                                 // Password Strength Indicator
                                 Padding(
@@ -281,12 +305,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   ),
                                 ),
                                 SizedBox(height: screenHeight * 0.03),
-                                // Confirm Password field (Height increased to match)
+                                // Confirm Password field
                                 TextFormField(
                                   controller: _confirmPasswordController,
                                   obscureText: _obscureConfirmPassword,
                                   decoration: InputDecoration(
                                     labelText: 'Confirm Password',
+                                    labelStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                    ),
+                                    hintText: 'Confirm New Password',
+                                    hintStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
                                     prefixIcon: Icon(Icons.lock, color: Color(0xFF458DE0)),
@@ -301,15 +338,26 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                         });
                                       },
                                     ),
-                                    border: OutlineInputBorder(
+                                    enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
                                       borderSide: BorderSide(color: Color(0xFFD59A00)),
                                     ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                    ),
                                     contentPadding: EdgeInsets.symmetric(
-                                      vertical: screenWidth * 0.04, // Increased vertical padding for taller field
+                                      vertical: screenWidth * 0.04,
                                       horizontal: screenWidth * 0.05,
                                     ),
                                   ),
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                  ),
+                                  cursorColor: const Color(0xFF3B82F6),
                                 ),
                                 SizedBox(height: screenHeight * 0.03),
                                 SizedBox(

@@ -209,7 +209,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: screenWidth * 0.07,
+                                  fontSize: screenWidth * 0.05,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.black,
                                   fontFamily: 'Epunda Slab',
@@ -229,7 +229,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                     TextSpan(
                                       text: 'Please enter the 4 digit code we sent to\n',
                                       style: TextStyle(
-                                        fontSize: screenWidth * 0.05,
+                                        fontSize: screenWidth * 0.04,
                                         fontWeight: FontWeight.normal,
                                         color: Colors.black,
                                         fontFamily: 'Poppins',
