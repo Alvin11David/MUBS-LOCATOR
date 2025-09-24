@@ -185,9 +185,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ),
               ),
+              // Notifications title row with icons
+              Positioned(
+                top: screenHeight * 0.10,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: screenWidth * 0.04),
+                      child: Text(
+                        'Notifications',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: screenWidth * 0.05,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context); // Navigate to previous screen
+                          },
+                          child: Icon(
+                            Icons.chevron_left,
+                            color: Colors.black,
+                            size: screenWidth * 0.08,
+                          ),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey,
+                          size: screenWidth * 0.08,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               // Centered image and texts
               Positioned.fill(
-                top: screenHeight * 0.09, // Below the glassy rectangle
+                top: screenHeight * 0.14, // Adjusted to account for title row
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -304,7 +347,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ),
                         ],
                       ),
-                      // Home icon and text
+                      // Dashboard icon and text
                       Padding(
                         padding: EdgeInsets.only(
                           left: screenWidth * 0.03,
@@ -313,13 +356,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.home,
+                              Icons.dashboard,
                               color: Colors.black,
                               size: screenWidth * 0.06,
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             Text(
-                              'Home',
+                              'Dashboard',
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: screenWidth * 0.04,
@@ -331,7 +374,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
-                      // Settings icon and Profile Settingstext
+                      // Chat icon and Feedback & Reports text
                       Padding(
                         padding: EdgeInsets.only(
                           left: screenWidth * 0.03,
@@ -340,13 +383,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.settings,
+                              Icons.chat,
                               color: Colors.black,
                               size: screenWidth * 0.06,
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             Text(
-                              'Profile Settings',
+                              'Feedback & Reports',
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: screenWidth * 0.04,
@@ -400,7 +443,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             Text(
-                              'Notifications',
+                              'Push Notifications',
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: screenWidth * 0.04,
@@ -427,7 +470,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             Text(
-                              'Search Locations',
+                              'Locations',
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: screenWidth * 0.04,
