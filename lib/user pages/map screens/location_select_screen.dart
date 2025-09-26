@@ -19,15 +19,18 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     super.dispose();
   }
 
+  void _navigateToHomeScreen() {
+    Navigator.pushReplacementNamed(context, '/HomeScreen');
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Split the search text into keywords (simplified logic, refine as needed)
     List<String> keywords = _searchController.text.isNotEmpty
         ? _searchController.text.split(' ').where((word) => word.isNotEmpty).toList()
         : [];
 
     return Scaffold(
-      extendBody: true, // Allows body to extend under the bottom navigation bar
+      extendBody: true,
       body: Container(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
@@ -62,10 +65,15 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.arrow_back,
-                              color: Colors.black,
-                              size: MediaQuery.of(context).size.width * 0.06,
+                            IconButton(
+                              icon: Icon(
+                                Icons.arrow_back,
+                                color: Colors.black,
+                                size: MediaQuery.of(context).size.width * 0.06,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context); // Navigate back to the previous screen
+                              },
                             ),
                             SizedBox(width: MediaQuery.of(context).size.width * 0.03),
                             Expanded(
@@ -161,33 +169,36 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                           Positioned(
                             top: MediaQuery.of(context).size.height * 0.12,
                             left: MediaQuery.of(context).size.width * 0.03,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: MediaQuery.of(context).size.width * 0.13,
-                                  height: MediaQuery.of(context).size.width * 0.13,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(0xFF3E5891),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.location_on,
-                                      color: Colors.white,
-                                      size: MediaQuery.of(context).size.width * 0.08,
+                            child: GestureDetector(
+                              onTap: _navigateToHomeScreen, // Navigate to HomeScreen when clicked
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: MediaQuery.of(context).size.width * 0.13,
+                                    height: MediaQuery.of(context).size.width * 0.13,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Color(0xFF3E5891),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.location_on,
+                                        color: Colors.white,
+                                        size: MediaQuery.of(context).size.width * 0.08,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                SizedBox(width: MediaQuery.of(context).size.width * 0.03),
-                                Text(
-                                  'Choose on map',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: MediaQuery.of(context).size.width * 0.04,
+                                  SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                                  Text(
+                                    'Choose on map',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: MediaQuery.of(context).size.width * 0.04,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -223,7 +234,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   ],
                 ),
               ),
-              if (keywords.isNotEmpty) // Show keywords only if there are any
+              if (keywords.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(
                     left: MediaQuery.of(context).size.width * 0.05,
@@ -231,8 +242,8 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                     top: MediaQuery.of(context).size.height * 0.01,
                   ),
                   child: Wrap(
-                    spacing: MediaQuery.of(context).size.width * 0.02, // Space between rectangles
-                    runSpacing: MediaQuery.of(context).size.height * 0.01, // Space between rows
+                    spacing: MediaQuery.of(context).size.width * 0.02,
+                    runSpacing: MediaQuery.of(context).size.height * 0.01,
                     children: keywords.map((keyword) {
                       return ClipRRect(
                         borderRadius: BorderRadius.circular(20),
@@ -272,10 +283,10 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         padding: EdgeInsets.only(
           left: MediaQuery.of(context).size.width * 0.05,
           right: MediaQuery.of(context).size.width * 0.05,
-          bottom: MediaQuery.of(context).size.height * 0.015, // Lifted slightly up
+          bottom: MediaQuery.of(context).size.height * 0.015,
         ),
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.9, // Reduced width to 90% of screen
+          width: MediaQuery.of(context).size.width * 0.9,
           child: const BottomNavBar(),
         ),
       ),

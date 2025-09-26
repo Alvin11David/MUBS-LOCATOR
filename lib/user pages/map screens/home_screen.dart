@@ -7,6 +7,9 @@ import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,11 +26,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
-  final String _googleApiKey =
-      'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA'; // Replace with your actual API key
+  final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
   List<Building> fetchedBuildings = [];
+  String _userFullName = 'User';
+  bool _isMenuVisible = false;
 
-  // Updated MUBS boundary coordinates - using your exact coordinates
   final List<LatLng> _mubsBounds = [
     LatLng(0.32665770214412915, 32.615554267866116),
     LatLng(0.329929943362535, 32.61561864088474),
@@ -48,6 +51,63 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchAllData();
     _initializeMarkers();
     _initializePolygons();
+    _fetchUserFullName();
+  }
+
+  Future<void> _fetchUserFullName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        print('Fetching full name for email: ${user.email}');
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: user.email)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final userData = querySnapshot.docs.first.data();
+          final fullName = userData['fullName'] as String?;
+          if (fullName != null && fullName.isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _userFullName = fullName;
+              });
+              print('Successfully fetched full name: $_userFullName');
+            }
+          } else {
+            print('Full name not found in Firestore document');
+            if (mounted) {
+              setState(() {
+                _userFullName = 'User'; // Fallback if fullName is empty
+              });
+            }
+          }
+        } else {
+          print('No Firestore document found for email: ${user.email}');
+          if (mounted) {
+            setState(() {
+              _userFullName = 'User'; // Fallback if no document found
+            });
+          }
+        }
+      } else {
+        print('No user signed in or email is null');
+        if (mounted) {
+          setState(() {
+            _userFullName = 'User'; // Fallback if no user signed in
+          });
+        }
+      }
+    } catch (e, stackTrace) {
+      print('Error fetching user full name: $e');
+      print(stackTrace);
+      if (mounted) {
+        setState(() {
+          _userFullName = 'User'; // Fallback on error
+        });
+      }
+    }
   }
 
   void _initializeMarkers() {
@@ -64,7 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initializePolygons() {
-    // Create the main MUBS campus polygon with blue border
     polygons.add(
       Polygon(
         polygonId: PolygonId('mubs_campus'),
@@ -78,8 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<LatLng> _createLargeOuterBounds() {
-    // Create a large rectangular boundary that encompasses the entire map view
-    // This ensures the blur effect covers all areas outside the campus
     double minLat = _mubsBounds.map((p) => p.latitude).reduce(math.min) - 0.02;
     double maxLat = _mubsBounds.map((p) => p.latitude).reduce(math.max) + 0.02;
     double minLng = _mubsBounds.map((p) => p.longitude).reduce(math.min) - 0.02;
@@ -120,59 +177,83 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showBuildingBottomSheet(BuildContext context, Building building) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    isDismissible: true,
-    enableDrag: true,
-    useSafeArea: true,
-    builder: (BuildContext context) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.6, // Start at 60% of screen height
-        minChildSize: 0.3,     // Can be dragged down to 30%
-        maxChildSize: 0.9,     // Can be expanded to 90%
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: _BuildingBottomSheetContent(
-              building: building,
-              scrollController: scrollController,
-              onDirectionsTap: () => _navigateToBuilding(building),
-              onFeedbackSubmit: (
-                String issueType,
-                String issueTitle,
-                String description,
-              ) {
-                _submitFeedback(
-                  building,
-                  issueType,
-                  issueTitle,
-                  description,
-                );
-              },
-            ),
-          );
-        },
+  Future<void> _logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      await FirebaseAuth.instance.signOut();
+      print('User signed out successfully');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/SignInScreen');
+      }
+    } catch (e) {
+      print('Error signing out: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out: $e'), backgroundColor: Colors.red),
       );
-    },
-  );
-}
+    }
+  }
+
+  void _toggleMenu() {
+    setState(() {
+      _isMenuVisible = !_isMenuVisible;
+    });
+  }
+
+  void _showBuildingBottomSheet(BuildContext context, Building building) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: _BuildingBottomSheetContent(
+                building: building,
+                scrollController: scrollController,
+                onDirectionsTap: () => _navigateToBuilding(building),
+                onFeedbackSubmit: (
+                  String issueType,
+                  String issueTitle,
+                  String description,
+                ) {
+                  _submitFeedback(
+                    building,
+                    issueType,
+                    issueTitle,
+                    description,
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
       LatLng buildingLocation = LatLng(
@@ -180,11 +261,9 @@ class _HomeScreenState extends State<HomeScreen> {
         building.location.longitude,
       );
 
-      // Clear existing markers and polylines
       markers.removeWhere((marker) => marker.markerId.value == 'destination');
       polylines.clear();
 
-      // Add new marker for the building
       markers.add(
         Marker(
           markerId: const MarkerId('destination'),
@@ -197,13 +276,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-      // Get directions
       await _getDirections(buildingLocation);
 
-      // Update the map
       setState(() {});
 
-      // Animate camera to show both markers and route
       final bounds = LatLngBounds(
         southwest: LatLng(
           _mubsMaingate.latitude < buildingLocation.latitude
@@ -226,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mapController!.animateCamera(
         CameraUpdate.newLatLngBounds(
           bounds,
-          100, // padding
+          100,
         ),
       );
     }
@@ -248,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (data['status'] == 'OK') {
           final points = data['routes'][0]['overview_polyline']['points'];
           List<LatLng> routeCoords = _convertToLatLng(_decodePoly(points));
-          
+
           setState(() {
             polylines.clear();
             polylines.add(
@@ -345,187 +421,477 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final textScaler = MediaQuery.textScalerOf(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Good morning, User'),
+        title: Text(
+          'Good morning, $_userFullName',
+          style: TextStyle(
+            fontSize: textScaler.scale(18), // Responsive font size
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu,
+            size: textScaler.scale(24), // Responsive icon size
+          ),
+          onPressed: _toggleMenu,
+        ),
         actions: [
           IconButton(
             onPressed: createTheBuildings,
-            icon: Icon(Icons.notifications_rounded),
+            icon: Icon(
+              Icons.notifications_rounded,
+              size: textScaler.scale(24), // Responsive icon size
+            ),
           ),
         ],
       ),
-      drawer: Drawer(),
       body: Stack(
         children: [
-          // Google Map
-          GoogleMap(
-            onMapCreated: (GoogleMapController controller) {
-              mapController = controller;
+          GestureDetector(
+            onTap: () {
+              if (_isMenuVisible) {
+                setState(() {
+                  _isMenuVisible = false;
+                });
+              }
             },
-            initialCameraPosition: CameraPosition(
-              target: _mubsMaingate,
-              zoom: 18.5, // Adjusted zoom to better show the campus
-            ),
-            markers: markers,
-            polygons: polygons,
-            polylines: polylines,
-            mapType: MapType.normal,
-            zoomGesturesEnabled: true,
-            scrollGesturesEnabled: true,
-            tiltGesturesEnabled: true,
-            rotateGesturesEnabled: true,
-          ),
-
-          // Search bar positioned on top
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+            child: Stack(
+              children: [
+                GoogleMap(
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _mubsMaingate,
+                    zoom: 18.5,
                   ),
-                ],
-              ),
-              child: TypeAheadField<Building>(
-                controller: searchController,
-                builder: (context, textController, focusNode) {
-                  return TextField(
-                    controller: textController,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      hintText: 'Search buildings, departments, etc.',
-                      hintStyle: TextStyle(color: Colors.grey[500]),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
-                      suffixIcon: textController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                textController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 15,
-                      ),
-                    ),
-                    onChanged: (value) {
-                      setState(() {});
-                    },
-                  );
-                },
-                suggestionsCallback: (pattern) async {
-                  if (pattern.isEmpty) return [];
-
-                  final matches = fetchedBuildings.map((building) {
-                    final nameScore = StringSimilarity.compareTwoStrings(
-                      building.name.toLowerCase(),
-                      pattern.toLowerCase(),
-                    );
-                    final otherNameScore =
-                        (building.otherNames != null &&
-                            building.otherNames!.isNotEmpty)
-                        ? building.otherNames!
-                              .map(
-                                (name) => StringSimilarity.compareTwoStrings(
-                                  name.toLowerCase(),
-                                  pattern.toLowerCase(),
-                                ),
-                              )
-                              .fold<double>(
-                                0,
-                                (prev, curr) => curr > prev ? curr : prev,
-                              )
-                        : 0;
-
-                    final descriptionScore = StringSimilarity.compareTwoStrings(
-                      building.description.toLowerCase(),
-                      pattern.toLowerCase(),
-                    );
-
-                    final maxScore = [
-                      nameScore,
-                      otherNameScore,
-                      descriptionScore,
-                    ].reduce((a, b) => a > b ? a : b);
-
-                    return {'building': building, 'score': maxScore};
-                  }).toList();
-
-                  matches.sort(
-                    (a, b) =>
-                        (b['score'] as double).compareTo(a['score'] as double),
-                  );
-
-                  return matches
-                      .where((m) => (m['score'] as double) > 0.1)
-                      .take(10)
-                      .map((m) => m['building'] as Building)
-                      .toList();
-                },
-                itemBuilder: (context, Building suggestion) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Theme.of(context).primaryColor,
-                          size: 20,
+                  markers: markers,
+                  polygons: polygons,
+                  polylines: polylines,
+                  mapType: MapType.normal,
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                ),
+                Positioned(
+                  top: screenHeight * 0.02,
+                  left: screenWidth * 0.04,
+                  right: screenWidth * 0.04,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    child: TypeAheadField<Building>(
+                      controller: searchController,
+                      builder: (context, textController, focusNode) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Search buildings, departments, etc.',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: textScaler.scale(14),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey[500],
+                              size: textScaler.scale(20),
+                            ),
+                            suffixIcon: textController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      size: textScaler.scale(20),
+                                    ),
+                                    onPressed: () {
+                                      textController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.05,
+                              vertical: screenHeight * 0.015,
+                            ),
+                          ),
+                          style: TextStyle(fontSize: textScaler.scale(14)),
+                          onChanged: (value) {
+                            setState(() {});
+                          },
+                        );
+                      },
+                      suggestionsCallback: (pattern) async {
+                        if (pattern.isEmpty) return [];
+
+                        final matches = fetchedBuildings.map((building) {
+                          final nameScore = StringSimilarity.compareTwoStrings(
+                            building.name.toLowerCase(),
+                            pattern.toLowerCase(),
+                          );
+                          final otherNameScore =
+                              (building.otherNames != null &&
+                                  building.otherNames!.isNotEmpty)
+                              ? building.otherNames!
+                                    .map(
+                                      (name) => StringSimilarity.compareTwoStrings(
+                                        name.toLowerCase(),
+                                        pattern.toLowerCase(),
+                                      ),
+                                    )
+                                    .fold<double>(
+                                      0,
+                                      (prev, curr) => curr > prev ? curr : prev,
+                                    )
+                              : 0;
+
+                          final descriptionScore = StringSimilarity.compareTwoStrings(
+                            building.description.toLowerCase(),
+                            pattern.toLowerCase(),
+                          );
+
+                          final maxScore = [
+                            nameScore,
+                            otherNameScore,
+                            descriptionScore,
+                          ].reduce((a, b) => a > b ? a : b);
+
+                          return {'building': building, 'score': maxScore};
+                        }).toList();
+
+                        matches.sort(
+                          (a, b) =>
+                              (b['score'] as double).compareTo(a['score'] as double),
+                        );
+
+                        return matches
+                            .where((m) => (m['score'] as double) > 0.1)
+                            .take(10)
+                            .map((m) => m['building'] as Building)
+                            .toList();
+                      },
+                      itemBuilder: (context, Building suggestion) {
+                        return Container(
+                          padding: EdgeInsets.all(screenWidth * 0.03),
+                          child: Row(
                             children: [
-                              Text(
-                                suggestion.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
-                                ),
+                              Icon(
+                                Icons.location_on,
+                                color: Theme.of(context).primaryColor,
+                                size: textScaler.scale(20),
                               ),
-                              Text(
-                                suggestion.description,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
+                              SizedBox(width: screenWidth * 0.03),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      suggestion.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: textScaler.scale(16),
+                                      ),
+                                    ),
+                                    Text(
+                                      suggestion.description,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: textScaler.scale(14),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
+                        );
+                      },
+                      onSelected: (Building suggestion) {
+                        debugPrint("Selected: ${suggestion.name}");
+                        searchController.text = suggestion.name;
+                        _showBuildingBottomSheet(context, suggestion);
+                      },
+                      errorBuilder: (context, error) => Padding(
+                        padding: EdgeInsets.all(screenWidth * 0.02),
+                        child: Text(
+                          'Something went wrong 😢: $error',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: textScaler.scale(14),
+                          ),
+                        ),
+                      ),
+                      emptyBuilder: (context) => Padding(
+                        padding: EdgeInsets.all(screenWidth * 0.02),
+                        child: Text(
+                          'No places found. Try another keyword.',
+                          style: TextStyle(fontSize: textScaler.scale(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+            top: 0,
+            child: Container(
+              width: screenWidth * 0.6,
+              height: screenHeight * 0.8,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                    offset: const Offset(2, 0),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    children: [
+                      Image.asset(
+                        'assets/images/sidebar.png',
+                        width: screenWidth * 0.6,
+                        height: screenHeight * 0.16,
+                        fit: BoxFit.cover,
+                      ),
+                      Positioned(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.03,
+                        child: Container(
+                          width: screenWidth * 0.15,
+                          height: screenWidth * 0.15,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.black, width: 1),
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.black,
+                            size: screenWidth * 0.08,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: screenWidth * 0.19,
+                        top: screenHeight * 0.05,
+                        child: Text(
+                          'MUBS Locator',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: textScaler.scale(18),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: screenWidth * 0.19,
+                        top: screenHeight * 0.09,
+                        child: Text(
+                          _userFullName,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: textScaler.scale(14),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis, // Handle long names
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.dashboard,
+                          color: Colors.black,
+                          size: textScaler.scale(24),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'Dashboard',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: textScaler.scale(16),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
                         ),
                       ],
                     ),
-                  );
-                },
-                onSelected: (Building suggestion) {
-                  debugPrint("Selected: ${suggestion.name}");
-                  searchController.text = suggestion.name;
-                  _showBuildingBottomSheet(context, suggestion);
-                },
-                errorBuilder: (context, error) => Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'Something went wrong 😢: $error',
-                    style: const TextStyle(color: Colors.red),
                   ),
-                ),
-                emptyBuilder: (context) => const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('No places found. Try another keyword.'),
-                ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.chat,
+                          color: Colors.black,
+                          size: textScaler.scale(24),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'Feedback & Reports',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: textScaler.scale(16),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.settings,
+                          color: Colors.black,
+                          size: textScaler.scale(24),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'Profile Settings',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: textScaler.scale(16),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.notifications,
+                          color: Colors.black,
+                          size: textScaler.scale(24),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'Push Notifications',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: textScaler.scale(16),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: Colors.black,
+                          size: textScaler.scale(24),
+                        ),
+                        SizedBox(width: screenWidth * 0.02),
+                        Text(
+                          'Locations',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: textScaler.scale(16),
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: screenWidth * 0.03,
+                      top: screenHeight * 0.02,
+                    ),
+                    child: GestureDetector(
+                      onTap: _logout,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.exit_to_app,
+                            color: Colors.black,
+                            size: textScaler.scale(24),
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Text(
+                            'Logout',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: textScaler.scale(16),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Urbanist',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -541,7 +907,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Keep all your existing _BuildingBottomSheetContent class unchanged
+// _BuildingBottomSheetContent remains unchanged
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
   final ScrollController scrollController;
@@ -585,8 +951,9 @@ class _BuildingBottomSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75, // Takes up 75% of screen height
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -594,12 +961,11 @@ class _BuildingBottomSheetContentState
       child: SingleChildScrollView(
         controller: widget.scrollController,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag indicator
               Center(
                 child: Container(
                   width: 40,
@@ -610,27 +976,24 @@ class _BuildingBottomSheetContentState
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Building name
+              SizedBox(height: MediaQuery.of(context).size.height * 0.025),
               Text(
                 widget.building.name,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: textScaler.scale(24),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: 8),
-
-              // Description
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
               Text(
                 widget.building.description,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: textScaler.scale(16),
                   color: Colors.grey[600],
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Tab buttons
+              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
               Row(
                 children: [
                   Expanded(
@@ -640,7 +1003,7 @@ class _BuildingBottomSheetContentState
                       label: 'Details',
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
                   Expanded(
                     child: _buildTabButton(
                       index: 1,
@@ -648,7 +1011,7 @@ class _BuildingBottomSheetContentState
                       label: 'Directions',
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
                   Expanded(
                     child: _buildTabButton(
                       index: 2,
@@ -658,12 +1021,8 @@ class _BuildingBottomSheetContentState
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Tab content
+              SizedBox(height: MediaQuery.of(context).size.height * 0.025),
               _buildTabContent(),
-
-              // Bottom padding for safe area
               SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
             ],
           ),
@@ -678,18 +1037,19 @@ class _BuildingBottomSheetContentState
     required String label,
   }) {
     final bool isSelected = _selectedTabIndex == index;
+    final textScaler = MediaQuery.textScalerOf(context);
 
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedTabIndex = index;
         });
-
-        // Removed the automatic navigation trigger
-        // Now only changes the tab, doesn't immediately start navigation
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: EdgeInsets.symmetric(
+          vertical: MediaQuery.of(context).size.height * 0.015,
+          horizontal: MediaQuery.of(context).size.width * 0.02,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
           borderRadius: BorderRadius.circular(18),
@@ -703,19 +1063,22 @@ class _BuildingBottomSheetContentState
         child: Row(
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 12.0, right: 4.0),
+              padding: EdgeInsets.only(
+                left: MediaQuery.of(context).size.width * 0.03,
+                right: MediaQuery.of(context).size.width * 0.01,
+              ),
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : Colors.grey[600],
-                size: 20,
+                size: textScaler.scale(20),
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: MediaQuery.of(context).size.width * 0.01),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey[600],
-                fontSize: 12,
+                fontSize: textScaler.scale(12),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -739,22 +1102,28 @@ class _BuildingBottomSheetContentState
   }
 
   Widget _buildDetailsContent() {
+    final textScaler = MediaQuery.textScalerOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Description',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: textScaler.scale(18),
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         Text(
           widget.building.description,
-          style: const TextStyle(fontSize: 14, height: 1.5),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            height: 1.5,
+          ),
         ),
-        const SizedBox(height: 20),
-
+        SizedBox(height: MediaQuery.of(context).size.height * 0.025),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.03),
           decoration: BoxDecoration(
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
@@ -764,19 +1133,25 @@ class _BuildingBottomSheetContentState
             children: [
               Text(
                 'Location Coordinates',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: textScaler.scale(14),
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.005),
               Text(
                 'Lat: ${widget.building.location.latitude.toStringAsFixed(6)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                style: TextStyle(
+                  fontSize: textScaler.scale(12),
+                  color: Colors.grey[700],
+                ),
               ),
               Text(
                 'Long: ${widget.building.location.longitude.toStringAsFixed(6)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                style: TextStyle(
+                  fontSize: textScaler.scale(12),
+                  color: Colors.grey[700],
+                ),
               ),
             ],
           ),
@@ -786,8 +1161,9 @@ class _BuildingBottomSheetContentState
   }
 
   Widget _buildDirectionsContent() {
+    final textScaler = MediaQuery.textScalerOf(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
       decoration: BoxDecoration(
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(8),
@@ -796,37 +1172,39 @@ class _BuildingBottomSheetContentState
         children: [
           Icon(
             Icons.navigation,
-            size: 48,
+            size: textScaler.scale(48),
             color: Theme.of(context).primaryColor,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.015),
           Text(
             'Get Directions',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: textScaler.scale(18),
               fontWeight: FontWeight.w600,
               color: Theme.of(context).primaryColor,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.01),
           Text(
             'Navigate to ${widget.building.name}',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            style: TextStyle(
+              fontSize: textScaler.scale(14),
+              color: Colors.grey[700],
+            ),
           ),
-          const SizedBox(height: 20),
-          
-          // Start Navigation Button
+          SizedBox(height: MediaQuery.of(context).size.height * 0.025),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // This is where the actual navigation starts
                 widget.onDirectionsTap();
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(
+                  vertical: MediaQuery.of(context).size.height * 0.02,
+                ),
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -836,11 +1214,17 @@ class _BuildingBottomSheetContentState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.navigation, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(
+                    Icons.navigation,
+                    size: textScaler.scale(20),
+                  ),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
+                  Text(
                     'Start Navigation',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: textScaler.scale(16),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -852,23 +1236,29 @@ class _BuildingBottomSheetContentState
   }
 
   Widget _buildFeedbackContent() {
+    final textScaler = MediaQuery.textScalerOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Submit Feedback',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: textScaler.scale(18),
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 16),
-
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
         Text(
           'Issue Type',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.03),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
@@ -878,7 +1268,13 @@ class _BuildingBottomSheetContentState
               value: _selectedIssueType,
               isExpanded: true,
               items: _issueTypes.map((String type) {
-                return DropdownMenuItem<String>(value: type, child: Text(type));
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(
+                    type,
+                    style: TextStyle(fontSize: textScaler.scale(14)),
+                  ),
+                );
               }).toList(),
               onChanged: (String? newValue) {
                 if (newValue != null) {
@@ -890,45 +1286,52 @@ class _BuildingBottomSheetContentState
             ),
           ),
         ),
-        const SizedBox(height: 16),
-
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
         Text(
           'Issue Title',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         TextField(
           controller: _issueTitleController,
           decoration: InputDecoration(
             hintText: 'Enter a brief title for the issue',
+            hintStyle: TextStyle(fontSize: textScaler.scale(14)),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.03,
+              vertical: MediaQuery.of(context).size.height * 0.015,
             ),
           ),
+          style: TextStyle(fontSize: textScaler.scale(14)),
         ),
-        const SizedBox(height: 16),
-
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
         Text(
           'Description',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         TextField(
           controller: _descriptionController,
           maxLines: 4,
           decoration: InputDecoration(
             hintText: 'Describe the issue in detail...',
+            hintStyle: TextStyle(fontSize: textScaler.scale(14)),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.03,
+              vertical: MediaQuery.of(context).size.height * 0.015,
             ),
           ),
+          style: TextStyle(fontSize: textScaler.scale(14)),
         ),
-        const SizedBox(height: 20),
-
+        SizedBox(height: MediaQuery.of(context).size.height * 0.025),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -965,16 +1368,21 @@ class _BuildingBottomSheetContentState
               }
             },
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(
+                vertical: MediaQuery.of(context).size.height * 0.02,
+              ),
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Submit Feedback',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: textScaler.scale(16),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
