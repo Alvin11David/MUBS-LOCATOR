@@ -101,7 +101,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Enable resizing for keyboard
+      resizeToAvoidBottomInset: false, // Prevent resizing when keyboard appears
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -176,231 +176,238 @@ class _SignInScreenState extends State<SignInScreen> {
                   top: screenHeight * 0.31,
                   left: screenWidth * 0.02,
                   right: screenWidth * 0.02,
-                  bottom: 0, // Stretch to bottom for scrolling
+                  bottom: 0, // Fixed to bottom of screen
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: ListView(
+                    child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.04,
-                        horizontal: screenWidth * 0.02,
-                      ),
-                      children: [
-                        // Subtitle
-                        SizedBox(
-                          width: screenWidth * 0.8,
-                          child: Text(
-                            'Please enter the details to\ncontinue.',
-                            textAlign: TextAlign.center,
-                            softWrap: true,
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.045,
-                              fontWeight: FontWeight.w300,
-                              color: Colors.black,
-                              fontFamily: 'Epunda Slab',
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: screenHeight * 0.69, // Ensure minimum height
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: screenHeight * 0.04,
+                            horizontal: screenWidth * 0.02,
                           ),
-                        ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-                          child: EmailField(controller: _emailController),
-                        ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-                          child: PasswordField(controller: _passwordController),
-                        ),
-                        SizedBox(height: screenHeight * 0.01),
-                        Padding(
-                          padding: EdgeInsets.only(right: screenWidth * 0.06),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: GestureDetector(
-                              onTapDown: (_) {
-                                setState(() {
-                                  _isForgotPasswordTapped = true;
-                                });
-                              },
-                              onTapUp: (_) {
-                                setState(() {
-                                  _isForgotPasswordTapped = false;
-                                });
-                                Navigator.pushNamed(context, '/ForgotPasswordScreen');
-                              },
-                              onTapCancel: () {
-                                setState(() {
-                                  _isForgotPasswordTapped = false;
-                                });
-                              },
-                              onTap: () {},
-                              child: Text(
-                                "Forgot Password?",
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontFamily: 'Poppins',
-                                  decoration: _isForgotPasswordTapped
-                                      ? TextDecoration.underline
-                                      : TextDecoration.none,
-                                  decorationColor: Colors.black,
+                          child: Column(
+                            children: [
+                              // Subtitle
+                              SizedBox(
+                                width: screenWidth * 0.8,
+                                child: Text(
+                                  'Please enter the details to\ncontinue.',
+                                  textAlign: TextAlign.center,
+                                  softWrap: true,
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.045,
+                                    fontWeight: FontWeight.w300,
+                                    color: Colors.black,
+                                    fontFamily: 'Epunda Slab',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: screenHeight * 0.06,
-                            child: GestureDetector(
-                              onTap: isButtonEnabled && !_isLoading ? _signIn : null,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: isButtonEnabled ? const Color(0xFF3B82F6) : Colors.grey,
-                                    width: 1,
+                              SizedBox(height: screenHeight * 0.03),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                child: EmailField(controller: _emailController),
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                child: PasswordField(controller: _passwordController),
+                              ),
+                              SizedBox(height: screenHeight * 0.01),
+                              Padding(
+                                padding: EdgeInsets.only(right: screenWidth * 0.06),
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTapDown: (_) {
+                                      setState(() {
+                                        _isForgotPasswordTapped = true;
+                                      });
+                                    },
+                                    onTapUp: (_) {
+                                      setState(() {
+                                        _isForgotPasswordTapped = false;
+                                      });
+                                      Navigator.pushNamed(context, '/ForgotPasswordScreen');
+                                    },
+                                    onTapCancel: () {
+                                      setState(() {
+                                        _isForgotPasswordTapped = false;
+                                      });
+                                    },
+                                    onTap: () {},
+                                    child: Text(
+                                      "Forgot Password?",
+                                      style: TextStyle(
+                                        fontSize: screenWidth * 0.04,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                        fontFamily: 'Poppins',
+                                        decoration: _isForgotPasswordTapped
+                                            ? TextDecoration.underline
+                                            : TextDecoration.none,
+                                        decorationColor: Colors.black,
+                                      ),
+                                    ),
                                   ),
-                                  gradient: isButtonEnabled
-                                      ? const LinearGradient(
-                                          colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : const LinearGradient(
-                                          colors: [Color(0xFFE5E7EB), Color(0xFFD1D5DB)],
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: screenHeight * 0.06,
+                                  child: GestureDetector(
+                                    onTap: isButtonEnabled && !_isLoading ? _signIn : null,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(
+                                          color: isButtonEnabled ? const Color(0xFF3B82F6) : Colors.grey,
+                                          width: 1,
+                                        ),
+                                        gradient: isButtonEnabled
+                                            ? const LinearGradient(
+                                                colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              )
+                                            : const LinearGradient(
+                                                colors: [Color(0xFFE5E7EB), Color(0xFFD1D5DB)],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: _isLoading
+                                          ? const CircularProgressIndicator(
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                            )
+                                          : Text(
+                                              "Sign In",
+                                              style: TextStyle(
+                                                fontSize: screenWidth * 0.05,
+                                                fontWeight: FontWeight.bold,
+                                                color: isButtonEnabled ? Colors.black : Colors.grey,
+                                                fontFamily: 'Epunda Slab',
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                child: const OrDivider(),
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: screenHeight * 0.06,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      // Add Google sign-in logic here
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color.fromARGB(255, 255, 255, 255),
+                                            Color.fromARGB(255, 255, 255, 255),
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            spreadRadius: 2,
+                                            blurRadius: 5,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/logo/googleicon.png',
+                                            width: screenWidth * 0.08,
+                                            height: screenHeight * 0.03,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            "Google",
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.05,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                              fontFamily: 'Epunda Slab',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                alignment: Alignment.center,
-                                child: _isLoading
-                                    ? const CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                                      )
-                                    : Text(
-                                        "Sign In",
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Center(
+                                child: SizedBox(
+                                  width: screenWidth * 0.8,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Don't have an account, ",
                                         style: TextStyle(
-                                          fontSize: screenWidth * 0.05,
+                                          fontSize: screenWidth * 0.04,
                                           fontWeight: FontWeight.bold,
-                                          color: isButtonEnabled ? Colors.black : Colors.grey,
+                                          color: Colors.black,
                                           fontFamily: 'Epunda Slab',
                                         ),
                                       ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
-                          child: const OrDivider(),
-                        ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: screenHeight * 0.06,
-                            child: GestureDetector(
-                              onTap: () {
-                                // Add Google sign-in logic here
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: const Color(0xFFD59A00), width: 1),
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color.fromARGB(255, 255, 255, 255),
-                                      Color.fromARGB(255, 255, 255, 255),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      spreadRadius: 2,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                alignment: Alignment.center,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/logo/googleicon.png',
-                                      width: screenWidth * 0.08,
-                                      height: screenHeight * 0.03,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      "Google",
-                                      style: TextStyle(
-                                        fontSize: screenWidth * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                        fontFamily: 'Epunda Slab',
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.pushNamed(context, '/SignUpScreen');
+                                        },
+                                        child: Text(
+                                          "Sign Up",
+                                          style: TextStyle(
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF93C5FD),
+                                            fontFamily: 'Epunda Slab',
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                              SizedBox(height: screenHeight * 0.05), // Fixed padding
+                            ],
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.03),
-                        Center(
-                          child: SizedBox(
-                            width: screenWidth * 0.8,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Don't have an account, ",
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                    fontFamily: 'Epunda Slab',
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.pushNamed(context, '/SignUpScreen');
-                                  },
-                                  child: Text(
-                                    "Sign Up",
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF93C5FD),
-                                      fontFamily: 'Epunda Slab',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          height: MediaQuery.of(context).viewInsets.bottom + screenHeight * 0.05, // Extra padding for keyboard
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
