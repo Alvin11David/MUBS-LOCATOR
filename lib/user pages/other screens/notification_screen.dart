@@ -27,7 +27,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isMenuVisible = false;
 
   // State for unread notifications count
-  int _unreadNotifications = 0; // Placeholder, set to 0 for now
+  final int _unreadNotifications = 0; // Placeholder, set to 0 for now
 
   // Logout function
   void _logout() async {

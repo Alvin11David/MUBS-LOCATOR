@@ -194,7 +194,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               bottom: 0,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   width: screenWidth,
                   height: screenHeight * 1.5, // Enough height to accommodate all content
                   child: Stack(

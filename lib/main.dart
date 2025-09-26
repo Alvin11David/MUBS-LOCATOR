@@ -12,6 +12,7 @@ import 'package:mubs_locator/user%20pages/auth/sign_up.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
+import 'package:mubs_locator/user%20pages/map%20screens/home_screen.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
@@ -61,7 +62,8 @@ class MyApp extends StatelessWidget {
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) => const ResetPasswordScreen(),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
-        '/AddPlaceScreen': (context) => const AddPlaceScreen()
+        '/AddPlaceScreen': (context) => const AddPlaceScreen(),
+        '/HomeScreen': (context) => const HomeScreen(),
       },
     );
   }

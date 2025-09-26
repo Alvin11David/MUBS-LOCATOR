@@ -35,10 +35,17 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _checkLoginState() async {
     final prefs = await SharedPreferences.getInstance();
     final loggedIn = prefs.getBool('isLoggedIn') ?? false;
-    if (loggedIn) {
-      // Navigate to HomeScreen if already logged in
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/AboutScreen');
+    if (loggedIn && mounted) {
+      // Check if the current user is admin
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.email?.toLowerCase() == 'adminuser@gmail.com') {
+          print('Admin user detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
       }
     }
   }
@@ -56,7 +63,14 @@ class _SignInScreenState extends State<SignInScreen> {
       await prefs.setBool('isLoggedIn', true);
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/AboutScreen');
+        // Check if the email is adminuser@gmail.com
+        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Sign in failed';
@@ -87,88 +101,95 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, 
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          double screenWidth = constraints.maxWidth;
-          double screenHeight = constraints.maxHeight;
+      resizeToAvoidBottomInset: true, // Enable resizing for keyboard
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            double screenWidth = constraints.maxWidth;
+            double screenHeight = constraints.maxHeight;
 
-          return Stack(
-            children: [
-              Container(
-                width: screenWidth,
-                height: screenHeight,
-                color: const Color(0xFF93C5FD),
-                child: const SizedBox(),
-              ),
-              Positioned(
-                top: screenHeight * 0.05,
-                left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
-                child: Image.asset(
-                  'assets/logo/logo.png',
-                  width: screenWidth * 0.2,
-                  height: screenHeight * 0.1,
-                  fit: BoxFit.contain,
+            return Stack(
+              children: [
+                // Background
+                Container(
+                  width: screenWidth,
+                  height: screenHeight,
+                  color: const Color(0xFF93C5FD),
                 ),
-              ),
-              Positioned(
-                top: screenHeight * 0.04,
-                left: screenWidth * 0.02,
-                child: Text(
-                  'Ambasize',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.05,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'Abril Fatface',
+                // Logo at center top
+                Positioned(
+                  top: screenHeight * 0.05,
+                  left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
+                  child: Image.asset(
+                    'assets/logo/logo.png',
+                    width: screenWidth * 0.2,
+                    height: screenHeight * 0.1,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox(),
                   ),
                 ),
-              ),
-              Positioned(
-                top: screenHeight * 0.09,
-                right: screenWidth * 0.02,
-                child: Text(
-                  'Jackline',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.05,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'Abril Fatface',
-                  ),
-                ),
-              ),
-              Positioned(
-                top: screenHeight * 0.17,
-                left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
-                child: Text(
-                  "Let's get you\nsigned in",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.08,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-              ),
-              Positioned(
-                top: screenHeight * 0.31,
-                left: screenWidth * 0.02,
-                right: screenWidth * 0.02,
-                child: Container(
-                  height: screenHeight * 0.69, 
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.04,
+                // Ambasize top left
+                Positioned(
+                  top: screenHeight * 0.04,
+                  left: screenWidth * 0.02,
+                  child: Text(
+                    'Ambasize',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.05,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Abril Fatface',
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                  ),
+                ),
+                // Jackline top right
+                Positioned(
+                  top: screenHeight * 0.09,
+                  right: screenWidth * 0.02,
+                  child: Text(
+                    'Jackline',
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.05,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Abril Fatface',
+                    ),
+                  ),
+                ),
+                // "Let's get you signed in"
+                Positioned(
+                  top: screenHeight * 0.17,
+                  left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
+                  child: Text(
+                    "Let's get you\nsigned in",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.08,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                ),
+                // White container with inputs
+                Positioned(
+                  top: screenHeight * 0.31,
+                  left: screenWidth * 0.02,
+                  right: screenWidth * 0.02,
+                  bottom: 0, // Stretch to bottom for scrolling
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenHeight * 0.04,
+                        horizontal: screenWidth * 0.02,
+                      ),
                       children: [
+                        // Subtitle
                         SizedBox(
                           width: screenWidth * 0.8,
                           child: Text(
@@ -186,26 +207,36 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                         SizedBox(height: screenHeight * 0.03),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                           child: EmailField(controller: _emailController),
                         ),
                         SizedBox(height: screenHeight * 0.03),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                           child: PasswordField(controller: _passwordController),
                         ),
                         SizedBox(height: screenHeight * 0.01),
                         Padding(
-                          padding: EdgeInsets.only(right: screenWidth * 0.091),
+                          padding: EdgeInsets.only(right: screenWidth * 0.06),
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: GestureDetector(
-                              onTapDown: (_) { setState(() { _isForgotPasswordTapped = true; }); },
+                              onTapDown: (_) {
+                                setState(() {
+                                  _isForgotPasswordTapped = true;
+                                });
+                              },
                               onTapUp: (_) {
-                                setState(() { _isForgotPasswordTapped = false; });
+                                setState(() {
+                                  _isForgotPasswordTapped = false;
+                                });
                                 Navigator.pushNamed(context, '/ForgotPasswordScreen');
                               },
-                              onTapCancel: () { setState(() { _isForgotPasswordTapped = false; }); },
+                              onTapCancel: () {
+                                setState(() {
+                                  _isForgotPasswordTapped = false;
+                                });
+                              },
                               onTap: () {},
                               child: Text(
                                 "Forgot Password?",
@@ -225,7 +256,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                         SizedBox(height: screenHeight * 0.03),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                           child: SizedBox(
                             width: double.infinity,
                             height: screenHeight * 0.06,
@@ -253,7 +284,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                                 alignment: Alignment.center,
                                 child: _isLoading
-                                    ? CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.black))
+                                    ? const CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                      )
                                     : Text(
                                         "Sign In",
                                         style: TextStyle(
@@ -269,23 +302,28 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                         SizedBox(height: screenHeight * 0.03),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
-                          child: OrDivider(),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                          child: const OrDivider(),
                         ),
                         SizedBox(height: screenHeight * 0.03),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                           child: SizedBox(
                             width: double.infinity,
                             height: screenHeight * 0.06,
                             child: GestureDetector(
-                              onTap: () {},
+                              onTap: () {
+                                // Add Google sign-in logic here
+                              },
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
                                   border: Border.all(color: const Color(0xFFD59A00), width: 1),
                                   gradient: const LinearGradient(
-                                    colors: [Color.fromARGB(255, 255, 255, 255), Color.fromARGB(255, 255, 255, 255)],
+                                    colors: [
+                                      Color.fromARGB(255, 255, 255, 255),
+                                      Color.fromARGB(255, 255, 255, 255),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -307,6 +345,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                       width: screenWidth * 0.08,
                                       height: screenHeight * 0.03,
                                       fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
@@ -358,14 +397,17 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           ),
                         ),
+                        SizedBox(
+                          height: MediaQuery.of(context).viewInsets.bottom + screenHeight * 0.05, // Extra padding for keyboard
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -411,7 +453,7 @@ class EmailField extends StatelessWidget {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(Icons.mail, color: const Color.fromARGB(255, 69, 141, 224)),
+              child: const Icon(Icons.mail, color: Color.fromARGB(255, 69, 141, 224)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
@@ -479,13 +521,17 @@ class _PasswordFieldState extends State<PasswordField> {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: Icon(Icons.lock, color: const Color.fromARGB(255, 73, 122, 220)),
+              child: const Icon(Icons.lock, color: Color.fromARGB(255, 73, 122, 220)),
             ),
             suffixIcon: IconButton(
-              icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility,
-                  color: const Color.fromARGB(255, 86, 156, 235)),
+              icon: Icon(
+                _isObscured ? Icons.visibility_off : Icons.visibility,
+                color: const Color.fromARGB(255, 86, 156, 235),
+              ),
               onPressed: () {
-                setState(() { _isObscured = !_isObscured; });
+                setState(() {
+                  _isObscured = !_isObscured;
+                });
               },
             ),
             enabledBorder: OutlineInputBorder(

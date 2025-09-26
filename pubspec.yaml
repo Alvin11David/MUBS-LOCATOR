@@ -22,7 +22,7 @@ dependencies:
   # Firebase Initialization
   firebase_core: 
   # Firebase Authentication
-  firebase_auth:
+  firebase_auth: ^6.1.0
   # IOS firestore
   cloud_firestore:
   string_similarity: ^2.1.1
