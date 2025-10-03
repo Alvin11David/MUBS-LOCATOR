@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 
@@ -382,182 +383,216 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                           ),
                           child: Container(
                             alignment: Alignment.center,
-                            width:
-                                screenWidth *
-                                0.88, // 80% of the white rectangle (0.92 * 0.8)
+                            width: screenWidth * 0.88,
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.black, width: 1),
                             ),
-                            child: Table(
-                              columnWidths: {
-                                0: FlexColumnWidth(1),
-                                1: FlexColumnWidth(1),
-                                2: FlexColumnWidth(1),
-                              },
-                              border: TableBorder(
-                                verticalInside: BorderSide(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
-                                horizontalInside: BorderSide(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
-                                top: BorderSide.none,
-                              ),
-                              children: [
-                                TableRow(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF93C5FD),
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('buildings')
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                }
+                                if (snapshot.hasError) {
+                                  return Center(
+                                      child: Text('Error: ${snapshot.error}'));
+                                }
+                                if (!snapshot.hasData ||
+                                    snapshot.data!.docs.isEmpty) {
+                                  return const Center(
+                                      child: Text('No buildings found'));
+                                }
+
+                                final docs = snapshot.data!.docs;
+
+                                return Table(
+                                  columnWidths: {
+                                    0: FlexColumnWidth(1),
+                                    1: FlexColumnWidth(1),
+                                    2: FlexColumnWidth(1),
+                                  },
+                                  border: TableBorder(
+                                    verticalInside: BorderSide(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ),
+                                    horizontalInside: BorderSide(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ),
+                                    top: BorderSide.none,
                                   ),
                                   children: [
-                                    Padding(
-                                      padding: EdgeInsets.all(
-                                        screenWidth * 0.02,
+                                    TableRow(
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF93C5FD),
                                       ),
-                                      child: Text(
-                                        'Building\nName',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: screenWidth * 0.035,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.all(
+                                            screenWidth * 0.02,
+                                          ),
+                                          child: Text(
+                                            'Building\nName',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: screenWidth * 0.035,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Poppins',
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(
-                                        screenWidth * 0.02,
-                                      ),
-                                      child: Text(
-                                        'Building\nPurpose',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: screenWidth * 0.035,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                        Padding(
+                                          padding: EdgeInsets.all(
+                                            screenWidth * 0.02,
+                                          ),
+                                          child: Text(
+                                            'Building\nPurpose',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: screenWidth * 0.035,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Poppins',
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(
-                                        screenWidth * 0.02,
-                                      ),
-                                      child: Text(
-                                        'Action\nButtons',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: screenWidth * 0.035,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                        Padding(
+                                          padding: EdgeInsets.all(
+                                            screenWidth * 0.02,
+                                          ),
+                                          child: Text(
+                                            'Action\nButtons',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontSize: screenWidth * 0.035,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Poppins',
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
+                                      ],
                                     ),
+                                    ...docs.map((doc) {
+                                      // Safely access the 'name' field
+                                      final name = doc.get('name') as String? ?? 'Unnamed';
+                                      return TableRow(
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.all(
+                                              screenWidth * 0.02,
+                                            ),
+                                            child: Text(
+                                              name,
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                                fontSize: screenWidth * 0.035,
+                                                fontFamily: 'Poppins',
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(
+                                              screenWidth * 0.02,
+                                            ),
+                                            child: Text(
+                                              '', // Empty as per request
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                                fontSize: screenWidth * 0.035,
+                                                fontFamily: 'Poppins',
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: EdgeInsets.all(
+                                              screenWidth * 0.02,
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                Container(
+                                                  width: screenWidth * 0.22,
+                                                  height: screenWidth * 0.08,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green,
+                                                    borderRadius:
+                                                        BorderRadius.circular(20),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.edit,
+                                                        color: Colors.white,
+                                                        size: screenWidth * 0.04,
+                                                      ),
+                                                      SizedBox(
+                                                          width:
+                                                              screenWidth * 0.015),
+                                                      Text(
+                                                        'Edit',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize:
+                                                              screenWidth * 0.03,
+                                                          fontFamily: 'Poppins',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                    height: screenWidth * 0.02),
+                                                Container(
+                                                  width: screenWidth * 0.22,
+                                                  height: screenWidth * 0.08,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red,
+                                                    borderRadius:
+                                                        BorderRadius.circular(20),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.delete,
+                                                        color: Colors.black,
+                                                        size: screenWidth * 0.04,
+                                                      ),
+                                                      SizedBox(
+                                                          width:
+                                                              screenWidth * 0.015),
+                                                      Text(
+                                                        'Delete',
+                                                        style: TextStyle(
+                                                          color: Colors.black,
+                                                          fontSize:
+                                                              screenWidth * 0.03,
+                                                          fontFamily: 'Poppins',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }),
                                   ],
-                                ),
-                                ...List.generate(
-                                  20, // Generate all 20 data rows
-                                  (index) => TableRow(
-                                    children: [
-                                      Padding(
-                                        padding: EdgeInsets.all(
-                                          screenWidth * 0.02,
-                                        ),
-                                        child: Text(
-                                          '',
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: screenWidth * 0.035,
-                                            fontFamily: 'Poppins',
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(
-                                          screenWidth * 0.02,
-                                        ),
-                                        child: Text(
-                                          '',
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: screenWidth * 0.035,
-                                            fontFamily: 'Poppins',
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: EdgeInsets.all(
-                                          screenWidth * 0.02,
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Container(
-                                              width: screenWidth * 0.22,
-                                              height: screenWidth * 0.08,
-                                              decoration: BoxDecoration(
-                                                color: Colors.green,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.edit,
-                                                    color: Colors.white,
-                                                    size: screenWidth * 0.04,
-                                                  ),
-                                                  SizedBox(width: screenWidth * 0.015),
-                                                  Text(
-                                                    'Edit',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: screenWidth * 0.03,
-                                                      fontFamily: 'Poppins',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            SizedBox(height: screenWidth * 0.02),
-                                            Container(
-                                              width: screenWidth * 0.22,
-                                              height: screenWidth * 0.08,
-                                              decoration: BoxDecoration(
-                                                color: Colors.red,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons.delete,
-                                                    color: Colors.black,
-                                                    size: screenWidth * 0.04,
-                                                  ),
-                                                  SizedBox(width: screenWidth * 0.015),
-                                                  Text(
-                                                    'Delete',
-                                                    style: TextStyle(
-                                                      color: Colors.black,
-                                                      fontSize: screenWidth * 0.03,
-                                                      fontFamily: 'Poppins',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                );
+                              },
                             ),
                           ),
                         ),
@@ -881,7 +916,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
               right: 0,
               bottom: 0,
               child: Container(
-                color: Colors.transparent, // Now no X will appear
+                color: Colors.transparent, // No X will appear
               ),
             ),
           ],

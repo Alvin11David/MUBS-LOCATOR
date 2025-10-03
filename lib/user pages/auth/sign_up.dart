@@ -526,8 +526,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               Builder(
                                 builder: (context) {
                                   final List<String> hints =
-                                      (_passwordHints is List<String> &&
-                                              _passwordHints != null)
+                                      (_passwordHints != null)
                                           ? _passwordHints
                                           : <String>[];
                                   if (hints.isEmpty) return const SizedBox.shrink();

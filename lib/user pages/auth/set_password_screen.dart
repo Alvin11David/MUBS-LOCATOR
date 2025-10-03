@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -13,9 +15,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool isButtonEnabled = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false; // NEW: Loading state for button
+  bool _isLoading = false; // Loading state for button
 
-  // Password strength state
+  // Password strength state 
   double _passwordStrengthProgress = 0.0; // Progress from 0.0 to 1.0
   Color _strengthColor = Colors.white; // Color based on strength
 
@@ -62,15 +64,48 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call / password reset process
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final newPassword = _passwordController.text.trim();
+        
+        // Update password in Firebase Authentication
+        await user.updatePassword(newPassword);
 
-    setState(() {
-      _isLoading = false;
-    });
+        // Update password in Firestore (not recommended for security, use hashed value or skip this)
+        final userEmail = user.email;
+        if (userEmail != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: userEmail)
+              .limit(1)
+              .get()
+              .then((querySnapshot) {
+            if (querySnapshot.docs.isNotEmpty) {
+              final docRef = querySnapshot.docs.first.reference;
+              return docRef.update({'password': newPassword});
+            }
+            return null;
+          });
+        }
 
-    if (mounted) {
-      Navigator.pushNamed(context, '/SignInScreen');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password updated successfully!')),
+          );
+          Navigator.pushNamed(context, '/SignInScreen');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating password: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -238,14 +273,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.045,
                                     ),
                                     hintText: 'Enter New Password',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
@@ -278,7 +313,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    fontSize: screenWidth * 0.04,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),
@@ -315,14 +350,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.045,
                                     ),
                                     hintText: 'Confirm New Password',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
@@ -355,7 +390,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    fontSize: screenWidth * 0.04,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),

@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -15,68 +18,151 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController(); // Controller for email field
   final _phoneController = TextEditingController(); // Controller for phone contact field
   final _locationController = TextEditingController(); // Controller for location field
+  String? _savedImagePath; // Store the saved image path
 
-  // Function to pick an image from gallery or camera
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedImage();
+    _fetchUserData(); // Fetch data from Firestore on init
+  }
+
+  Future<void> _loadSavedImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _savedImagePath = prefs.getString('profileImagePath');
+      if (_savedImagePath != null && _selectedImage == null) {
+        _selectedImage = File(_savedImagePath!);
+      }
+    });
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: user.email)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final userData = querySnapshot.docs.first.data();
+          setState(() {
+            _fullNameController.text = userData['fullName'] ?? '';
+            _emailController.text = userData['email'] ?? '';
+            _phoneController.text = userData['phone'] ?? '';
+            _locationController.text = userData['location'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching user data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery); // Use gallery for image selection
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path); // Update state with selected image
+        _selectedImage = File(pickedFile.path);
       });
+    }
+  }
+
+  Future<void> _saveProfileData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'location': _locationController.text.trim(),
+        }, SetOptions(merge: true));
+
+        final prefs = await SharedPreferences.getInstance();
+        if (_selectedImage != null) {
+          await prefs.setString('profileImagePath', _selectedImage!.path);
+        }
+
+        if (mounted) {
+          Navigator.pop(context, {
+            'imagePath': _selectedImage?.path,
+            'fullName': _fullNameController.text,
+            'email': _emailController.text,
+            'phone': _phoneController.text,
+            'location': _locationController.text,
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error saving profile data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions for responsive sizing
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: SafeArea(
         child: Container(
-          color: const Color(0xFF93C5FD), // Set background color to #93C5FD
+          color: const Color(0xFF93C5FD),
           width: double.infinity,
           height: double.infinity,
           child: Stack(
             children: [
-              // Glassy water rectangle (top)
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: screenHeight * 0.15, // 15% of screen height for rectangle
+                  height: screenHeight * 0.15,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(30),
                       bottomRight: Radius.circular(30),
                     ),
                     border: Border.all(
-                      color: Colors.white, // White stroke
-                      width: 1, // Fixed stroke width
+                      color: Colors.white,
+                      width: 1,
                     ),
                   ),
                 ),
               ),
-              // Profile picture circle with person icon or selected image
               Positioned(
-                top: screenHeight * 0.015, // Centered vertically in the glassy rectangle
-                left: (screenWidth - screenWidth * 0.25) / 2, // Center horizontally
+                top: screenHeight * 0.015,
+                left: (screenWidth - screenWidth * 0.25) / 2,
                 child: Stack(
                   children: [
                     Container(
-                      width: screenWidth * 0.25, // Circle size is 25% of screen width
-                      height: screenWidth * 0.25, // Keep aspect ratio
+                      width: screenWidth * 0.25,
+                      height: screenWidth * 0.25,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.2), // Glassy effect
+                        color: Colors.white.withOpacity(0.2),
                         border: Border.all(
-                          color: Colors.white, // White stroke
-                          width: screenWidth * 0.006, // Stroke width scales with screen
+                          color: Colors.white,
+                          width: screenWidth * 0.006,
                         ),
                       ),
                       child: Center(
@@ -91,33 +177,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               )
                             : Icon(
                                 Icons.person,
-                                color: Colors.black, // Black icon color
-                                size: screenWidth * 0.12, // Icon size is 12% of screen width
+                                color: Colors.black,
+                                size: screenWidth * 0.12,
                               ),
                       ),
                     ),
-                    // Camera icon on lower border
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: _pickImage, // Trigger image picker on tap
+                        onTap: _pickImage,
                         child: Container(
-                          width: screenWidth * 0.08, // Camera icon container size
+                          width: screenWidth * 0.08,
                           height: screenWidth * 0.08,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white, // White background for camera icon
+                            color: Colors.white,
                             border: Border.all(
-                              color: Colors.white, // White stroke
-                              width: screenWidth * 0.003, // Stroke width scales
+                              color: Colors.white,
+                              width: screenWidth * 0.003,
                             ),
                           ),
                           child: Center(
                             child: Icon(
                               Icons.camera_alt,
                               color: Colors.black,
-                              size: screenWidth * 0.05, // Camera icon size
+                              size: screenWidth * 0.05,
                             ),
                           ),
                         ),
@@ -126,39 +211,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ],
                 ),
               ),
-              // Back chevron button
               Positioned(
-                top: screenHeight * 0.02, // 2% of screen height for top padding
-                left: screenWidth * 0.04, // 4% of screen width for left padding
+                top: screenHeight * 0.02,
+                left: screenWidth * 0.04,
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pop(context); // Navigate to previous screen
+                    Navigator.pop(context);
                   },
                   child: ClipOval(
                     child: Container(
-                      width: screenWidth * 0.15, // Circle size is 15% of screen width
-                      height: screenWidth * 0.15, // Keep aspect ratio
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
+                        color: Colors.white.withOpacity(0.2),
                         border: Border.all(
-                          color: Colors.white, // White stroke
-                          width: screenWidth * 0.006, // Stroke width scales with screen
+                          color: Colors.white,
+                          width: screenWidth * 0.006,
                         ),
                       ),
                       child: Center(
                         child: Icon(
                           Icons.chevron_left,
-                          color: Colors.black, // Black icon color
-                          size: screenWidth * 0.08, // Icon size is 8% of screen width
+                          color: Colors.black,
+                          size: screenWidth * 0.08,
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              // "Edit Profile" text
               Positioned(
-                top: screenHeight * 0.19, // Below the glassy rectangle
+                top: screenHeight * 0.19,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -167,15 +250,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.06, // Font size is 6% of screen width for responsiveness
+                      fontSize: screenWidth * 0.06,
                       fontFamily: 'Epunda Slab',
                     ),
                   ),
                 ),
               ),
-              // "Feel in the fields below" text
               Positioned(
-                top: screenHeight * 0.23, // Below the "Edit Profile" text
+                top: screenHeight * 0.23,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -183,44 +265,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Feel in the fields below',
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: screenWidth * 0.05, // Font size is 5% of screen width for responsiveness
+                      fontSize: screenWidth * 0.05,
                       fontWeight: FontWeight.w200,
                     ),
                   ),
                 ),
               ),
-              // Glassy water rectangle below "Feel in the fields below"
               Positioned(
-                top: screenHeight * 0.31, // Below the "Feel in the fields below" text
-                left: screenWidth * 0.02, // 2% of screen width for left padding
-                right: screenWidth * 0.02, // 2% of screen width for right padding
+                top: screenHeight * 0.31,
+                left: screenWidth * 0.02,
+                right: screenWidth * 0.02,
                 child: Container(
-                  height: screenHeight * 0.69, // 69% of screen height for rectangle
+                  height: screenHeight * 0.69,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2), // Semi-transparent for glassy effect
-                    borderRadius: BorderRadius.circular(30), // Border radius of 30
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: Colors.white, // White stroke
-                      width: 1, // Fixed stroke width
+                      color: Colors.white,
+                      width: 1,
                     ),
                   ),
-                  margin: EdgeInsets.only(bottom: screenHeight * 0.05), // Bottom padding
+                  margin: EdgeInsets.only(bottom: screenHeight * 0.05),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.05, // 5% of screen width for horizontal padding
-                      vertical: screenHeight * 0.02, // 2% of screen height for vertical padding
+                      horizontal: screenWidth * 0.05,
+                      vertical: screenHeight * 0.02,
                     ),
                     child: Column(
                       children: [
                         FullNameField(controller: _fullNameController),
-                        SizedBox(height: screenHeight * 0.02), // Spacing between fields
+                        SizedBox(height: screenHeight * 0.02),
                         EmailField(controller: _emailController),
-                        SizedBox(height: screenHeight * 0.02), // Spacing between fields
+                        SizedBox(height: screenHeight * 0.02),
                         PhoneContactField(controller: _phoneController),
-                        SizedBox(height: screenHeight * 0.02), // Spacing between fields
+                        SizedBox(height: screenHeight * 0.02),
                         LocationField(controller: _locationController),
-                        SizedBox(height: screenHeight * 0.05), // Spacing before button
-                        UpdateButton(),
+                        SizedBox(height: screenHeight * 0.05),
+                        UpdateButton(onUpdate: _saveProfileData),
                       ],
                     ),
                   ),
@@ -284,9 +365,9 @@ class FullNameField extends StatelessWidget {
             suffixIcon: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.02),
               child: Icon(
-                Icons.edit, // Pen icon
-                color: const Color.fromARGB(255, 69, 141, 224), // Matching color with prefix icon
-                size: screenWidth * 0.06, // Responsive icon size
+                Icons.edit,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
               ),
             ),
             enabledBorder: OutlineInputBorder(
@@ -366,9 +447,9 @@ class EmailField extends StatelessWidget {
             suffixIcon: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.02),
               child: Icon(
-                Icons.edit, // Pen icon
-                color: const Color.fromARGB(255, 69, 141, 224), // Matching color with prefix icon
-                size: screenWidth * 0.06, // Responsive icon size
+                Icons.edit,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
               ),
             ),
             enabledBorder: OutlineInputBorder(
@@ -448,9 +529,9 @@ class PhoneContactField extends StatelessWidget {
             suffixIcon: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.02),
               child: Icon(
-                Icons.edit, // Pen icon
-                color: const Color.fromARGB(255, 69, 141, 224), // Matching color with prefix icon
-                size: screenWidth * 0.06, // Responsive icon size
+                Icons.edit,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
               ),
             ),
             enabledBorder: OutlineInputBorder(
@@ -529,9 +610,9 @@ class LocationField extends StatelessWidget {
             suffixIcon: Padding(
               padding: EdgeInsets.only(right: screenWidth * 0.02),
               child: Icon(
-                Icons.edit, // Pen icon
-                color: const Color.fromARGB(255, 69, 141, 224), // Matching color with prefix icon
-                size: screenWidth * 0.06, // Responsive icon size
+                Icons.edit,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
               ),
             ),
             enabledBorder: OutlineInputBorder(
@@ -561,7 +642,8 @@ class LocationField extends StatelessWidget {
 }
 
 class UpdateButton extends StatelessWidget {
-  const UpdateButton({super.key});
+  final VoidCallback onUpdate;
+  const UpdateButton({super.key, required this.onUpdate});
 
   @override
   Widget build(BuildContext context) {
@@ -570,27 +652,24 @@ class UpdateButton extends StatelessWidget {
         double screenWidth = constraints.maxWidth;
         double screenHeight = MediaQuery.of(context).size.height;
         return SizedBox(
-          width: double.infinity, // Full width like the fields
-          height: screenHeight * 0.06, // Same height as typical field height
+          width: double.infinity,
+          height: screenHeight * 0.06,
           child: GestureDetector(
-            onTap: () {
-              // Add update logic here
-              print('Update profile tapped');
-            },
+            onTap: onUpdate,
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30), // Same as fields
+                borderRadius: BorderRadius.circular(30),
                 gradient: const LinearGradient(
                   colors: [
-                    Color(0xFFE0E7FF), // E0E7FF at 0%
-                    Color(0xFF93C5FD), // 93C5FD at 47%
+                    Color(0xFFE0E7FF),
+                    Color(0xFF93C5FD),
                   ],
-                  stops: [0.0, 0.47], // 0% to 47%
+                  stops: [0.0, 0.47],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 border: Border.all(
-                  color: const Color(0xFF3B82F6), // Blue border
+                  color: const Color(0xFF3B82F6),
                   width: 1,
                 ),
               ),

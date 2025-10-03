@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/SplashScreen', // Start with splash screen
+      initialRoute: '/SplashScreen', 
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
