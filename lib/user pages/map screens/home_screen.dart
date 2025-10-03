@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsCentre = LatLng(0.3282482847196531, 32.61798173177951);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
 
@@ -371,8 +372,8 @@ class _HomeScreenState extends State<HomeScreen> {
               mapController = controller;
             },
             initialCameraPosition: CameraPosition(
-              target: _mubsMaingate,
-              zoom: 18.5, // Adjusted zoom to better show the campus
+              target: _mubsCentre,
+              zoom: 17, // Adjusted zoom to better show the campus
             ),
             markers: markers,
             polygons: polygons,
