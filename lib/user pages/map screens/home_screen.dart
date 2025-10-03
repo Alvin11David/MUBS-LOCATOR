@@ -7,6 +7,7 @@ import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
+import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -193,6 +194,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  BitmapDescriptor getRandomDefaultMarkerHue() {
+  // 1. Define the list of all available hue constants.
+  final List<double> hues = [
+    BitmapDescriptor.hueRed,
+    BitmapDescriptor.hueOrange,
+    BitmapDescriptor.hueYellow,
+    BitmapDescriptor.hueGreen,
+    BitmapDescriptor.hueCyan,
+    BitmapDescriptor.hueAzure,
+    BitmapDescriptor.hueBlue,
+    BitmapDescriptor.hueViolet,
+    BitmapDescriptor.hueMagenta,
+    BitmapDescriptor.hueRose,
+  ];
+
+  // 2. Create a Random object.
+  final Random random = Random();
+
+  // 3. Select a random index from the list.
+  final int randomIndex = random.nextInt(hues.length);
+
+  // 4. Get the hue value at the random index.
+  final double randomHue = hues[randomIndex];
+
+  // 5. Return the corresponding BitmapDescriptor.
+  return BitmapDescriptor.defaultMarkerWithHue(randomHue);
+}
+
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
       LatLng buildingLocation = LatLng(
@@ -216,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
             snippet: building.description,
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          
         ),
       );
 
