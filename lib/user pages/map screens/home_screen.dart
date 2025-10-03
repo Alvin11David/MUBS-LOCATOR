@@ -8,6 +8,7 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'dart:math';
+import 'package:flutter_mapbox_navigation/flutter_mapbox_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -607,6 +608,9 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // Keep all your existing _BuildingBottomSheetContent class unchanged
+// TODO: Add your Mapbox API key
+const String MAPBOX_ACCESS_TOKEN = 'sk.eyJ1IjoidGFnb29sZSIsImEiOiJjbWdhcjFuZHkwcWQ4MmtzZ2ttc2p5ZDhvIn0.N4HarDoiTsgSoIYJrzwPUw';
+
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
   final ScrollController scrollController;
@@ -631,6 +635,8 @@ class _BuildingBottomSheetContentState
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
+  late MapBoxNavigation _navigation;
+  bool _isNavigating = false;
 
   final List<String> _issueTypes = [
     'General',
@@ -640,6 +646,94 @@ class _BuildingBottomSheetContentState
     'Facility Issue',
     'Other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMapboxNavigation();
+  }
+
+  void _initializeMapboxNavigation() {
+    MapBoxNavigation.instance.registerRouteEventListener((event) {
+      print('Navigation Event: ${event.eventType}');
+      
+      switch (event.eventType) {
+        case MapBoxEvent.navigation_running:
+          setState(() => _isNavigating = true);
+          break;
+        case MapBoxEvent.navigation_finished:
+        case MapBoxEvent.navigation_cancelled:
+          setState(() => _isNavigating = false);
+          break;
+        case MapBoxEvent.on_arrival:
+          print('Arrived at ${widget.building.name}!');
+          setState(() => _isNavigating = false);
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  Future<void> _startMapboxNavigation() async {
+    try {
+      // Get current location - you'll need to implement this based on your app's location service
+      // For now, using placeholder coordinates
+      double startLat = 0.0; // TODO: Replace with actual user location latitude
+      double startLng = 0.0; // TODO: Replace with actual user location longitude
+
+      // Destination from the building
+      double endLat = widget.building.location.latitude;
+      double endLng = widget.building.location.longitude;
+
+      var wayPoints = <WayPoint>[
+        WayPoint(
+          name: "Your Location",
+          latitude: startLat,
+          longitude: startLng,
+        ),
+        WayPoint(
+          name: widget.building.name,
+          latitude: endLat,
+          longitude: endLng,
+        ),
+      ];
+
+      var options = MapBoxOptions(
+        initialLatitude: startLat,
+        initialLongitude: startLng,
+        zoom: 15.0,
+        tilt: 0.0,
+        bearing: 0.0,
+        enableRefresh: true, // Auto rerouting
+        alternatives: true,
+        voiceInstructionsEnabled: true,
+        bannerInstructionsEnabled: true,
+        allowsUTurnAtWayPoints: true,
+        mode: MapBoxNavigationMode.drivingWithTraffic,
+        simulateRoute: false, // Set to true for testing without moving
+        language: "en",
+        units: VoiceUnits.metric,
+      );
+
+      await MapBoxNavigation.instance.startNavigation(
+        wayPoints: wayPoints,
+        options: options,
+      );
+
+      setState(() => _isNavigating = true);
+    } catch (e) {
+      print('Error starting navigation: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start navigation: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -714,8 +808,8 @@ class _BuildingBottomSheetContentState
                   Expanded(
                     child: _buildTabButton(
                       index: 1,
-                      icon: Icons.directions,
-                      label: 'Directions',
+                      icon: Icons.navigation,
+                      label: 'Start',
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -773,7 +867,7 @@ class _BuildingBottomSheetContentState
         child: Row(
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 12.0, right: 4.0),
+              padding: const EdgeInsets.only(left: 16.0, right: 4.0),
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : Colors.grey[600],
@@ -890,11 +984,20 @@ class _BuildingBottomSheetContentState
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                // This is where the actual navigation starts
-                widget.onDirectionsTap();
-                Navigator.pop(context);
-              },
+              onPressed: _isNavigating
+                  ? null
+                  : () async {
+                      // Start Mapbox Navigation
+                      await _startMapboxNavigation();
+                      
+                      // Call the original callback if needed
+                      widget.onDirectionsTap();
+                      
+                      // Close the bottom sheet
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Theme.of(context).primaryColor,
@@ -906,11 +1009,24 @@ class _BuildingBottomSheetContentState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.navigation, size: 20),
+                  if (_isNavigating)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else
+                    const Icon(Icons.navigation, size: 20),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Start Navigation',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  Text(
+                    _isNavigating ? 'Starting...' : 'Start Navigation',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
