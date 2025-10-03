@@ -24,9 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
-  final String _googleApiKey =
-      'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA'; // Replace with your actual API key
+  final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
   List<Building> fetchedBuildings = [];
+  bool searchActive = true;
 
   // Updated MUBS boundary coordinates - using your exact coordinates
   final List<LatLng> _mubsBounds = [
@@ -99,6 +99,24 @@ class _HomeScreenState extends State<HomeScreen> {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
       fetchedBuildings.addAll(buildings);
+      setState(() {
+        for (var element in buildings) {
+          markers.add(
+            Marker(
+              markerId: MarkerId(element.id),
+              position: LatLng(
+                element.location.latitude,
+                element.location.longitude,
+              ),
+              infoWindow: InfoWindow(
+                title: element.name,
+                snippet: element.description,
+              ),
+            ),
+          );
+        }
+      });
+
       print("✅ Successfully fetched ${buildings.length} buildings.");
     } catch (e, stackTrace) {
       print("❌ Failed to fetch buildings: $e");
@@ -182,11 +200,13 @@ class _HomeScreenState extends State<HomeScreen> {
         building.location.longitude,
       );
 
-      // Clear existing markers and polylines
-      markers.removeWhere((marker) => marker.markerId.value == 'destination');
-      polylines.clear();
+      // Keep only the origin marker (MUBS Maingate)
+      markers.removeWhere((marker) => marker.markerId.value != 'mubs_maingate');
 
-      // Add new marker for the building
+      // Remove any previous destination marker
+      markers.removeWhere((marker) => marker.markerId.value == 'destination');
+
+      // Add new marker for the building (destination)
       markers.add(
         Marker(
           markerId: const MarkerId('destination'),
@@ -347,7 +367,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearSearchBar() {
     searchController.clear();
-    setState(() {});
+    setState(() {
+      searchActive = false; // Disable suggestions after navigation
+    });
   }
 
   @override
@@ -428,12 +450,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     onChanged: (value) {
-                      setState(() {});
+                      setState(() {
+                        searchActive = true; // Enable suggestions when typing
+                      });
                     },
                   );
                 },
                 suggestionsCallback: (pattern) async {
-                  if (pattern.isEmpty) return [];
+                  if (!searchActive || pattern.isEmpty) return [];
 
                   final matches = fetchedBuildings.map((building) {
                     final nameScore = StringSimilarity.compareTwoStrings(
@@ -529,10 +553,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
-                emptyBuilder: (context) => const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('No places found. Try another keyword.'),
-                ),
+                emptyBuilder: (context) {
+                  if (!searchActive)
+                    return SizedBox.shrink(); // Hide message if not active
+                  return const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('No places found. Try another keyword.'),
+                  );
+                },
               ),
             ),
           ),
