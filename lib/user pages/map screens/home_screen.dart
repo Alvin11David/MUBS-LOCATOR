@@ -121,58 +121,59 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showBuildingBottomSheet(BuildContext context, Building building) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    isDismissible: true,
-    enableDrag: true,
-    useSafeArea: true,
-    builder: (BuildContext context) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.6, // Start at 60% of screen height
-        minChildSize: 0.3,     // Can be dragged down to 30%
-        maxChildSize: 0.9,     // Can be expanded to 90%
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6, // Start at 60% of screen height
+          minChildSize: 0.3, // Can be dragged down to 30%
+          maxChildSize: 0.9, // Can be expanded to 90%
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
-              ],
-            ),
-            child: _BuildingBottomSheetContent(
-              building: building,
-              scrollController: scrollController,
-              onDirectionsTap: () => _navigateToBuilding(building),
-              onFeedbackSubmit: (
-                String issueType,
-                String issueTitle,
-                String description,
-              ) {
-                _submitFeedback(
-                  building,
-                  issueType,
-                  issueTitle,
-                  description,
-                );
-              },
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: _BuildingBottomSheetContent(
+                building: building,
+                scrollController: scrollController,
+                onDirectionsTap: () {
+                  _clearSearchBar(); // <-- Clear search bar before navigation
+                  _navigateToBuilding(building);
+                },
+                onFeedbackSubmit:
+                    (String issueType, String issueTitle, String description) {
+                      _submitFeedback(
+                        building,
+                        issueType,
+                        issueTitle,
+                        description,
+                      );
+                    },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
       LatLng buildingLocation = LatLng(
@@ -248,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (data['status'] == 'OK') {
           final points = data['routes'][0]['overview_polyline']['points'];
           List<LatLng> routeCoords = _convertToLatLng(_decodePoly(points));
-          
+
           setState(() {
             polylines.clear();
             polylines.add(
@@ -341,6 +342,11 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
+  }
+
+  void _clearSearchBar() {
+    searchController.clear();
+    setState(() {});
   }
 
   @override
@@ -586,7 +592,9 @@ class _BuildingBottomSheetContentState
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75, // Takes up 75% of screen height
+      height:
+          MediaQuery.of(context).size.height *
+          0.75, // Takes up 75% of screen height
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -615,7 +623,10 @@ class _BuildingBottomSheetContentState
               // Building name
               Text(
                 widget.building.name,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -815,7 +826,7 @@ class _BuildingBottomSheetContentState
             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
           const SizedBox(height: 20),
-          
+
           // Start Navigation Button
           SizedBox(
             width: double.infinity,
