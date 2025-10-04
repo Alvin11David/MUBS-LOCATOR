@@ -38,7 +38,10 @@ dependencies:
   url_launcher:
   # shared preferences
   shared_preferences:
-  flutter_mapbox_navigation:
+  geolocator: 
+  google_directions_api: 
+  get:
+  dio: 
 
 dev_dependencies:
   flutter_test:

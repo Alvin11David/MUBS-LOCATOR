@@ -1,5 +1,3 @@
-MAPBOX_DOWNLOADS_TOKEN=sk.eyJ1IjoidGFnb29sZSIsImEiOiJjbWdhcjFuZHkwcWQ4MmtzZ2ttc2p5ZDhvIn0.N4HarDoiTsgSoIYJrzwPUw
-
 plugins {
     id("com.android.application") version "8.7.3" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
@@ -13,6 +11,9 @@ allprojects {
         mavenCentral()
     }
 }
+
+val mapboxToken: String = project.findProperty("MAPBOX_DOWNLOADS_TOKEN") as String
+println("Mapbox Token: $mapboxToken")
 
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
