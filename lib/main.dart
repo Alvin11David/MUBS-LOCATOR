@@ -6,6 +6,7 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
 import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/terms_and_privacy_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,12 +29,13 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       routes: {
-       // '/': (context) => const SplashScreen(),
-       // '/OnboardingScreen1': (context) => const OnboardingScreen1(),
-       // '/OnboardingScreen2': (context) => const OnboardingScreen2(),
-       // '/OnboardingScreen3': (context) => const OnboardingScreen3(),
-       '/': (context) => AboutScreen(),
-       //'/':AboutScreen': (context) => const AboutScreen(),
+       //'/': (context) => const SplashScreen(),
+       //'/OnboardingScreen1': (context) => const OnboardingScreen1(),
+       //'/OnboardingScreen2': (context) => const OnboardingScreen2(),
+       //'/OnboardingScreen3': (context) => const OnboardingScreen3(),
+       
+       //'/': (context) => const AboutScreen(),
+        '/': (context) => const TermsAndPrivacyScreen(),
       },
     );
   }
