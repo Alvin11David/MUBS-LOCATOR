@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/SplashScreen', // Start with splash screen
+      initialRoute: '/SplashScreen', 
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
         '/LocationManagementScreen': (context) => const LocationManagementScreen(),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
-        '/ResetPasswordScreen': (context) => const ResetPasswordScreen(),
+        '/ResetPasswordScreen': (context) => const ResetPasswordScreen(email: '',),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
         '/AddPlaceScreen': (context) => const AddPlaceScreen(),
         '/HomeScreen': (context) => const HomeScreen(),

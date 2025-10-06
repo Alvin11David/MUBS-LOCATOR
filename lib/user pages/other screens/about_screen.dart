@@ -171,16 +171,21 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
               Positioned(
                 top: screenHeight * 0.02,
                 left: screenWidth * 0.04,
-                child: ClipOval(
-                  child: Container(
-                    width: screenWidth * 0.15,
-                    height: screenWidth * 0.15,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      border: Border.all(color: Colors.white, width: screenWidth * 0.002),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.chevron_left, color: Colors.black, size: screenWidth * 0.08),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: ClipOval(
+                    child: Container(
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        border: Border.all(color: Colors.white, width: screenWidth * 0.002),
+                      ),
+                      child: Center(
+                        child: Icon(Icons.chevron_left, color: Colors.black, size: screenWidth * 0.08),
+                      ),
                     ),
                   ),
                 ),

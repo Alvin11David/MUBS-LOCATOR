@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -10,7 +12,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool isButtonEnabled = false;
-  bool isLoading = false; // NEW: Track loading state
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -30,16 +32,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() {
       isLoading = true;
     });
+    try {
+      final email = _emailController.text.trim();
+      final otp = (1000 + Random().nextInt(9000)).toString();
 
-    // Simulate a network call (you can replace this with Firebase OTP logic)
-    await Future.delayed(const Duration(seconds: 2));
+      // Call your deployed Cloud Function
+      final callable = FirebaseFunctions.instance.httpsCallable('sendOTPEmail');
+      await callable.call({'email': email, 'otp': otp});
 
-    setState(() {
-      isLoading = false;
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('A 4 digit code has been sent to $email')),
+      );
 
-    // Navigate to OTP verification screen after loading
-    Navigator.pushNamed(context, '/OTPScreen');
+      Navigator.pushNamed(context, '/OTPScreen', arguments: {'email': email});
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -202,7 +216,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           SizedBox(
                             width: screenWidth * 0.8,
                             child: Text(
-                              'Please enter your email address below to receive an OTP code.',
+                              'Please enter your email address below to receive a 4 digit code.',
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -244,14 +258,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045, // Reduced from 0.05
+                                      fontSize: screenWidth * 0.045,
                                     ),
                                     hintText: 'Enter Your Gmail',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04, // Reduced from 0.045
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     fillColor: const Color.fromARGB(
                                       255,
@@ -297,7 +311,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04, // Reduced from 0.045
+                                    fontSize: screenWidth * 0.04,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),
@@ -317,7 +331,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           width: 1,
                                         ),
                                         gradient: LinearGradient(
-                                          colors: isButtonEnabled
+                                          colors: isButtonEnabled && !isLoading
                                               ? [
                                                   const Color(0xFFE0E7FF),
                                                   const Color(0xFF93C5FD),

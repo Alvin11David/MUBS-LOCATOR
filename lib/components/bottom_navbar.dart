@@ -18,6 +18,28 @@ class _BottomNavBarState extends State<BottomNavBar> {
     _selectedIndex = widget.initialIndex;
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    // Navigation logic for each item
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/HomeScreen');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/LocationSelectScreen');
+        break;
+      case 2:
+        // Feedback item: No navigation defined yet
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/ProfileScreen');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -30,15 +52,15 @@ class _BottomNavBarState extends State<BottomNavBar> {
         return ClipRRect(
           borderRadius: BorderRadius.circular(30),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Matching search bar blur
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
-              height: screenHeight * 0.1, // 10% of screen height
-              width: screenWidth, // Full width
+              height: screenHeight * 0.1,
+              width: screenWidth,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2), // Matching search bar background
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.3), // Matching search bar border
+                  color: Colors.white.withOpacity(0.3),
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -52,16 +74,15 @@ class _BottomNavBarState extends State<BottomNavBar> {
               ),
               child: Stack(
                 children: [
-                  // Sliding watery glass rectangle (adjusted to match glassy effect)
                   AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300), // Smooth animation
-                    left: padding + _selectedIndex * effectiveItemWidth, // Align precisely with each item's position
-                    top: screenHeight * 0.010, // Slightly lower for better vertical centering over icon + label
-                    width: effectiveItemWidth, // Matches the exact space for each item
-                    height: screenHeight * 0.075, // Covers icon and label
+                    duration: const Duration(milliseconds: 300),
+                    left: padding + _selectedIndex * effectiveItemWidth,
+                    top: screenHeight * 0.010,
+                    width: effectiveItemWidth,
+                    height: screenHeight * 0.075,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2), // Matching overall glassy effect
+                        color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.3),
@@ -77,7 +98,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       ),
                     ),
                   ),
-                  // Icons and labels
                   Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: padding),
@@ -133,13 +153,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
     required bool isSelected,
   }) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
+      onTap: () => _onItemTapped(index), // Call navigation handler
       child: Opacity(
-        opacity: isSelected ? 1.0 : 0.6, // Active item is fully opaque, others dimmed
+        opacity: isSelected ? 1.0 : 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -147,7 +163,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
             Icon(
               icon,
               color: Colors.black,
-              size: isSelected ? screenWidth * 0.07 : screenWidth * 0.06, // Larger icon when selected
+              size: isSelected ? screenWidth * 0.07 : screenWidth * 0.06,
             ),
             Text(
               label,
@@ -155,7 +171,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 color: Colors.black,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w500,
-                fontSize: isSelected ? screenWidth * 0.04 : screenWidth * 0.035, // Larger text when selected
+                fontSize: isSelected ? screenWidth * 0.04 : screenWidth * 0.035,
               ),
             ),
           ],
