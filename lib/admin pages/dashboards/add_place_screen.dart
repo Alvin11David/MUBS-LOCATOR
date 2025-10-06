@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddPlaceScreen extends StatefulWidget {
   const AddPlaceScreen({super.key});
@@ -16,7 +17,21 @@ class AddPlaceScreen extends StatefulWidget {
 
 class _AddPlaceScreenState extends State<AddPlaceScreen>
     with SingleTickerProviderStateMixin {
-  // Determine greeting based on time of day
+  String? _profileImagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profileImagePath = prefs.getString('profileImagePath');
+    });
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -28,29 +43,27 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
-  // State for dropdown and menu visibility
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
 
-  // Controllers and focus nodes for input fields
   final TextEditingController _buildingNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final FocusNode _buildingNameFocus = FocusNode();
   final FocusNode _descriptionFocus = FocusNode();
   final FocusNode _locationFocus = FocusNode();
 
-  // Location state
-  LatLng _selectedLocation = const LatLng(0.32848299678238435, 32.61717974633408);
+  LatLng _selectedLocation = const LatLng(
+    0.32848299678238435,
+    32.61717974633408,
+  );
   GoogleMapController? _mapController;
   bool _isLocationSelected = false;
 
-  // MUBS center coordinates
   static const CameraPosition _mubsCenter = CameraPosition(
     target: LatLng(0.32848299678238435, 32.61717974633408),
     zoom: 16.0,
   );
 
-  // Logout function
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -70,9 +83,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       _selectedLocation = position;
       _isLocationSelected = true;
     });
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(_selectedLocation),
-    );
+    _mapController?.animateCamera(CameraUpdate.newLatLng(_selectedLocation));
   }
 
   @override
@@ -90,297 +101,292 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-
-    // Get the user's full name from Firebase
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF93C5FD),
-      body: Stack(
-        children: [
-          // Background GestureDetector to close sidebar, dropdown, and keyboard
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (_isMenuVisible) {
-                    _isMenuVisible = false; // Close sidebar when tapping outside
-                  }
-                  _isDropdownVisible = false; // Close dropdown
-                });
-                FocusScope.of(context).unfocus(); // Close keyboard
-              },
-              behavior: HitTestBehavior.translucent,
-            ),
-          ),
-          // Glassy rectangle at the top
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: screenHeight * 0.09,
-              width: screenWidth,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(16),
-                ),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Background GestureDetector to close sidebar, dropdown, and keyboard
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isMenuVisible = false;
+                    _isDropdownVisible = false;
+                  });
+                  FocusScope.of(context).unfocus();
+                },
+                behavior: HitTestBehavior.translucent,
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(0),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.04,
-                        vertical: screenHeight * 0.02,
+            ),
+            // Glassy rectangle at the top, positioned below status bar
+            Column(
+              children: [
+                Container(
+                  height: screenHeight * 0.09,
+                  width: screenWidth,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Menu icon
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isMenuVisible = !_isMenuVisible;
-                                _isDropdownVisible = false; // Ensure dropdown is closed
-                              });
-                            },
-                            behavior: HitTestBehavior.opaque,
-                            child: Icon(
-                              Icons.menu,
-                              color: Colors.black,
-                              size: screenWidth * 0.08,
-                            ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                            vertical: screenHeight * 0.02,
                           ),
-                          SizedBox(width: screenWidth * 0.04),
-                          // Greeting text with full name
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _isMenuVisible = !_isMenuVisible;
+                                    _isDropdownVisible = false;
+                                  });
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: Icon(
+                                  Icons.menu,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.08,
+                                ),
+                              ),
+                              SizedBox(width: screenWidth * 0.04),
+                              Text(
+                                '${_getGreeting()}, $fullName',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.045,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                width: screenWidth * 0.17,
+                                height: screenHeight * 0.05,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        left: screenWidth * 0.00,
+                                      ),
+                                      child: Container(
+                                        width: screenWidth * 0.1,
+                                        height: screenWidth * 0.1,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child:
+                                            (_profileImagePath != null &&
+                                                _profileImagePath!.isNotEmpty)
+                                            ? ClipOval(
+                                                child: Image.file(
+                                                  File(_profileImagePath!),
+                                                  fit: BoxFit.cover,
+                                                  width: screenWidth * 0.09,
+                                                  height: screenWidth * 0.09,
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.person,
+                                                color: Colors.black,
+                                                size: screenWidth * 0.04,
+                                              ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        right: screenWidth * 0.01,
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _isDropdownVisible =
+                                                !_isDropdownVisible;
+                                            _isMenuVisible = false;
+                                          });
+                                        },
+                                        behavior: HitTestBehavior.opaque,
+                                        child: Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.04,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Add a Place text, subtitle, and chevron icons
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.04,
+                    vertical: screenHeight * 0.01,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            '${_getGreeting()}, $fullName',
+                            'Add a Place',
                             style: TextStyle(
                               color: Colors.black,
-                              fontSize: screenWidth * 0.045,
+                              fontSize: screenWidth * 0.05,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'Poppins',
                             ),
                           ),
-                          const Spacer(),
-                          // Small rectangle with black stroke
-                          Container(
-                            width: screenWidth * 0.17,
-                            height: screenHeight * 0.05,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: Colors.black,
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Circular container with person icon
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    left: screenWidth * 0.00,
-                                  ),
-                                  child: Container(
-                                    width: screenWidth * 0.09,
-                                    height: screenWidth * 0.09,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
-                                    ),
-                                  ),
-                                ),
-                                // Dropdown arrow
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    right: screenWidth * 0.01,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _isDropdownVisible =
-                                            !_isDropdownVisible;
-                                        _isMenuVisible = false; // Ensure sidebar is closed
-                                      });
-                                    },
-                                    behavior: HitTestBehavior.opaque,
-                                    child: Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          SizedBox(height: screenHeight * 0.01),
+                          Text(
+                            'Fill in the form below to successfully\nadd a place',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: screenWidth * 0.038,
+                              fontWeight: FontWeight.normal,
+                              fontFamily: 'Poppins',
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Add a Place text, subtitle, and chevron icons
-          Positioned(
-            top: screenHeight * 0.1,
-            left: screenWidth * 0.05,
-            right: screenWidth * 0.04,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Add a Place',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: screenWidth * 0.05,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.01),
-                      Text(
-                        'Fill in the form below to successfully\nadd a place',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: screenWidth * 0.038,
-                          fontWeight: FontWeight.normal,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context); // Navigate to previous screen
-                        },
-                        child: Icon(
-                          Icons.chevron_left,
-                          color: Colors.black,
-                          size: screenWidth * 0.08,
-                        ),
-                      ),
-                      SizedBox(width: screenWidth * 0.02),
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey,
-                        size: screenWidth * 0.08,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Dropdown rectangle
-          if (_isDropdownVisible)
-            Positioned(
-              top: screenHeight * 0.09,
-              right: screenWidth * 0.04,
-              child: Container(
-                width: screenWidth * 0.25,
-                height: screenHeight * 0.06,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      color: Colors.transparent,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.03,
-                          vertical: screenHeight * 0.01,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Profile',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                            Image.asset(
-                              'assets/images/edit.png',
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                            child: Icon(
+                              Icons.chevron_left,
                               color: Colors.black,
-                              width: screenWidth * 0.04,
-                              height: screenWidth * 0.04,
+                              size: screenWidth * 0.08,
                             ),
-                          ],
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                            size: screenWidth * 0.08,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Dropdown rectangle
+            if (_isDropdownVisible)
+              Positioned(
+                top: screenHeight * 0.09,
+                right: screenWidth * 0.04,
+                child: Container(
+                  width: screenWidth * 0.25,
+                  height: screenHeight * 0.06,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Profile',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              Image.asset(
+                                'assets/images/edit.png',
+                                color: Colors.black,
+                                width: screenWidth * 0.04,
+                                height: screenWidth * 0.04,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          // White rectangle with scrollable content
-          Positioned(
-            top: screenHeight * 0.21,
-            left: screenWidth * 0.02,
-            right: screenWidth * 0.02,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: () {
-                // Prevent taps within the form from closing the sidebar
-              },
-              behavior: HitTestBehavior.opaque,
+            // White rectangle with scrollable content
+            Positioned(
+              top: screenHeight * 0.21,
+              left: screenWidth * 0.02,
+              right: screenWidth * 0.02,
+              bottom: 0,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return SingleChildScrollView(
@@ -398,73 +404,75 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           vertical: screenHeight * 0.04,
                           horizontal: screenWidth * 0.04,
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
+                        child: Form(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: BuildingNameField(
+                                  controller: _buildingNameController,
+                                  label: 'Building Name',
+                                  hint: 'Enter Building Name',
+                                  icon: Icons.location_city,
+                                  focusNode: _buildingNameFocus,
+                                  nextFocusNode: _descriptionFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
                               ),
-                              child: BuildingNameField(
-                                controller: _buildingNameController,
-                                label: 'Building Name',
-                                hint: 'Enter Building Name',
-                                icon: Icons.location_city,
-                                focusNode: _buildingNameFocus,
-                                nextFocusNode: _descriptionFocus,
-                                textInputAction: TextInputAction.next,
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: DescriptionField(
+                                  controller: _descriptionController,
+                                  label: 'Building Description',
+                                  hint: 'Enter Place Description',
+                                  icon: Icons.description,
+                                  focusNode: _descriptionFocus,
+                                  textInputAction: TextInputAction.next,
+                                  nextFocusNode: _locationFocus,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.0,
+                                ),
+                                child: LocationSelectField(
+                                  controller: TextEditingController(),
+                                  label: 'Location Select',
+                                  hint: 'Tap on the map to select location',
+                                  icon: Icons.location_on,
+                                  focusNode: _locationFocus,
+                                  textInputAction: TextInputAction.done,
+                                  selectedLocation: _selectedLocation,
+                                  isLocationSelected: _isLocationSelected,
+                                  onMapCreated: _onMapCreated,
+                                  onTap: _onTap,
+                                ),
                               ),
-                              child: DescriptionField(
-                                controller: _descriptionController,
-                                label: 'Building Description',
-                                hint: 'Enter Place Description',
-                                icon: Icons.description,
-                                focusNode: _descriptionFocus,
-                                textInputAction: TextInputAction.next,
-                                nextFocusNode: _locationFocus,
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: PhotosMediaField(),
                               ),
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.0,
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: OpeningClosingHoursField(),
                               ),
-                              child: LocationSelectField(
-                                controller: TextEditingController(),
-                                label: 'Location Select',
-                                hint: 'Tap on the map to select location',
-                                icon: Icons.location_on,
-                                focusNode: _locationFocus,
-                                textInputAction: TextInputAction.done,
-                                selectedLocation: _selectedLocation,
-                                isLocationSelected: _isLocationSelected,
-                                onMapCreated: _onMapCreated,
-                                onTap: _onTap,
-                              ),
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.0,
-                              ),
-                              child: PhotosMediaField(),
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.00,
-                              ),
-                              child: OpeningClosingHoursField(),
-                            ),
-                            SizedBox(height: screenHeight * 0.04),
-                          ],
+                              SizedBox(height: screenHeight * 0.04),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -472,250 +480,167 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                 },
               ),
             ),
-          ),
-          // Content area with Empty Container
-          Positioned(
-            top: screenHeight * 0.09,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              color: Colors.transparent,
-            ),
-          ),
-          // Sidebar (Menu rectangle)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-            top: 0,
-            child: GestureDetector(
-              onTap: () {
-                // Prevent taps within the sidebar from closing it
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: screenWidth * 0.6,
-                height: screenHeight * 0.8,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                      offset: const Offset(2, 0),
-                    ),
-                  ],
+            // Sidebar overlay
+            if (_isMenuVisible)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isMenuVisible = false;
+                    });
+                  },
+                  behavior: HitTestBehavior.translucent,
+                  child: Container(color: Colors.transparent),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(
-                      children: [
-                        Image.asset(
-                          'assets/images/sidebar.png',
-                          width: screenWidth * 0.6,
-                          height: screenHeight * 0.16,
-                          fit: BoxFit.cover,
-                        ),
-                        Positioned(
+              ),
+            // Sidebar
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+              top: 0,
+              child: GestureDetector(
+                onTap: () {},
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: screenWidth * 0.6,
+                  height: screenHeight * 0.8,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(2, 0),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          Image.asset(
+                            'assets/images/sidebar.png',
+                            width: screenWidth * 0.6,
+                            height: screenHeight * 0.16,
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.03,
+                            child: Container(
+                              width: screenWidth * 0.15,
+                              height: screenWidth * 0.15,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 1,
+                                ),
+                              ),
+                              child:
+                                  (_profileImagePath != null &&
+                                      _profileImagePath!.isNotEmpty)
+                                  ? ClipOval(
+                                      child: Image.file(
+                                        File(_profileImagePath!),
+                                        fit: BoxFit.cover,
+                                        width: screenWidth * 0.15,
+                                        height: screenWidth * 0.15,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.person,
+                                      color: Colors.black,
+                                      size: screenWidth * 0.08,
+                                    ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.05,
+                            child: Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: screenWidth * 0.05,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.09,
+                            child: Text(
+                              fullName,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: screenWidth * 0.035,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(
                           left: screenWidth * 0.03,
-                          top: screenHeight * 0.03,
-                          child: Container(
-                            width: screenWidth * 0.15,
-                            height: screenWidth * 0.15,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1),
-                            ),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.black,
-                              size: screenWidth * 0.08,
-                            ),
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/AdminDashboardScreen',
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.dashboard,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Dashboard',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Positioned(
-                          left: screenWidth * 0.19,
-                          top: screenHeight * 0.05,
-                          child: Text(
-                            'MUBS Locator',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth * 0.05,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
+                      ),
+
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
                         ),
-                        Positioned(
-                          left: screenWidth * 0.19,
-                          top: screenHeight * 0.09,
-                          child: Text(
-                            fullName,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth * 0.035,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.dashboard,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Dashboard',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chat,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Feedback & Reports',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.settings,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Profile Settings',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.notifications,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Push Notifications',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Locations',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.02,
-                      ),
-                      child: GestureDetector(
-                        onTap: _logout,
                         child: Row(
                           children: [
                             Icon(
-                              Icons.exit_to_app,
+                              Icons.chat,
                               color: Colors.black,
                               size: screenWidth * 0.06,
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             Text(
-                              'Logout',
+                              'Feedback & Reports',
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: screenWidth * 0.04,
@@ -726,13 +651,128 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/ProfileScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Push Notifications',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Locations',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: _logout,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.exit_to_app,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Logout',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -784,6 +824,7 @@ class BuildingNameField extends StatelessWidget {
           validator: _validateName,
           focusNode: focusNode,
           textInputAction: textInputAction,
+          enabled: true,
           onFieldSubmitted: (_) {
             if (nextFocusNode != null) {
               FocusScope.of(context).requestFocus(nextFocusNode);
@@ -889,6 +930,7 @@ class DescriptionField extends StatelessWidget {
           validator: _validateDescription,
           focusNode: focusNode,
           textInputAction: textInputAction,
+          enabled: true,
           maxLines: 4,
           minLines: 3,
           maxLength: 500,
@@ -921,7 +963,10 @@ class DescriptionField extends StatelessWidget {
               heightFactor: 1.0,
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: EdgeInsets.only(left: screenWidth * 0.08, top: screenWidth * 0.005),
+                padding: EdgeInsets.only(
+                  left: screenWidth * 0.08,
+                  top: screenWidth * 0.005,
+                ),
                 child: Icon(
                   icon,
                   color: const Color.fromARGB(255, 69, 141, 224),
@@ -960,7 +1005,7 @@ class DescriptionField extends StatelessWidget {
   }
 }
 
-// Location Select Field with Google Maps
+// LocationSelectField class
 class LocationSelectField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -1027,10 +1072,7 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
                 decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 237, 236, 236),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF93C5FD),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFF93C5FD), width: 1),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
@@ -1053,8 +1095,11 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
                               BitmapDescriptor.hueRed,
                             ),
                             infoWindow: InfoWindow(
-                              title: widget.isLocationSelected ? 'Selected Location' : 'Tap to select location',
-                              snippet: '${widget.selectedLocation.latitude.toStringAsFixed(6)}, ${widget.selectedLocation.longitude.toStringAsFixed(6)}',
+                              title: widget.isLocationSelected
+                                  ? 'Selected Location'
+                                  : 'Tap to select location',
+                              snippet:
+                                  '${widget.selectedLocation.latitude.toStringAsFixed(6)}, ${widget.selectedLocation.longitude.toStringAsFixed(6)}',
                             ),
                           ),
                         },
@@ -1121,7 +1166,7 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
   }
 }
 
-// Photos & Media Field with 4 solid rectangles
+// PhotosMediaField class
 class PhotosMediaField extends StatefulWidget {
   const PhotosMediaField({super.key});
 
@@ -1135,16 +1180,18 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
 
   Future<void> _addImage(int index) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
       if (pickedFile != null) {
         setState(() {
           _images[index] = pickedFile;
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
     }
   }
 
@@ -1183,10 +1230,7 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
                 decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 237, 236, 236),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF93C5FD),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFF93C5FD), width: 1),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
@@ -1247,12 +1291,13 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
   }
 }
 
-// Opening & Closing Hours Field
+// OpeningClosingHoursField class
 class OpeningClosingHoursField extends StatefulWidget {
   const OpeningClosingHoursField({super.key});
 
   @override
-  State<OpeningClosingHoursField> createState() => _OpeningClosingHoursFieldState();
+  State<OpeningClosingHoursField> createState() =>
+      _OpeningClosingHoursFieldState();
 }
 
 class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
@@ -1368,15 +1413,16 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                 decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 237, 236, 236),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: const Color(0xFF93C5FD),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFF93C5FD), width: 1),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
                   child: Padding(
-                    padding: EdgeInsets.only(bottom: screenHeight * 0.09, left: screenWidth * 0.02, right: screenWidth * 0.02),
+                    padding: EdgeInsets.only(
+                      bottom: screenHeight * 0.09,
+                      left: screenWidth * 0.02,
+                      right: screenWidth * 0.02,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -1401,7 +1447,12 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                 fontWeight: FontWeight.w400,
                                 fontSize: screenWidth * 0.035,
                               ),
-                              fillColor: const Color.fromARGB(255, 237, 236, 236),
+                              fillColor: const Color.fromARGB(
+                                255,
+                                237,
+                                236,
+                                236,
+                              ),
                               filled: true,
                               prefixIcon: Icon(
                                 Icons.calendar_today,
@@ -1410,11 +1461,17 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
-                                borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF93C5FD),
+                                  width: 1,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
-                                borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF93C5FD),
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: EdgeInsets.symmetric(
                                 vertical: screenWidth * 0.04,
@@ -1451,7 +1508,12 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                 fontWeight: FontWeight.w400,
                                 fontSize: screenWidth * 0.035,
                               ),
-                              fillColor: const Color.fromARGB(255, 237, 236, 236),
+                              fillColor: const Color.fromARGB(
+                                255,
+                                237,
+                                236,
+                                236,
+                              ),
                               filled: true,
                               prefixIcon: Icon(
                                 Icons.access_time,
@@ -1460,11 +1522,17 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
-                                borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF93C5FD),
+                                  width: 1,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
-                                borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF93C5FD),
+                                  width: 2,
+                                ),
                               ),
                               contentPadding: EdgeInsets.symmetric(
                                 vertical: screenWidth * 0.04,
