@@ -553,103 +553,108 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       Positioned(
                         top: screenHeight * 0.28, // Adjusted from screenHeight * 0.37
                         left: screenWidth * 0.04, // Align with left padding
-                        child: Container(
-                          width: screenWidth * 0.92, // Responsive width (92% of screen width)
-                          height: screenHeight * 0.23, // Responsive height (23% of screen height)
-                          decoration: BoxDecoration(
-                            color: Colors.white, // White background
-                            borderRadius: BorderRadius.circular(30), // Border radius of 30
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                left: -screenWidth * 0.2, // Small left padding
-                                bottom: -screenHeight * 0.05, // Small bottom padding
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8), // Slightly rounded corners for image
-                                  child: Image.asset(
-                                    'assets/images/location.png',
-                                    width: screenWidth * 0.7, // Responsive image size
-                                    height: screenWidth * 0.7, // Keep it square
-                                    fit: BoxFit.contain, // Ensure image scales properly
-                                    errorBuilder: (context, error, stackTrace) => Icon(
-                                      Icons.error,
-                                      color: Colors.red,
-                                      size: screenWidth * 0.2, // Match image size for error icon
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: screenWidth * 0.26, // Position to the right of the image
-                                top: screenHeight * 0.022, // Align with image's bottom edge
-                                child: Text(
-                                  'Locations',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: screenWidth * 0.045, // Responsive font size
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins', // Consistent with Dashboard Overview
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: screenWidth * 0.26, // Align with Locations text
-                                top: screenHeight * 0.070, // Below Locations text
-                                child: Text(
-                                  'Manage all the locations on the\nmap here.',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: screenWidth * 0.04, // Slightly smaller responsive font size
-                                    fontWeight: FontWeight.normal,
-                                    fontFamily: 'Poppins', // Consistent with Dashboard Overview
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: screenWidth * 0.26, // Align with Manage text
-                                top: screenHeight * 0.152, // Below Manage text
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      'Add/Edit/Delete places',
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: screenWidth * 0.04, // Same responsive font size as Manage text
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Poppins', // Consistent with Dashboard Overview
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/AddPlaceScreen');
+                          },
+                          child: Container(
+                            width: screenWidth * 0.92, // Responsive width (92% of screen width)
+                            height: screenHeight * 0.23, // Responsive height (23% of screen height)
+                            decoration: BoxDecoration(
+                              color: Colors.white, // White background
+                              borderRadius: BorderRadius.circular(30), // Border radius of 30
+                            ),
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: -screenWidth * 0.2, // Small left padding
+                                  bottom: -screenHeight * 0.05, // Small bottom padding
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8), // Slightly rounded corners for image
+                                    child: Image.asset(
+                                      'assets/images/location.png',
+                                      width: screenWidth * 0.7, // Responsive image size
+                                      height: screenWidth * 0.7, // Keep it square
+                                      fit: BoxFit.contain, // Ensure image scales properly
+                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                        Icons.error,
+                                        color: Colors.red,
+                                        size: screenWidth * 0.2, // Match image size for error icon
                                       ),
                                     ),
-                                    SizedBox(width: screenWidth * 0.02), // Responsive separation
-                                    Icon(
-                                      Icons.double_arrow,
-                                      color: Colors.green,
-                                      size: screenWidth * 0.08, // Responsive icon size
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Positioned(
-                                top: screenHeight * 0.02, // Align near top edge
-                                right: screenWidth * 0.02, // Align near right edge
-                                child: Container(
-                                  width: screenWidth * 0.08, // Responsive circle size
-                                  height: screenWidth * 0.08, // Keep it circular
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.black, // Black stroke
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.location_on,
-                                    color: Colors.black,
-                                    size: screenWidth * 0.04, // Responsive icon size
                                   ),
                                 ),
-                              ),
-                            ],
+                                Positioned(
+                                  left: screenWidth * 0.26, // Position to the right of the image
+                                  top: screenHeight * 0.022, // Align with image's bottom edge
+                                  child: Text(
+                                    'Locations',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.045, // Responsive font size
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins', // Consistent with Dashboard Overview
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: screenWidth * 0.26, // Align with Locations text
+                                  top: screenHeight * 0.070, // Below Locations text
+                                  child: Text(
+                                    'Manage all the locations on the\nmap here.',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04, // Slightly smaller responsive font size
+                                      fontWeight: FontWeight.normal,
+                                      fontFamily: 'Poppins', // Consistent with Dashboard Overview
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: screenWidth * 0.26, // Align with Manage text
+                                  top: screenHeight * 0.152, // Below Manage text
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Add/Edit/Delete places',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: screenWidth * 0.04, // Same responsive font size as Manage text
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Poppins', // Consistent with Dashboard Overview
+                                        ),
+                                      ),
+                                      SizedBox(width: screenWidth * 0.02), // Responsive separation
+                                      Icon(
+                                        Icons.double_arrow,
+                                        color: Colors.green,
+                                        size: screenWidth * 0.08, // Responsive icon size
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Positioned(
+                                  top: screenHeight * 0.02, // Align near top edge
+                                  right: screenWidth * 0.02, // Align near right edge
+                                  child: Container(
+                                    width: screenWidth * 0.08, // Responsive circle size
+                                    height: screenWidth * 0.08, // Keep it circular
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.black, // Black stroke
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.location_on,
+                                      color: Colors.black,
+                                      size: screenWidth * 0.04, // Responsive icon size
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

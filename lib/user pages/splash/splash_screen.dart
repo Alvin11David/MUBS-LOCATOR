@@ -217,7 +217,7 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Text(
                                         'Bachelor of Leadership and\n Governance',
                                         style: TextStyle(
-                                          fontSize: screenWidth * 0.039,
+                                          fontSize: screenWidth * 0.030,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                           fontFamily: 'Abril Fatface',
