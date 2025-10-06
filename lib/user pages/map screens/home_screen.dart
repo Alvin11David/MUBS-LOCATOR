@@ -61,6 +61,18 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'MUBS Maingate',
           snippet: 'Makerere University Business School',
         ),
+        onTap: () {
+          // Show bottom sheet for Maingate (optional: create a Building object for it)
+          _showBuildingBottomSheet(
+            context,
+            Building(
+              id: 'mubs_maingate',
+              name: 'MUBS Maingate',
+              description: 'Makerere University Business School',
+              location: _mubsMaingate,
+            ),
+          );
+        },
       ),
     );
   }
@@ -113,6 +125,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: element.name,
                 snippet: element.description,
               ),
+              onTap: () {
+                _showBuildingBottomSheet(context, element);
+              },
             ),
           );
         }
@@ -195,32 +210,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   BitmapDescriptor getRandomDefaultMarkerHue() {
-  // 1. Define the list of all available hue constants.
-  final List<double> hues = [
-    BitmapDescriptor.hueRed,
-    BitmapDescriptor.hueOrange,
-    BitmapDescriptor.hueYellow,
-    BitmapDescriptor.hueGreen,
-    BitmapDescriptor.hueCyan,
-    BitmapDescriptor.hueAzure,
-    BitmapDescriptor.hueBlue,
-    BitmapDescriptor.hueViolet,
-    BitmapDescriptor.hueMagenta,
-    BitmapDescriptor.hueRose,
-  ];
+    // 1. Define the list of all available hue constants.
+    final List<double> hues = [
+      BitmapDescriptor.hueRed,
+      BitmapDescriptor.hueOrange,
+      BitmapDescriptor.hueYellow,
+      BitmapDescriptor.hueGreen,
+      BitmapDescriptor.hueCyan,
+      BitmapDescriptor.hueAzure,
+      BitmapDescriptor.hueBlue,
+      BitmapDescriptor.hueViolet,
+      BitmapDescriptor.hueMagenta,
+      BitmapDescriptor.hueRose,
+    ];
 
-  // 2. Create a Random object.
-  final Random random = Random();
+    // 2. Create a Random object.
+    final Random random = Random();
 
-  // 3. Select a random index from the list.
-  final int randomIndex = random.nextInt(hues.length);
+    // 3. Select a random index from the list.
+    final int randomIndex = random.nextInt(hues.length);
 
-  // 4. Get the hue value at the random index.
-  final double randomHue = hues[randomIndex];
+    // 4. Get the hue value at the random index.
+    final double randomHue = hues[randomIndex];
 
-  // 5. Return the corresponding BitmapDescriptor.
-  return BitmapDescriptor.defaultMarkerWithHue(randomHue);
-}
+    // 5. Return the corresponding BitmapDescriptor.
+    return BitmapDescriptor.defaultMarkerWithHue(randomHue);
+  }
 
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
@@ -245,7 +260,6 @@ class _HomeScreenState extends State<HomeScreen> {
             snippet: building.description,
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          
         ),
       );
 
@@ -608,7 +622,6 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // Keep all your existing _BuildingBottomSheetContent class unchanged
-
 
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
