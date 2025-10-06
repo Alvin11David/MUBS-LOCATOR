@@ -22,8 +22,17 @@ import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
 import 'package:get/get.dart';
 import 'package:mubs_locator/services/navigation_service.dart';
 
-void main() {
-  Get.put(NavigationService()); 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Fire base initialized successfully');
+  } catch (e) {
+    print('Firebase init error: $e');
+  }
+  Get.put(NavigationService());
   runApp(MyApp());
 }
 
