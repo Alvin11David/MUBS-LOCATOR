@@ -42,6 +42,7 @@ dependencies:
   google_directions_api: 
   get:
   dio: 
+  flutter_polyline_points:
 
 dev_dependencies:
   flutter_test:

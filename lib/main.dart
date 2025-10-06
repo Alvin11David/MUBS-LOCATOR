@@ -19,18 +19,12 @@ import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.da
 import 'package:mubs_locator/user%20pages/other%20screens/notification_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
+import 'package:get/get.dart';
+import 'package:mubs_locator/services/navigation_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print('Firebase initialized successfully');
-  } catch (e) {
-    print('Firebase init error: $e');
-  }
-  runApp(const MyApp());
+void main() {
+  Get.put(NavigationService()); 
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -57,7 +51,8 @@ class MyApp extends StatelessWidget {
         '/AboutScreen': (context) => const AboutScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
         '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
-        '/LocationManagementScreen': (context) => const LocationManagementScreen(),
+        '/LocationManagementScreen': (context) =>
+            const LocationManagementScreen(),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) => const ResetPasswordScreen(),

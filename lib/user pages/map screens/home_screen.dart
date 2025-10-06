@@ -8,6 +8,9 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'dart:math';
+import '../../services/navigation_service.dart';
+import 'navigation_screen.dart';
+import 'package:get/get.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -126,7 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 snippet: element.description,
               ),
               onTap: () {
-                _showBuildingBottomSheet(context, element);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _showBuildingBottomSheet(context, element);
+                });
               },
             ),
           );
@@ -647,6 +652,9 @@ class _BuildingBottomSheetContentState
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
+  bool _isCheckingPermissions = false;
+
+  final NavigationService _navigationService = Get.find<NavigationService>();
 
   final List<String> _issueTypes = [
     'General',
@@ -903,31 +911,69 @@ class _BuildingBottomSheetContentState
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                // This is where the actual navigation starts
-                widget.onDirectionsTap();
-                Navigator.pop(context);
-              },
+              onPressed: _isCheckingPermissions ? null : _handleStartNavigation,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.navigation, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Start Navigation',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
+              child: _isCheckingPermissions
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Checking permissions...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.navigation, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Start Navigation',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
+          ),
+
+          // Permission info text
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 4),
+              Text(
+                'Location permission required',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ],
           ),
         ],
       ),
@@ -1062,6 +1108,162 @@ class _BuildingBottomSheetContentState
           ),
         ),
       ],
+    );
+  }
+
+  // Navigation handler with permission check and error handling
+  Future<void> _handleStartNavigation() async {
+    setState(() {
+      _isCheckingPermissions = true;
+    });
+
+    try {
+      // Check location permissions
+      final hasPermission = await _navigationService
+          .checkAndRequestLocationPermission();
+
+      if (!hasPermission) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+
+        // Show error message
+        if (!mounted) return;
+        _showPermissionDialog();
+        return;
+      }
+
+      // Get current location to verify GPS is working
+      final currentLocation = await _navigationService.getCurrentLocation();
+
+      if (currentLocation == null) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Unable to get your location. Please check your GPS settings.',
+            ),
+            backgroundColor: Colors.orange,
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+
+      // Close the bottom sheet
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Navigate to NavigationScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NavigationScreen(
+            destination: LatLng(
+              widget.building.location.latitude,
+              widget.building.location.longitude,
+            ),
+            destinationName: widget.building.name,
+          ),
+        ),
+      );
+
+      // Call the original callback if needed
+      widget.onDirectionsTap();
+    } catch (e) {
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error starting navigation: $e'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _handleStartNavigation,
+          ),
+        ),
+      );
+    }
+  }
+
+  // Show permission dialog with instructions
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.location_off, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Text('Location Permission'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _navigationService.errorMessage.value.isNotEmpty
+                  ? _navigationService.errorMessage.value
+                  : 'Location permission is required for navigation.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please enable location permission in your device settings.',
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _handleStartNavigation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
     );
   }
 }
