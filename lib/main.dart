@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
@@ -63,6 +64,8 @@ class MyApp extends StatelessWidget {
             AdminGuard(child: const LocationManagementScreen()),
         '/AddPlaceScreen': (context) =>
             AdminGuard(child: const AddPlaceScreen()),
+        '/EditPlaceScreen': (context) =>
+            AdminGuard(child: const EditPlaceScreen(buildingId: '',)),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) =>

@@ -1001,7 +1001,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             fit: BoxFit.cover,
                           ),
                           Positioned(
-                            left: screenWidth * 0.03,
+                            left: screenWidth * 0.0,
                             top: screenHeight * 0.03,
                             child: Container(
                               width: screenWidth * 0.15,
