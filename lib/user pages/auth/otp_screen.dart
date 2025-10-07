@@ -89,6 +89,8 @@ class _OTP_ScreenState extends State<OTP_Screen> {
             'createdAt': now.millisecondsSinceEpoch,
             'expiresAt': expiresAt.millisecondsSinceEpoch,
           });
+      // Print the active OTP code to the console
+      print('ACTIVE OTP CODE SENT: $otp');
 
       // Call the Cloud Function to send the new OTP email
       await FirebaseFunctions.instance.httpsCallable('sendOTPEmail').call({
@@ -154,11 +156,12 @@ class _OTP_ScreenState extends State<OTP_Screen> {
 
         if (DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP) {
           // OTP is valid, navigate to ResetPasswordScreen
-          Navigator.pushNamed(
-            context,
-            '/ResetPasswordScreen',
-            arguments: {'email': widget.email},
-          );
+          Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => OTP_Screen(email: widget.email), // userEmail must not be empty!
+  ),
+);
         } else {
           ScaffoldMessenger.of(
             context,

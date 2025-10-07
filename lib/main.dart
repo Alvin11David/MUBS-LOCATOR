@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
@@ -15,6 +16,7 @@ import 'package:mubs_locator/user%20pages/intro/onboarding_screen3.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/home_screen.dart';
 import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/adminguard.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/notification_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
@@ -44,7 +46,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/SplashScreen', 
+      initialRoute: '/SplashScreen',
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
@@ -56,13 +58,19 @@ class MyApp extends StatelessWidget {
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
-        '/AdminDashboardScreen': (context) => const AdminDashboardScreen(),
-        '/LocationManagementScreen': (context) => const LocationManagementScreen(),
+        '/AdminDashboardScreen': (context) =>
+            AdminGuard(child: const AdminDashboardScreen()),
+        '/LocationManagementScreen': (context) =>
+            AdminGuard(child: const LocationManagementScreen()),
+        '/AddPlaceScreen': (context) =>
+            AdminGuard(child: const AddPlaceScreen()),
+        '/EditPlaceScreen': (context) =>
+            AdminGuard(child: const EditPlaceScreen(buildingId: '',)),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
-        '/ResetPasswordScreen': (context) => const ResetPasswordScreen(email: '',),
+        '/ResetPasswordScreen': (context) =>
+            const ResetPasswordScreen(email: ''),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
-        '/AddPlaceScreen': (context) => const AddPlaceScreen(),
         '/HomeScreen': (context) => const HomeScreen(),
       },
     );

@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'dart:io';
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationManagementScreen extends StatefulWidget {
   const LocationManagementScreen({super.key});
@@ -14,7 +16,24 @@ class LocationManagementScreen extends StatefulWidget {
 
 class _LocationManagementScreenState extends State<LocationManagementScreen>
     with SingleTickerProviderStateMixin {
-  // Determine greeting based on time of day
+  String? _profileImagePath;
+  bool _isDropdownVisible = false;
+  bool _isMenuVisible = false;
+  bool _isRectangleVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profileImagePath = prefs.getString('profileImagePath');
+    });
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -26,12 +45,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
     }
   }
 
-  // State for dropdown and menu visibility
-  bool _isDropdownVisible = false;
-  bool _isMenuVisible = false;
-  bool _isRectangleVisible = true; // State for rectangle animation
-
-  // Logout function
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -43,38 +56,17 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   }
 
   @override
-  void initState() {
-    super.initState();
-    // Trigger animation after a short delay
-    Future.delayed(const Duration(milliseconds: 100), () {
-      setState(() {
-        _isRectangleVisible = true;
-      });
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    // Get the user's full name from Firebase
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
 
     return Scaffold(
       backgroundColor: const Color(0xFF93C5FD),
-      body: GestureDetector(
-        onTap: () {
-          setState(() {
-            _isDropdownVisible = false; // Close dropdown when tapping outside
-            _isMenuVisible = false; // Close menu when tapping outside
-          });
-        },
-        behavior: HitTestBehavior.opaque,
+      body: SafeArea(
         child: Stack(
           children: [
-            // Glassy rectangle at the top
             Positioned(
               top: 0,
               left: 0,
@@ -102,7 +94,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(0),
+                    bottom: Radius.circular(16),
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -117,11 +109,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Menu icon
                             GestureDetector(
                               onTap: () {
                                 setState(() {
                                   _isMenuVisible = !_isMenuVisible;
+                                  _isDropdownVisible = false;
                                 });
                               },
                               behavior: HitTestBehavior.opaque,
@@ -132,7 +124,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.04),
-                            // Greeting text with full name
                             Text(
                               '${_getGreeting()}, $fullName',
                               style: TextStyle(
@@ -143,7 +134,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                               ),
                             ),
                             const Spacer(),
-                            // Small rectangle with black stroke
                             Container(
                               width: screenWidth * 0.17,
                               height: screenHeight * 0.05,
@@ -158,10 +148,9 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  // Circular container with person icon
                                   Padding(
                                     padding: EdgeInsets.only(
-                                      left: screenWidth * 0.00,
+                                      left: screenWidth * 0.01,
                                     ),
                                     child: Container(
                                       width: screenWidth * 0.09,
@@ -173,14 +162,37 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                           width: 1,
                                         ),
                                       ),
-                                      child: Icon(
-                                        Icons.person,
-                                        color: Colors.black,
-                                        size: screenWidth * 0.04,
-                                      ),
+                                      child:
+                                          _profileImagePath != null &&
+                                              _profileImagePath!.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.file(
+                                                File(_profileImagePath!),
+                                                fit: BoxFit.cover,
+                                                width: screenWidth * 0.09,
+                                                height: screenWidth * 0.09,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Icon(
+                                                        Icons.person,
+                                                        color: Colors.black,
+                                                        size:
+                                                            screenWidth * 0.04,
+                                                      );
+                                                    },
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              color: Colors.black,
+                                              size: screenWidth * 0.04,
+                                            ),
                                     ),
                                   ),
-                                  // Dropdown arrow
                                   Padding(
                                     padding: EdgeInsets.only(
                                       right: screenWidth * 0.01,
@@ -190,6 +202,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                         setState(() {
                                           _isDropdownVisible =
                                               !_isDropdownVisible;
+                                          _isMenuVisible = false;
                                         });
                                       },
                                       behavior: HitTestBehavior.opaque,
@@ -211,7 +224,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                 ),
               ),
             ),
-            // Locations text, subtitle, and chevron icons
             Positioned(
               top: screenHeight * 0.1,
               left: screenWidth * 0.04,
@@ -248,7 +260,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                     children: [
                       GestureDetector(
                         onTap: () {
-                          Navigator.pop(context); // Navigate to previous screen
+                          Navigator.pop(context);
                         },
                         child: Icon(
                           Icons.chevron_left,
@@ -267,7 +279,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                 ],
               ),
             ),
-            // White rectangle with animation, divider, filter icon, text, new rectangle, and table
             AnimatedPositioned(
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
@@ -277,7 +288,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                   : -screenWidth * 0.9,
               child: Container(
                 width: screenWidth * 0.92,
-                height: screenHeight * 0.80,
+                height: screenHeight * 0.78,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
@@ -290,9 +301,9 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                     ),
                   ],
                 ),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: screenHeight * 0.03),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: SingleChildScrollView(
                     child: Column(
                       children: [
                         SizedBox(height: screenHeight * 0.02),
@@ -329,41 +340,49 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                 fontFamily: 'Poppins',
                               ),
                             ),
-                            Spacer(),
+                            const Spacer(),
                             Padding(
                               padding: EdgeInsets.only(
                                 right: screenWidth * 0.04,
                               ),
-                              child: Container(
-                                width: screenWidth * 0.3,
-                                height: screenWidth * 0.1,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF93C5FD),
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: Colors.black,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/AddPlaceScreen',
+                                  );
+                                },
+                                child: Container(
+                                  width: screenWidth * 0.3,
+                                  height: screenWidth * 0.1,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF93C5FD),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
                                       color: Colors.black,
-                                      size: screenWidth * 0.06,
+                                      width: 1,
                                     ),
-                                    SizedBox(width: screenWidth * 0.02),
-                                    Text(
-                                      'Add Location',
-                                      style: TextStyle(
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add,
                                         color: Colors.black,
-                                        fontSize: screenWidth * 0.031,
-                                        fontWeight: FontWeight.normal,
-                                        fontFamily: 'Poppins',
+                                        size: screenWidth * 0.06,
                                       ),
-                                    ),
-                                  ],
+                                      SizedBox(width: screenWidth * 0.02),
+                                      Text(
+                                        'Add Location',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: screenWidth * 0.031,
+                                          fontWeight: FontWeight.normal,
+                                          fontFamily: 'Poppins',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -395,27 +414,30 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
                                   return const Center(
-                                      child: CircularProgressIndicator());
+                                    child: CircularProgressIndicator(),
+                                  );
                                 }
                                 if (snapshot.hasError) {
                                   return Center(
-                                      child: Text('Error: ${snapshot.error}'));
+                                    child: Text('Error: ${snapshot.error}'),
+                                  );
                                 }
                                 if (!snapshot.hasData ||
                                     snapshot.data!.docs.isEmpty) {
                                   return const Center(
-                                      child: Text('No buildings found'));
+                                    child: Text('No buildings found'),
+                                  );
                                 }
 
                                 final docs = snapshot.data!.docs;
 
                                 return Table(
-                                  columnWidths: {
+                                  columnWidths: const {
                                     0: FlexColumnWidth(1),
                                     1: FlexColumnWidth(1),
                                     2: FlexColumnWidth(1),
                                   },
-                                  border: TableBorder(
+                                  border: const TableBorder(
                                     verticalInside: BorderSide(
                                       color: Colors.black,
                                       width: 1,
@@ -428,8 +450,8 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                   ),
                                   children: [
                                     TableRow(
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF93C5FD),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF93C5FD),
                                       ),
                                       children: [
                                         Padding(
@@ -480,8 +502,13 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                       ],
                                     ),
                                     ...docs.map((doc) {
-                                      // Safely access the 'name' field
-                                      final name = doc.get('name') as String? ?? 'Unnamed';
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
+                                      final name =
+                                          data['name'] as String? ?? 'Unnamed';
+                                      final description =
+                                          data['description'] as String? ??
+                                          'No description';
                                       return TableRow(
                                         children: [
                                           Padding(
@@ -503,13 +530,15 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                               screenWidth * 0.02,
                                             ),
                                             child: Text(
-                                              '', // Empty as per request
+                                              description,
                                               style: TextStyle(
                                                 color: Colors.black,
                                                 fontSize: screenWidth * 0.035,
                                                 fontFamily: 'Poppins',
                                               ),
                                               textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           Padding(
@@ -518,70 +547,159 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                             ),
                                             child: Column(
                                               children: [
-                                                Container(
-                                                  width: screenWidth * 0.22,
-                                                  height: screenWidth * 0.08,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green,
-                                                    borderRadius:
-                                                        BorderRadius.circular(20),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment.center,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.edit,
-                                                        color: Colors.white,
-                                                        size: screenWidth * 0.04,
-                                                      ),
-                                                      SizedBox(
-                                                          width:
-                                                              screenWidth * 0.015),
-                                                      Text(
-                                                        'Edit',
-                                                        style: TextStyle(
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.pushNamed(
+                                                      context,
+                                                      '/EditPlaceScreen',
+                                                      arguments: {
+                                                        'buildingId': doc.id,
+                                                      },
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    width: screenWidth * 0.22,
+                                                    height: screenWidth * 0.08,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            20,
+                                                          ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.edit,
                                                           color: Colors.white,
-                                                          fontSize:
-                                                              screenWidth * 0.03,
-                                                          fontFamily: 'Poppins',
+                                                          size:
+                                                              screenWidth *
+                                                              0.04,
                                                         ),
-                                                      ),
-                                                    ],
+                                                        SizedBox(
+                                                          width:
+                                                              screenWidth *
+                                                              0.015,
+                                                        ),
+                                                        Text(
+                                                          'Edit',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize:
+                                                                screenWidth *
+                                                                0.03,
+                                                            fontFamily:
+                                                                'Poppins',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                                 SizedBox(
-                                                    height: screenWidth * 0.02),
-                                                Container(
-                                                  width: screenWidth * 0.22,
-                                                  height: screenWidth * 0.08,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red,
-                                                    borderRadius:
-                                                        BorderRadius.circular(20),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment.center,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.delete,
-                                                        color: Colors.black,
-                                                        size: screenWidth * 0.04,
-                                                      ),
-                                                      SizedBox(
-                                                          width:
-                                                              screenWidth * 0.015),
-                                                      Text(
-                                                        'Delete',
-                                                        style: TextStyle(
-                                                          color: Colors.black,
-                                                          fontSize:
-                                                              screenWidth * 0.03,
-                                                          fontFamily: 'Poppins',
+                                                  height: screenWidth * 0.02,
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    // Show confirmation dialog
+                                                    final confirm = await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (context) => AlertDialog(
+                                                        title: const Text(
+                                                          'Delete Location',
                                                         ),
+                                                        content: const Text(
+                                                          'Are you sure you want to delete this location?',
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  context,
+                                                                ).pop(false),
+                                                            child: const Text(
+                                                              'Cancel',
+                                                            ),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  context,
+                                                                ).pop(true),
+                                                            child: const Text(
+                                                              'Delete',
+                                                              style: TextStyle(
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
+                                                    );
+                                                    if (confirm == true) {
+                                                      await FirebaseFirestore
+                                                          .instance
+                                                          .collection(
+                                                            'buildings',
+                                                          )
+                                                          .doc(doc.id)
+                                                          .delete();
+                                                      // No need to manually remove from table, StreamBuilder will auto-update
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Location deleted',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: Container(
+                                                    width: screenWidth * 0.22,
+                                                    height: screenWidth * 0.08,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            20,
+                                                          ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.delete,
+                                                          color: Colors.black,
+                                                          size:
+                                                              screenWidth *
+                                                              0.04,
+                                                        ),
+                                                        SizedBox(
+                                                          width:
+                                                              screenWidth *
+                                                              0.015,
+                                                        ),
+                                                        Text(
+                                                          'Delete',
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize:
+                                                                screenWidth *
+                                                                0.03,
+                                                            fontFamily:
+                                                                'Poppins',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -596,13 +714,13 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                             ),
                           ),
                         ),
+                        SizedBox(height: screenHeight * 0.03),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-            // Dropdown rectangle
             if (_isDropdownVisible)
               Positioned(
                 top: screenHeight * 0.09,
@@ -659,7 +777,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                   ),
                 ),
               ),
-            // Menu rectangle
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -686,7 +803,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sidebar image with overlaid white circle and text
                     Stack(
                       children: [
                         Image.asset(
@@ -706,11 +822,30 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                               color: Colors.white,
                               border: Border.all(color: Colors.black, width: 1),
                             ),
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.black,
-                              size: screenWidth * 0.08,
-                            ),
+                            child:
+                                _profileImagePath != null &&
+                                    _profileImagePath!.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.file(
+                                      File(_profileImagePath!),
+                                      fit: BoxFit.cover,
+                                      width: screenWidth * 0.15,
+                                      height: screenWidth * 0.15,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Icon(
+                                              Icons.person,
+                                              color: Colors.black,
+                                              size: screenWidth * 0.08,
+                                            );
+                                          },
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.08,
+                                  ),
                           ),
                         ),
                         Positioned(
@@ -741,34 +876,37 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         ),
                       ],
                     ),
-                    // Dashboard icon and text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
                         top: screenHeight * 0.02,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.dashboard,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Dashboard',
-                            style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/AdminDashboardScreen');
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.dashboard,
                               color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
+                              size: screenWidth * 0.06,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
-                    // Chat icon and Feedback & Reports text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
@@ -795,34 +933,37 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
-                    // Settings icon and Profile Settings text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
                         top: screenHeight * 0.02,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.settings,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Profile Settings',
-                            style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/ProfileScreen');
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.settings,
                               color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
+                              size: screenWidth * 0.06,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Profile Settings',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
-                    // Notifications icon and Push Notifications text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
@@ -849,7 +990,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
-                    // Locations icon and Locations text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
@@ -876,7 +1016,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
-                    // Exit icon and Logout text
                     Padding(
                       padding: EdgeInsets.only(
                         left: screenWidth * 0.03,
@@ -909,16 +1048,20 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                 ),
               ),
             ),
-            // Empty content area instead of Placeholder
-            Positioned(
-              top: screenHeight * 0.09,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                color: Colors.transparent, // No X will appear
+            if (_isMenuVisible || _isDropdownVisible)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    if (_isMenuVisible || _isDropdownVisible) {
+                      setState(() {
+                        _isMenuVisible = false;
+                        _isDropdownVisible = false;
+                      });
+                    }
+                  },
+                  behavior: HitTestBehavior.opaque,
+                ),
               ),
-            ),
           ],
         ),
       ),
