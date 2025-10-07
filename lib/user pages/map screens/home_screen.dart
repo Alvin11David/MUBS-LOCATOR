@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
   List<Building> fetchedBuildings = [];
   bool searchActive = true;
+  bool isNavigating = false; // Add this flag
 
   // Updated MUBS boundary coordinates - using your exact coordinates
   final List<LatLng> _mubsBounds = [
@@ -421,6 +422,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Call this when navigation ends
+  void _endNavigation() {
+    setState(() {
+      polylines.clear(); // Remove route polyline
+      isNavigating = false; // Reset navigation state
+    });
+  }
+
+  // Example: Call _endNavigation when navigation is completed or user taps "End Navigation"
+  // You might call this from your NavigationService or from a button in your UI
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -448,7 +460,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             markers: markers,
             polygons: polygons,
-            polylines: polylines,
+            polylines: isNavigating
+                ? polylines
+                : {}, // Only show polyline if navigating
             mapType: MapType.normal,
             zoomGesturesEnabled: true,
             scrollGesturesEnabled: true,
@@ -614,6 +628,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (isNavigating)
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: ElevatedButton(
+                onPressed: _endNavigation,
+                child: Text('End Navigation'),
+              ),
+            ),
         ],
       ),
     );
