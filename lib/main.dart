@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/feedback_details_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
@@ -46,7 +47,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/SplashScreen',
+      home: const FeedbackDetailsScreen(),
+      initialRoute: '/FeedbackDetailsScreen',
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
