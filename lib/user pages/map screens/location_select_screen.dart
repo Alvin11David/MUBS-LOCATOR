@@ -16,7 +16,6 @@ class LocationSelectScreen extends StatefulWidget {
 }
 
 class _LocationSelectScreenState extends State<LocationSelectScreen> {
-  bool hasSearchHistory = false;
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final FocusNode _fromFocusNode = FocusNode();
@@ -28,9 +27,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   LatLng? _currentLocation;
   Building? _selectedFromLocation;
   Building? _selectedToLocation;
-  
-  // Search history
-  List<Building> _searchHistory = [];
 
   @override
   void initState() {
@@ -149,24 +145,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         .toList();
   }
 
-  void _addToSearchHistory(Building building) {
-    setState(() {
-      _searchHistory.removeWhere((b) => b.id == building.id);
-      _searchHistory.insert(0, building);
-      if (_searchHistory.length > 10) {
-        _searchHistory = _searchHistory.sublist(0, 10);
-      }
-      hasSearchHistory = _searchHistory.isNotEmpty;
-    });
-  }
-
-  void _clearSearchHistory() {
-    setState(() {
-      _searchHistory.clear();
-      hasSearchHistory = false;
-    });
-  }
-
   void _swapLocations() {
     setState(() {
       final tempController = _fromController.text;
@@ -244,18 +222,25 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   vertical: MediaQuery.of(context).size.height * 0.01,
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(12),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
                       width: MediaQuery.of(context).size.width * 0.9,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(30),
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1.5,
+                          color: Colors.grey.withOpacity(0.3),
+                          width: 1,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
@@ -271,11 +256,11 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                           // Divider
                           Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).size.width * 0.15,
+                              horizontal: MediaQuery.of(context).size.width * 0.12,
                             ),
                             child: Container(
-                              height: 1.2,
-                              color: Colors.black.withOpacity(0.2),
+                              height: 1,
+                              color: Colors.grey.withOpacity(0.3),
                             ),
                           ),
                           
@@ -320,77 +305,29 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                 ),
               ),
 
-              // Search History Section
-              if (_searchHistory.isNotEmpty) ...[
-                Padding(
-                  padding: EdgeInsets.only(
-                    left: MediaQuery.of(context).size.width * 0.05,
-                    right: MediaQuery.of(context).size.width * 0.05,
-                    top: MediaQuery.of(context).size.height * 0.02,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Empty space
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Recent Searches',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: MediaQuery.of(context).size.width * 0.045,
-                        ),
+                      Icon(
+                        Icons.explore_outlined,
+                        size: 64,
+                        color: Colors.black.withOpacity(0.3),
                       ),
-                      GestureDetector(
-                        onTap: _clearSearchHistory,
-                        child: Text(
-                          'Clear all',
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.7),
-                            fontSize: MediaQuery.of(context).size.width * 0.035,
-                            decoration: TextDecoration.underline,
-                          ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Enter locations to get started',
+                        style: TextStyle(
+                          color: Colors.black.withOpacity(0.5),
+                          fontSize: MediaQuery.of(context).size.width * 0.04,
                         ),
                       ),
                     ],
                   ),
                 ),
-                
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: MediaQuery.of(context).size.width * 0.05,
-                      vertical: MediaQuery.of(context).size.height * 0.01,
-                    ),
-                    itemCount: _searchHistory.length,
-                    itemBuilder: (context, index) {
-                      final building = _searchHistory[index];
-                      return _buildHistoryItem(building);
-                    },
-                  ),
-                ),
-              ] else ...[
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search,
-                          size: 64,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'No search history yet',
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.5),
-                            fontSize: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
@@ -418,27 +355,27 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   }) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: MediaQuery.of(context).size.width * 0.04,
-        vertical: MediaQuery.of(context).size.height * 0.02,
+        horizontal: MediaQuery.of(context).size.width * 0.03,
+        vertical: MediaQuery.of(context).size.height * 0.012,
       ),
       child: Row(
         children: [
           Container(
-            width: MediaQuery.of(context).size.width * 0.11,
-            height: MediaQuery.of(context).size.width * 0.11,
-            decoration: const BoxDecoration(
+            width: MediaQuery.of(context).size.width * 0.08,
+            height: MediaQuery.of(context).size.width * 0.08,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFF3E5891),
+              color: const Color(0xFF3E5891).withOpacity(0.1),
             ),
             child: Center(
               child: Icon(
                 icon,
-                color: Colors.white,
-                size: MediaQuery.of(context).size.width * 0.06,
+                color: const Color(0xFF3E5891),
+                size: MediaQuery.of(context).size.width * 0.045,
               ),
             ),
           ),
-          SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+          SizedBox(width: MediaQuery.of(context).size.width * 0.025),
           Expanded(
             child: TypeAheadField<Building>(
               controller: controller,
@@ -449,23 +386,28 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   focusNode: focusNode,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: MediaQuery.of(context).size.width * 0.04,
-                    fontWeight: FontWeight.w500,
+                    fontSize: MediaQuery.of(context).size.width * 0.038,
+                    fontWeight: FontWeight.w400,
                   ),
                   decoration: InputDecoration(
                     hintText: hint,
                     hintStyle: TextStyle(
-                      color: Colors.black.withOpacity(0.5),
-                      fontSize: MediaQuery.of(context).size.width * 0.04,
+                      color: Colors.grey[600],
+                      fontSize: MediaQuery.of(context).size.width * 0.038,
+                      fontWeight: FontWeight.w400,
                     ),
                     border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: MediaQuery.of(context).size.height * 0.01,
+                    ),
                     suffixIcon: textController.text.isNotEmpty &&
                             !(isFrom && textController.text == "Your Current Location")
                         ? IconButton(
                             icon: Icon(
                               Icons.clear,
-                              size: MediaQuery.of(context).size.width * 0.05,
-                              color: Colors.black.withOpacity(0.5),
+                              size: MediaQuery.of(context).size.width * 0.045,
+                              color: Colors.grey[600],
                             ),
                             onPressed: () {
                               textController.clear();
@@ -536,7 +478,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               },
               onSelected: (Building suggestion) {
                 controller.text = suggestion.name;
-                _addToSearchHistory(suggestion);
                 
                 if (isFrom) {
                   _selectedFromLocation = suggestion;
@@ -568,77 +509,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHistoryItem(Building building) {
-    return GestureDetector(
-      onTap: () {
-        // When tapping a history item, set it as the "To" location
-        _toController.text = building.name;
-        _selectedToLocation = building;
-        setState(() {});
-        _toFocusNode.unfocus();
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.01),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.history,
-                    color: Colors.black.withOpacity(0.6),
-                    size: MediaQuery.of(context).size.width * 0.05,
-                  ),
-                  SizedBox(width: MediaQuery.of(context).size.width * 0.03),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          building.name,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.w600,
-                            fontSize: MediaQuery.of(context).size.width * 0.04,
-                          ),
-                        ),
-                        Text(
-                          building.description,
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.6),
-                            fontSize: MediaQuery.of(context).size.width * 0.035,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.black.withOpacity(0.4),
-                    size: MediaQuery.of(context).size.width * 0.04,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
