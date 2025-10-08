@@ -30,10 +30,9 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   GoogleMapController? _mapController;
 
   // Default camera position (you can change this to your preferred location)
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(0.3476, 32.5825), // Default to Kampala, Uganda
-    zoom: 14.0,
-  );
+  
+  final LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
+
 
   @override
   void initState() {
@@ -102,7 +101,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
 
       setState(() {
         _currentLocation = LatLng(position.latitude, position.longitude);
-        _fromController.text = "Your Current Location";
+        _fromController.text = " Start";
         _isLoadingLocation = false;
       });
 
@@ -200,7 +199,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
           // Google Maps Background
           GoogleMap(
             onMapCreated: _onMapCreated,
-            initialCameraPosition: _initialPosition,
+            initialCameraPosition: CameraPosition(target: _mubsMaingate, zoom: 17),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -214,11 +213,11 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header with back button
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * 0.05,
-                    vertical: MediaQuery.of(context).size.height * 0.02,
-                  ),
+                //Padding(
+                //  padding: EdgeInsets.symmetric(
+                //    horizontal: MediaQuery.of(context).size.width * 0.05,
+                //    vertical: MediaQuery.of(context).size.height * 0.02,
+                //  ),
                   //child: Row(
                   //  children: [
                   //    GestureDetector(
@@ -247,7 +246,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   //    
                   //  ],
                   //),
-                ),
+                //),
 
                 // From and To location container
                 Padding(
@@ -275,7 +274,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                           controller: _fromController,
                           focusNode: _fromFocusNode,
                           icon: Icons.my_location,
-                          hint: 'Your location',
+                          hint: 'Start location',
                           isFrom: true,
                         ),
                         
@@ -295,7 +294,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                           controller: _toController,
                           focusNode: _toFocusNode,
                           icon: Icons.location_on,
-                          hint: 'Choose destination',
+                          hint: 'Destination',
                           isFrom: false,
                         ),
                       ],
