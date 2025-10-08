@@ -27,6 +27,13 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   LatLng? _currentLocation;
   Building? _selectedFromLocation;
   Building? _selectedToLocation;
+  GoogleMapController? _mapController;
+
+  // Default camera position (you can change this to your preferred location)
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(0.3476, 32.5825), // Default to Kampala, Uganda
+    zoom: 14.0,
+  );
 
   @override
   void initState() {
@@ -98,12 +105,28 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         _fromController.text = "Your Current Location";
         _isLoadingLocation = false;
       });
+
+      // Move camera to current location
+      if (_mapController != null && _currentLocation != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(_currentLocation!),
+        );
+      }
     } catch (e) {
       print("Error getting location: $e");
       setState(() {
         _isLoadingLocation = false;
         _fromController.text = "Unable to get location";
       });
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (_currentLocation != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLng(_currentLocation!),
+      );
     }
   }
 
@@ -164,6 +187,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     _toController.dispose();
     _fromFocusNode.dispose();
     _toFocusNode.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -171,69 +195,126 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        color: const Color(0xFF93C5FD),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with back button
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.05,
-                  vertical: MediaQuery.of(context).size.height * 0.02,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.arrow_back,
-                          color: Colors.black,
-                          size: MediaQuery.of(context).size.width * 0.06,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: MediaQuery.of(context).size.width * 0.03),
-                    Text(
-                      'Select Locations',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: MediaQuery.of(context).size.width * 0.05,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      body: Stack(
+        children: [
+          // Google Maps Background
+          GoogleMap(
+            onMapCreated: _onMapCreated,
+            initialCameraPosition: _initialPosition,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            markers: _buildMarkers(),
+          ),
 
-              // From and To location container
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.05,
-                  vertical: MediaQuery.of(context).size.height * 0.01,
+          // Overlay UI
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with back button
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.05,
+                    vertical: MediaQuery.of(context).size.height * 0.02,
+                  ),
+                  //child: Row(
+                  //  children: [
+                  //    GestureDetector(
+                  //      onTap: () => Navigator.pop(context),
+                  //      child: Container(
+                  //        padding: const EdgeInsets.all(8),
+                  //        decoration: BoxDecoration(
+                  //          color: Colors.white,
+                  //          shape: BoxShape.circle,
+                  //          boxShadow: [
+                  //            BoxShadow(
+                  //              color: Colors.black.withOpacity(0.1),
+                  //              blurRadius: 8,
+                  //              offset: const Offset(0, 2),
+                  //            ),
+                  //          ],
+                  //        ),
+                  //        child: Icon(
+                  //          Icons.arrow_back,
+                  //          color: Colors.black,
+                  //          size: MediaQuery.of(context).size.width * 0.06,
+                  //        ),
+                  //      ),
+                  //    ),
+                  //    SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                  //    
+                  //  ],
+                  //),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.9,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.withOpacity(0.3),
-                          width: 1,
+
+                // From and To location container
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.05,
+                    vertical: MediaQuery.of(context).size.height * 0.01,
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // From location
+                        _buildLocationField(
+                          controller: _fromController,
+                          focusNode: _fromFocusNode,
+                          icon: Icons.my_location,
+                          hint: 'Your location',
+                          isFrom: true,
+                        ),
+                        
+                        // Divider
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width * 0.12,
+                          ),
+                          child: Container(
+                            height: 1,
+                            color: Colors.grey.withOpacity(0.3),
+                          ),
+                        ),
+                        
+                        // To location
+                        _buildLocationField(
+                          controller: _toController,
+                          focusNode: _toFocusNode,
+                          icon: Icons.location_on,
+                          hint: 'Choose destination',
+                          isFrom: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Swap button
+                Center(
+                  child: GestureDetector(
+                    onTap: _swapLocations,
+                    child: Container(
+                      margin: EdgeInsets.symmetric(
+                        vertical: MediaQuery.of(context).size.height * 0.01,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -242,95 +323,20 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          // From location
-                          _buildLocationField(
-                            controller: _fromController,
-                            focusNode: _fromFocusNode,
-                            icon: Icons.my_location,
-                            hint: 'Your location',
-                            isFrom: true,
-                          ),
-                          
-                          // Divider
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).size.width * 0.12,
-                            ),
-                            child: Container(
-                              height: 1,
-                              color: Colors.grey.withOpacity(0.3),
-                            ),
-                          ),
-                          
-                          // To location
-                          _buildLocationField(
-                            controller: _toController,
-                            focusNode: _toFocusNode,
-                            icon: Icons.location_on,
-                            hint: 'Choose destination',
-                            isFrom: false,
-                          ),
-                        ],
+                      child: Icon(
+                        Icons.swap_vert,
+                        color: Colors.black,
+                        size: MediaQuery.of(context).size.width * 0.06,
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              // Swap button
-              Center(
-                child: GestureDetector(
-                  onTap: _swapLocations,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(
-                      vertical: MediaQuery.of(context).size.height * 0.01,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.swap_vert,
-                      color: Colors.black,
-                      size: MediaQuery.of(context).size.width * 0.06,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Empty space
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.explore_outlined,
-                        size: 64,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Enter locations to get started',
-                        style: TextStyle(
-                          color: Colors.black.withOpacity(0.5),
-                          fontSize: MediaQuery.of(context).size.width * 0.04,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                const Spacer(),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
       bottomNavigationBar: Padding(
         padding: EdgeInsets.only(
@@ -346,6 +352,57 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     );
   }
 
+  Set<Marker> _buildMarkers() {
+    Set<Marker> markers = {};
+
+    // Add current location marker
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_location'),
+          position: _currentLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'Your Location'),
+        ),
+      );
+    }
+
+    // Add selected from location marker
+    if (_selectedFromLocation != null && _selectedFromLocation!.location.latitude != null && _selectedFromLocation!.location.longitude != null) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('from_${_selectedFromLocation!.id}'),
+          position: LatLng(_selectedFromLocation!.location.latitude!, _selectedFromLocation!.location.longitude!),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: _selectedFromLocation!.name),
+        ),
+      );
+    }
+
+    // Add selected to location marker
+    if (_selectedToLocation != null && _selectedToLocation!.location.latitude != null && _selectedToLocation!.location.longitude != null) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('to_${_selectedToLocation!.id}'),
+          position: LatLng(_selectedToLocation!.location.latitude!, _selectedToLocation!.location.longitude!),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(title: _selectedToLocation!.name),
+        ),
+      );
+
+      // Move camera to show the destination
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(
+            LatLng(_selectedToLocation!.location.latitude!, _selectedToLocation!.location.longitude),
+          ),
+        );
+      }
+    }
+
+    return markers;
+  }
+
   Widget _buildLocationField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -355,14 +412,14 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   }) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: MediaQuery.of(context).size.width * 0.03,
-        vertical: MediaQuery.of(context).size.height * 0.012,
+        horizontal: MediaQuery.of(context).size.width * 0.025,
+        vertical: MediaQuery.of(context).size.height * 0.008,
       ),
       child: Row(
         children: [
           Container(
-            width: MediaQuery.of(context).size.width * 0.08,
-            height: MediaQuery.of(context).size.width * 0.08,
+            width: MediaQuery.of(context).size.width * 0.065,
+            height: MediaQuery.of(context).size.width * 0.065,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF3E5891).withOpacity(0.1),
@@ -371,11 +428,11 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               child: Icon(
                 icon,
                 color: const Color(0xFF3E5891),
-                size: MediaQuery.of(context).size.width * 0.045,
+                size: MediaQuery.of(context).size.width * 0.038,
               ),
             ),
           ),
-          SizedBox(width: MediaQuery.of(context).size.width * 0.025),
+          SizedBox(width: MediaQuery.of(context).size.width * 0.02),
           Expanded(
             child: TypeAheadField<Building>(
               controller: controller,
@@ -386,29 +443,31 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   focusNode: focusNode,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: MediaQuery.of(context).size.width * 0.038,
+                    fontSize: MediaQuery.of(context).size.width * 0.035,
                     fontWeight: FontWeight.w400,
                   ),
                   decoration: InputDecoration(
                     hintText: hint,
                     hintStyle: TextStyle(
                       color: Colors.grey[600],
-                      fontSize: MediaQuery.of(context).size.width * 0.038,
+                      fontSize: MediaQuery.of(context).size.width * 0.035,
                       fontWeight: FontWeight.w400,
                     ),
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(
-                      vertical: MediaQuery.of(context).size.height * 0.01,
+                      vertical: MediaQuery.of(context).size.height * 0.008,
                     ),
                     suffixIcon: textController.text.isNotEmpty &&
                             !(isFrom && textController.text == "Your Current Location")
                         ? IconButton(
                             icon: Icon(
                               Icons.clear,
-                              size: MediaQuery.of(context).size.width * 0.045,
+                              size: MediaQuery.of(context).size.width * 0.04,
                               color: Colors.grey[600],
                             ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                             onPressed: () {
                               textController.clear();
                               if (isFrom) {
@@ -440,15 +499,15 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               itemBuilder: (context, Building suggestion) {
                 return Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
                       Icon(
                         Icons.location_on,
                         color: const Color(0xFF3E5891),
-                        size: 20,
+                        size: 18,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,14 +516,14 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                               suggestion.name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 15,
+                                fontSize: 14,
                               ),
                             ),
                             Text(
                               suggestion.description,
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 13,
+                                fontSize: 12,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -489,6 +548,15 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                 
                 // Unfocus to hide keyboard
                 focusNode.unfocus();
+
+                // Move camera to selected location if coordinates are available
+                if (suggestion.location.latitude != null && suggestion.location.longitude != null && _mapController != null) {
+                  _mapController!.animateCamera(
+                    CameraUpdate.newLatLng(
+                      LatLng(suggestion.location.latitude!, suggestion.location.longitude!),
+                    ),
+                  );
+                }
               },
               emptyBuilder: (context) => Container(
                 color: Colors.white,
