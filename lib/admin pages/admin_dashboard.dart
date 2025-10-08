@@ -726,104 +726,109 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         Positioned(
                           top: screenHeight * 0.52,
                           left: screenWidth * 0.04,
-                          child: Container(
-                            width: screenWidth * 0.92,
-                            height: screenHeight * 0.23,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: -screenWidth * 0.2,
-                                  bottom: -screenHeight * 0.05,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      'assets/images/feedback.png',
-                                      width: screenWidth * 0.7,
-                                      height: screenWidth * 0.7,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) => Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                            size: screenWidth * 0.2,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/FeedbackListScreen');
+                            },
+                            child: Container(
+                              width: screenWidth * 0.92,
+                              height: screenHeight * 0.23,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: -screenWidth * 0.2,
+                                    bottom: -screenHeight * 0.05,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        'assets/images/feedback.png',
+                                        width: screenWidth * 0.7,
+                                        height: screenWidth * 0.7,
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (context, error, stackTrace) => Icon(
+                                              Icons.error,
+                                              color: Colors.red,
+                                              size: screenWidth * 0.2,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.022,
+                                    child: Text(
+                                      'User Feedback',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.070,
+                                    child: Text(
+                                      'Access all the user feedbacks from the\nMUBS Locator users.',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.04,
+                                        fontWeight: FontWeight.normal,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.152,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          'View the replies',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins',
                                           ),
+                                        ),
+                                        SizedBox(width: screenWidth * 0.02),
+                                        Icon(
+                                          Icons.double_arrow,
+                                          color: Colors.green,
+                                          size: screenWidth * 0.08,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.022,
-                                  child: Text(
-                                    'User Feedback',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.070,
-                                  child: Text(
-                                    'Access all the user feedbacks from the\nMUBS Locator users.',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.normal,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.152,
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        'View the replies',
-                                        style: TextStyle(
+                                  Positioned(
+                                    top: screenHeight * 0.02,
+                                    right: screenWidth * 0.02,
+                                    child: Container(
+                                      width: screenWidth * 0.08,
+                                      height: screenWidth * 0.08,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
                                           color: Colors.black,
-                                          fontSize: screenWidth * 0.04,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                          width: 1,
                                         ),
                                       ),
-                                      SizedBox(width: screenWidth * 0.02),
-                                      Icon(
-                                        Icons.double_arrow,
-                                        color: Colors.green,
-                                        size: screenWidth * 0.08,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Positioned(
-                                  top: screenHeight * 0.02,
-                                  right: screenWidth * 0.02,
-                                  child: Container(
-                                    width: screenWidth * 0.08,
-                                    height: screenWidth * 0.08,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                      child: Icon(
+                                        Icons.chat,
                                         color: Colors.black,
-                                        width: 1,
+                                        size: screenWidth * 0.04,
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.chat,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
-                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1100,24 +1105,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.chat,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Feedback & Reports',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/FeedbackListScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.chat,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Feedback & Reports',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1126,24 +1139,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.settings,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Profile Settings',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/ProfileScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1152,24 +1173,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.notifications,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Push Notifications',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Push Notifications',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1178,24 +1207,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Locations',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),

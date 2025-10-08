@@ -20,7 +20,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool isButtonEnabled = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _obscureCurrentPassword = true;
+  final bool _obscureCurrentPassword = true;
   bool _isLoading = false;
   double _passwordStrengthProgress = 0.0;
   Color _strengthColor = Colors.white;
@@ -100,6 +100,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       // Update password
       await auth.currentUser!.updatePassword(newPassword);
+
+      // Update password in Firestore (replace 'users' with your actual collection name)
+      await FirebaseFirestore.instance
+          .collection('users') // or your user collection name
+          .doc(email)
+          .update({'password': newPassword});
 
       // Delete OTP from Firestore
       await FirebaseFirestore.instance
@@ -284,16 +290,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               fontFamily: 'Epunda Slab',
                             ),
                           ),
-                          SizedBox(height: screenHeight * 0.02),
-                          Text(
-                            'Enter your current and new password below.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.04,
-                              color: Colors.black,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
                           SizedBox(height: screenHeight * 0.04),
                           Container(
                             width: screenWidth * 0.9,
@@ -302,77 +298,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             child: Column(
                               children: [
-                                // Current Password field
-                                TextFormField(
-                                  controller: _currentPasswordController,
-                                  obscureText: _obscureCurrentPassword,
-                                  decoration: InputDecoration(
-                                    labelText: 'Current Password',
-                                    labelStyle: TextStyle(
-                                      color: Colors.black,
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045,
-                                    ),
-                                    hintText: 'Enter Current Password',
-                                    hintStyle: TextStyle(
-                                      color: Colors.black,
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                    filled: true,
-                                    fillColor: const Color.fromARGB(
-                                      255,
-                                      237,
-                                      236,
-                                      236,
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.lock,
-                                      color: Color(0xFF458DE0),
-                                    ),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscureCurrentPassword
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                        color: Color(0xFF458DE0),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscureCurrentPassword =
-                                              !_obscureCurrentPassword;
-                                        });
-                                      },
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(
-                                        color: Color(0xFFD59A00),
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(
-                                        color: Color(0xFF93C5FD),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      vertical: screenWidth * 0.04,
-                                      horizontal: screenWidth * 0.05,
-                                    ),
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04,
-                                  ),
-                                  cursorColor: const Color(0xFF3B82F6),
-                                ),
-                                SizedBox(height: screenHeight * 0.03),
                                 // New Password field
                                 TextFormField(
                                   controller: _passwordController,

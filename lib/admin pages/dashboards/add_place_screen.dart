@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AddPlaceScreen extends StatefulWidget {
@@ -816,47 +815,63 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
                         padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.notifications,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Push Notifications',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Push Notifications',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
                         padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Locations',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),

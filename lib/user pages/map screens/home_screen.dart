@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsMaingate = const LatLng(0.32626314488423924, 32.616607995731286);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
 
@@ -31,9 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Building> fetchedBuildings = [];
   String _userFullName = 'User';
   bool _isMenuVisible = false;
-  File? _profileImage; // Store the profile image
+  File? _profileImage;
 
-  final List<LatLng> _mubsBounds = [
+  final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
     LatLng(0.329929943362535, 32.61561864088474),
     LatLng(0.33011233054641215, 32.616401845944665),
@@ -54,14 +55,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _initializeMarkers();
     _initializePolygons();
     _fetchUserFullName();
-    _loadProfileImage(); // Load image from saved data
+    _loadProfileImage();
   }
 
   Future<void> _fetchUserFullName() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.email != null) {
-        print('Fetching full name for email: ${user.email}');
         final querySnapshot = await FirebaseFirestore.instance
             .collection('users')
             .where('email', isEqualTo: user.email)
@@ -76,38 +76,33 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 _userFullName = fullName;
               });
-              print('Successfully fetched full name: $_userFullName');
             }
           } else {
-            print('Full name not found in Firestore document');
             if (mounted) {
               setState(() {
-                _userFullName = 'User'; // Fallback if fullName is empty
+                _userFullName = 'User';
               });
             }
           }
         } else {
-          print('No Firestore document found for email: ${user.email}');
           if (mounted) {
             setState(() {
-              _userFullName = 'User'; // Fallback if no document found
+              _userFullName = 'User';
             });
           }
         }
       } else {
-        print('No user signed in or email is null');
         if (mounted) {
           setState(() {
-            _userFullName = 'User'; // Fallback if no user signed in
+            _userFullName = 'User';
           });
         }
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       print('Error fetching user full name: $e');
-      print(stackTrace);
       if (mounted) {
         setState(() {
-          _userFullName = 'User'; // Fallback on error
+          _userFullName = 'User';
         });
       }
     }
@@ -123,12 +118,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _markFeedbackAsRead() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        final feedbackDocs = await FirebaseFirestore.instance
+            .collection('feedback')
+            .where('userEmail', isEqualTo: user.email)
+            .where('adminReply', isNotEqualTo: '')
+            .where('userRead', isEqualTo: false)
+            .get();
+
+        final batch = FirebaseFirestore.instance.batch();
+        for (var doc in feedbackDocs.docs) {
+          batch.update(doc.reference, {'userRead': true});
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      print('Error marking feedback as read: $e');
+    }
+  }
+
   void _initializeMarkers() {
     markers.add(
       Marker(
-        markerId: MarkerId('mubs_maingate'),
+        markerId: const MarkerId('mubs_maingate'),
         position: _mubsMaingate,
-        infoWindow: InfoWindow(
+        infoWindow: const InfoWindow(
           title: 'MUBS Maingate',
           snippet: 'Makerere University Business School',
         ),
@@ -139,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _initializePolygons() {
     polygons.add(
       Polygon(
-        polygonId: PolygonId('mubs_campus'),
+        polygonId: const PolygonId('mubs_campus'),
         points: _mubsBounds,
         strokeColor: Colors.blue,
         strokeWidth: 2,
@@ -168,10 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
       fetchedBuildings.addAll(buildings);
-      print("✅ Successfully fetched ${buildings.length} buildings.");
-    } catch (e, stackTrace) {
-      print("❌ Failed to fetch buildings: $e");
-      print(stackTrace);
+    } catch (e) {
+      print("Failed to fetch buildings: $e");
       rethrow;
     }
   }
@@ -182,8 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       BuildingRepository buildingRepository = BuildingRepository();
 
       for (var item in buildings) {
-        buildingRepository.addBuilding(item);
-        print('Added building: ${item.name} to Firestore');
+        await buildingRepository.addBuilding(item);
       }
     } catch (e) {
       print('Error creating buildings: $e');
@@ -195,14 +209,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', false);
       await FirebaseAuth.instance.signOut();
-      print('User signed out successfully');
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       }
     } catch (e) {
       print('Error signing out: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Error signing out: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -218,7 +234,9 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           backgroundColor: Colors.white,
           title: const Text(
             'Logout',
@@ -230,10 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           content: const Text(
             'Are you sure you want to logout?',
-            style: TextStyle(
-              color: Colors.black87,
-              fontFamily: 'Poppins',
-            ),
+            style: TextStyle(color: Colors.black87, fontFamily: 'Poppins'),
           ),
           actions: [
             TextButton(
@@ -305,11 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 building: building,
                 scrollController: scrollController,
                 onDirectionsTap: () => _navigateToBuilding(building),
-                onFeedbackSubmit: (
-                  String issueType,
-                  String issueTitle,
-                  String description,
-                ) {
+                onFeedbackSubmit:
+                    (String issueType, String issueTitle, String description) {
                   _submitFeedback(
                     building,
                     issueType,
@@ -370,12 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-      mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          bounds,
-          100,
-        ),
-      );
+      mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
     }
   }
 
@@ -488,6 +495,19 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
+
+    FirebaseFirestore.instance.collection('feedback').add({
+      'userEmail': FirebaseAuth.instance.currentUser?.email ?? 'anonymous',
+      'userName': _userFullName,
+      'buildingName': building.name,
+      'issueType': issueType,
+      'issueTitle': issueTitle,
+      'description': description,
+      'timestamp': Timestamp.now(),
+      'status': 'Submitted',
+      'read': false,
+      'userRead': false,
+    });
   }
 
   @override
@@ -501,25 +521,73 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(
           'Good morning, $_userFullName',
           style: TextStyle(
-            fontSize: textScaler.scale(18), // Responsive font size
+            fontSize: textScaler.scale(16),
             fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
           ),
         ),
         centerTitle: true,
         leading: IconButton(
           icon: Icon(
             Icons.menu,
-            size: textScaler.scale(24), // Responsive icon size
+            size: textScaler.scale(24),
           ),
           onPressed: _toggleMenu,
         ),
         actions: [
-          IconButton(
-            onPressed: () => Navigator.pushNamed(context, '/NotificationsScreen'),
-            icon: Icon(
-              Icons.notifications_rounded,
-              size: textScaler.scale(24), // Responsive icon size
-            ),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseAuth.instance.currentUser != null
+                ? FirebaseFirestore.instance
+                    .collection('feedback')
+                    .where('userEmail', isEqualTo: FirebaseAuth.instance.currentUser!.email)
+                    .where('adminReply', isNotEqualTo: '')
+                    .where('userRead', isEqualTo: false)
+                    .snapshots()
+                : Stream.empty(),
+            builder: (context, snapshot) {
+              int unreadCount = 0;
+              if (snapshot.hasData) {
+                unreadCount = snapshot.data!.docs.length;
+              }
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      _markFeedbackAsRead();
+                      Navigator.pushNamed(context, '/NotificationsScreen');
+                    },
+                    icon: Icon(
+                      Icons.notifications_rounded,
+                      size: textScaler.scale(24),
+                    ),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: textScaler.scale(16),
+                        height: textScaler.scale(16),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$unreadCount',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(10),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -527,7 +595,6 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           GestureDetector(
             onTapDown: (details) {
-              // Check if the tap is outside the sidebar when it’s visible
               if (_isMenuVisible) {
                 final tapX = details.globalPosition.dx;
                 if (tapX > screenWidth * 0.6) {
@@ -607,7 +674,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: screenHeight * 0.015,
                             ),
                           ),
-                          style: TextStyle(fontSize: textScaler.scale(14)),
+                          style: TextStyle(
+                            fontSize: textScaler.scale(14),
+                            fontFamily: 'Poppins',
+                          ),
                           onChanged: (value) {
                             setState(() {});
                           },
@@ -623,24 +693,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                           final otherNameScore =
                               (building.otherNames != null &&
-                                  building.otherNames!.isNotEmpty)
-                              ? building.otherNames!
-                                    .map(
-                                      (name) => StringSimilarity.compareTwoStrings(
-                                        name.toLowerCase(),
-                                        pattern.toLowerCase(),
-                                      ),
-                                    )
-                                    .fold<double>(
-                                      0,
-                                      (prev, curr) => curr > prev ? curr : prev,
-                                    )
-                              : 0;
+                                      building.otherNames!.isNotEmpty)
+                                  ? building.otherNames!
+                                      .map(
+                                        (name) => StringSimilarity.compareTwoStrings(
+                                          name.toLowerCase(),
+                                          pattern.toLowerCase(),
+                                        ),
+                                      )
+                                      .fold<double>(
+                                        0,
+                                        (prev, curr) => curr > prev ? curr : prev,
+                                      )
+                                  : 0;
 
-                          final descriptionScore = StringSimilarity.compareTwoStrings(
-                            building.description.toLowerCase(),
-                            pattern.toLowerCase(),
-                          );
+                          final descriptionScore =
+                              StringSimilarity.compareTwoStrings(
+                                building.description.toLowerCase(),
+                                pattern.toLowerCase(),
+                              );
 
                           final maxScore = [
                             nameScore,
@@ -652,8 +723,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         }).toList();
 
                         matches.sort(
-                          (a, b) =>
-                              (b['score'] as double).compareTo(a['score'] as double),
+                          (a, b) => (b['score'] as double).compareTo(
+                            a['score'] as double,
+                          ),
                         );
 
                         return matches
@@ -682,6 +754,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.w500,
                                         fontSize: textScaler.scale(16),
+                                        fontFamily: 'Poppins',
                                       ),
                                     ),
                                     Text(
@@ -689,6 +762,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: textScaler.scale(14),
+                                        fontFamily: 'Poppins',
                                       ),
                                     ),
                                   ],
@@ -699,7 +773,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                       onSelected: (Building suggestion) {
-                        debugPrint("Selected: ${suggestion.name}");
                         searchController.text = suggestion.name;
                         _showBuildingBottomSheet(context, suggestion);
                       },
@@ -710,6 +783,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             color: Colors.red,
                             fontSize: textScaler.scale(14),
+                            fontFamily: 'Poppins',
                           ),
                         ),
                       ),
@@ -717,7 +791,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.all(screenWidth * 0.02),
                         child: Text(
                           'No places found. Try another keyword.',
-                          style: TextStyle(fontSize: textScaler.scale(14)),
+                          style: TextStyle(
+                            fontSize: textScaler.scale(14),
+                            fontFamily: 'Poppins',
+                          ),
                         ),
                       ),
                     ),
@@ -731,241 +808,263 @@ class _HomeScreenState extends State<HomeScreen> {
             curve: Curves.easeInOut,
             left: _isMenuVisible ? 0 : -screenWidth * 0.6,
             top: 0,
-            child: Container(
-              width: screenWidth * 0.6,
-              height: screenHeight * 0.8,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  width: screenWidth * 0.6,
+                  height: screenHeight * 0.8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.55),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 12,
+                        offset: const Offset(2, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Image.asset(
-                        'assets/images/sidebar.png',
-                        width: screenWidth * 0.6,
-                        height: screenHeight * 0.16,
-                        fit: BoxFit.cover,
-                      ),
-                      Positioned(
-                        left: screenWidth * 0.03,
-                        top: screenHeight * 0.03,
-                        child: Container(
-                          width: screenWidth * 0.15,
-                          height: screenWidth * 0.15,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(color: Colors.black, width: 1),
+                      Stack(
+                        children: [
+                          Image.asset(
+                            'assets/images/sidebar.png',
+                            width: screenWidth * 0.6,
+                            height: screenHeight * 0.16,
+                            fit: BoxFit.cover,
                           ),
-                          child: ClipOval(
-                            child: _profileImage != null
-                                ? Image.file(
-                                    _profileImage!,
-                                    width: screenWidth * 0.15,
-                                    height: screenWidth * 0.15,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    color: Colors.black,
-                                    size: screenWidth * 0.08,
-                                  ),
+                          Positioned(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.03,
+                            child: Container(
+                              width: screenWidth * 0.14,
+                              height: screenWidth * 0.14,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.7),
+                                border: Border.all(
+                                  color: Colors.white70,
+                                  width: 1,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: _profileImage != null
+                                    ? Image.file(
+                                        _profileImage!,
+                                        width: screenWidth * 0.14,
+                                        height: screenWidth * 0.14,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.black.withOpacity(0.8),
+                                        size: screenWidth * 0.07,
+                                      ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.05,
+                            child: Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: textScaler.scale(15),
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.085,
+                            child: Text(
+                              _userFullName,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: textScaler.scale(12),
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Urbanist',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/HomeScreen'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.home,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Home',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Positioned(
-                        left: screenWidth * 0.19,
-                        top: screenHeight * 0.05,
-                        child: Text(
-                          'MUBS Locator',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: textScaler.scale(18),
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Urbanist',
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/ProfileScreen');
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Positioned(
-                        left: screenWidth * 0.19,
-                        top: screenHeight * 0.09,
-                        child: Text(
-                          _userFullName,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: textScaler.scale(14),
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Urbanist',
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/NotificationsScreen',
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis, // Handle long names
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Notifications',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/LocationSelectScreen',
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Search Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            _showLogoutDialog(context);
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.exit_to_app,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Logout',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: screenWidth * 0.03,
-                      top: screenHeight * 0.02,
-                    ),
-                    child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.home,
-                            color: Colors.black,
-                            size: textScaler.scale(24),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Home',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(16),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: screenWidth * 0.03,
-                      top: screenHeight * 0.02,
-                    ),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/ProfileScreen');
-                      },
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.settings,
-                            color: Colors.black,
-                            size: textScaler.scale(24),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Profile Settings',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(16),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: screenWidth * 0.03,
-                      top: screenHeight * 0.02,
-                    ),
-                    child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.notifications,
-                            color: Colors.black,
-                            size: textScaler.scale(24),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Notifications',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(16),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: screenWidth * 0.03,
-                      top: screenHeight * 0.02,
-                    ),
-                    child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.black,
-                            size: textScaler.scale(24),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Search Locations',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(16),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: screenWidth * 0.03,
-                      top: screenHeight * 0.02,
-                    ),
-                    child: GestureDetector(
-                      onTap: () {
-                        _showLogoutDialog(context);
-                      },
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.exit_to_app,
-                            color: Colors.black,
-                            size: textScaler.scale(24),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Logout',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(16),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -981,7 +1080,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// _BuildingBottomSheetContent remains unchanged
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
   final ScrollController scrollController;
@@ -1025,94 +1123,67 @@ class _BuildingBottomSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        controller: widget.scrollController,
-        child: Padding(
-          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      child: Padding(
+        padding: EdgeInsets.all(screenWidth * 0.05),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: screenWidth * 0.1,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-              Text(
-                widget.building.name,
-                style: TextStyle(
-                  fontSize: textScaler.scale(24),
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Text(
+              widget.building.name,
+              style: TextStyle(
+                fontSize: textScaler.scale(20),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-              Text(
-                widget.building.description,
-                style: TextStyle(
-                  fontSize: textScaler.scale(16),
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              widget.building.description,
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                color: Colors.grey[600],
+                fontFamily: 'Poppins',
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 0,
-                      icon: Icons.info_outline,
-                      label: 'Details',
-                    ),
-                  ),
-                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 1,
-                      icon: Icons.directions,
-                      label: 'Directions',
-                    ),
-                  ),
-                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 2,
-                      icon: Icons.feedback_outlined,
-                      label: 'Feedback',
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-              _buildTabContent(),
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildTabButton('Details', 0),
+                _buildTabButton('Feedback', 1),
+              ],
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            if (_selectedTabIndex == 0) ...[
+              _buildDetailsTab(),
+            ] else ...[
+              _buildFeedbackTab(),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTabButton({
-    required int index,
-    required IconData icon,
-    required String label,
-  }) {
-    final bool isSelected = _selectedTabIndex == index;
+  Widget _buildTabButton(String text, int index) {
     final textScaler = MediaQuery.textScalerOf(context);
-
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1121,341 +1192,253 @@ class _BuildingBottomSheetContentState
       },
       child: Container(
         padding: EdgeInsets.symmetric(
-          vertical: MediaQuery.of(context).size.height * 0.015,
-          horizontal: MediaQuery.of(context).size.width * 0.02,
+          horizontal: MediaQuery.of(context).size.width * 0.05,
+          vertical: MediaQuery.of(context).size.height * 0.01,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected
+          color: _selectedTabIndex == index
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.w500,
+            color: _selectedTabIndex == index
                 ? Theme.of(context).primaryColor
-                : Colors.grey[300]!,
-            width: 1,
+                : Colors.black,
+            fontFamily: 'Poppins',
           ),
         ),
-        child: Row(
+      ),
+    );
+  }
+
+  Widget _buildDetailsTab() {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final textScaler = MediaQuery.textScalerOf(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: MediaQuery.of(context).size.width * 0.03,
-                right: MediaQuery.of(context).size.width * 0.01,
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                size: textScaler.scale(20),
+            Text(
+              'Location',
+              style: TextStyle(
+                fontSize: textScaler.scale(16),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
             ),
-            SizedBox(width: MediaQuery.of(context).size.width * 0.01),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontSize: textScaler.scale(12),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            GestureDetector(
+              onTap: widget.onDirectionsTap,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Get Directions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: textScaler.scale(14),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTabContent() {
-    switch (_selectedTabIndex) {
-      case 0:
-        return _buildDetailsContent();
-      case 1:
-        return _buildDirectionsContent();
-      case 2:
-        return _buildFeedbackContent();
-      default:
-        return _buildDetailsContent();
-    }
-  }
-
-  Widget _buildDetailsContent() {
-    final textScaler = MediaQuery.textScalerOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Description',
-          style: TextStyle(
-            fontSize: textScaler.scale(18),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
         SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         Text(
-          widget.building.description,
+          'Latitude: ${widget.building.location.latitude}',
           style: TextStyle(
             fontSize: textScaler.scale(14),
-            height: 1.5,
+            fontFamily: 'Poppins',
           ),
         ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-        Container(
-          padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.03),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Location Coordinates',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: textScaler.scale(14),
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.005),
-              Text(
-                'Lat: ${widget.building.location.latitude.toStringAsFixed(6)}',
-                style: TextStyle(
-                  fontSize: textScaler.scale(12),
-                  color: Colors.grey[700],
-                ),
-              ),
-              Text(
-                'Long: ${widget.building.location.longitude.toStringAsFixed(6)}',
-                style: TextStyle(
-                  fontSize: textScaler.scale(12),
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
+        Text(
+          'Longitude: ${widget.building.location.longitude}',
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildDirectionsContent() {
-    final textScaler = MediaQuery.textScalerOf(context);
-    return Container(
-      padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.navigation,
-            size: textScaler.scale(48),
-            color: Theme.of(context).primaryColor,
-          ),
-          SizedBox(height: MediaQuery.of(context).size.height * 0.015),
+        if (widget.building.otherNames != null &&
+            widget.building.otherNames!.isNotEmpty) ...[
+          SizedBox(height: MediaQuery.of(context).size.height * 0.02),
           Text(
-            'Get Directions',
+            'Other Names',
             style: TextStyle(
-              fontSize: textScaler.scale(18),
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).primaryColor,
+              fontSize: textScaler.scale(16),
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
             ),
           ),
-          SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-          Text(
-            'Navigate to ${widget.building.name}',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: textScaler.scale(14),
-              color: Colors.grey[700],
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                widget.onDirectionsTap();
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  vertical: MediaQuery.of(context).size.height * 0.02,
-                ),
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.navigation,
-                    size: textScaler.scale(20),
-                  ),
-                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
-                  Text(
-                    'Start Navigation',
-                    style: TextStyle(
-                      fontSize: textScaler.scale(16),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+          ...widget.building.otherNames!.map(
+            (name) => Text(
+              '- $name',
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                fontFamily: 'Poppins',
               ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
-  Widget _buildFeedbackContent() {
+  Widget _buildFeedbackTab() {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Submit Feedback',
           style: TextStyle(
-            fontSize: textScaler.scale(18),
-            fontWeight: FontWeight.w600,
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
           ),
         ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-        Text(
-          'Issue Type',
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.03),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedIssueType,
-              isExpanded: true,
-              items: _issueTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(
-                    type,
-                    style: TextStyle(fontSize: textScaler.scale(14)),
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedIssueType = newValue;
-                  });
-                }
-              },
+        SizedBox(height: screenHeight * 0.01),
+        DropdownButtonFormField<String>(
+          value: _selectedIssueType,
+          decoration: InputDecoration(
+            labelText: 'Issue Type',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
+          items: _issueTypes.map((String type) {
+            return DropdownMenuItem<String>(
+              value: type,
+              child: Text(
+                type,
+                style: TextStyle(
+                  fontSize: textScaler.scale(14),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedIssueType = newValue!;
+            });
+          },
         ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-        Text(
-          'Issue Title',
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+        SizedBox(height: screenHeight * 0.02),
         TextField(
           controller: _issueTitleController,
           decoration: InputDecoration(
-            hintText: 'Enter a brief title for the issue',
-            hintStyle: TextStyle(fontSize: textScaler.scale(14)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width * 0.03,
-              vertical: MediaQuery.of(context).size.height * 0.015,
+            labelText: 'Issue Title',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-          style: TextStyle(fontSize: textScaler.scale(14)),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-        Text(
-          'Description',
           style: TextStyle(
             fontSize: textScaler.scale(14),
-            fontWeight: FontWeight.w500,
+            fontFamily: 'Poppins',
           ),
         ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+        SizedBox(height: screenHeight * 0.02),
         TextField(
           controller: _descriptionController,
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: 'Describe the issue in detail...',
-            hintStyle: TextStyle(fontSize: textScaler.scale(14)),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width * 0.03,
-              vertical: MediaQuery.of(context).size.height * 0.015,
+            labelText: 'Description',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-          style: TextStyle(fontSize: textScaler.scale(14)),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
+          ),
         ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.025),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              if (_issueTitleController.text.trim().isNotEmpty &&
-                  _descriptionController.text.trim().isNotEmpty) {
-                widget.onFeedbackSubmit(
-                  _selectedIssueType,
-                  _issueTitleController.text.trim(),
-                  _descriptionController.text.trim(),
-                );
-
-                _issueTitleController.clear();
-                _descriptionController.clear();
-                setState(() {
-                  _selectedIssueType = 'General';
-                });
-
+        SizedBox(height: screenHeight * 0.02),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () {
+              if (_issueTitleController.text.trim().isEmpty ||
+                  _descriptionController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Feedback submitted successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill in all required fields'),
+                  SnackBar(
+                    content: Text(
+                      'Please fill in all fields',
+                      style: TextStyle(fontFamily: 'Poppins'),
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
+                return;
               }
+              widget.onFeedbackSubmit(
+                _selectedIssueType,
+                _issueTitleController.text.trim(),
+                _descriptionController.text.trim(),
+              );
+              _issueTitleController.clear();
+              _descriptionController.clear();
+              setState(() {
+                _selectedIssueType = 'General';
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Feedback submitted successfully',
+                    style: TextStyle(fontFamily: 'Poppins'),
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
-            style: ElevatedButton.styleFrom(
+            child: Container(
+              width: screenWidth * 0.3,
               padding: EdgeInsets.symmetric(
-                vertical: MediaQuery.of(context).size.height * 0.02,
+                vertical: screenHeight * 0.015,
               ),
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-            child: Text(
-              'Submit Feedback',
-              style: TextStyle(
-                fontSize: textScaler.scale(16),
-                fontWeight: FontWeight.w600,
+              child: Center(
+                child: Text(
+                  'Submit',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: textScaler.scale(14),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
               ),
             ),
           ),

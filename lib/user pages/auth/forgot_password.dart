@@ -44,7 +44,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         SnackBar(content: Text('A 4 digit code has been sent to $email')),
       );
 
-      Navigator.pushNamed(context, '/OTPScreen', arguments: {'email': email});
+      Navigator.pushNamed(context, '/OTPScreen', arguments: email);
     } catch (e) {
       ScaffoldMessenger.of(
         context,

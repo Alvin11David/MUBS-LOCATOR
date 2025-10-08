@@ -44,6 +44,9 @@ dependencies:
   cloud_functions:
   # Firebase storage
   firebase_storage:
+  flutter_local_notifications:
+  # Firebase Message
+  firebase_messaging: 
 
 dev_dependencies:
   flutter_test:

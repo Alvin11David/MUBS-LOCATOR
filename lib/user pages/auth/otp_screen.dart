@@ -155,13 +155,19 @@ class _OTP_ScreenState extends State<OTP_Screen> {
         final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
 
         if (DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP) {
-          // OTP is valid, navigate to ResetPasswordScreen
-          Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => OTP_Screen(email: widget.email), // userEmail must not be empty!
-  ),
-);
+          // OTP is valid, navigate to SetPasswordScreen
+          Navigator.pushNamed(
+            context,
+            '/SetPasswordScreen',
+            arguments: widget.email,
+          );
+          // OR, if you use MaterialPageRoute:
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (context) => SetPasswordScreen(email: widget.email),
+          //   ),
+          // );
         } else {
           ScaffoldMessenger.of(
             context,
@@ -361,9 +367,9 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                     TextSpan(
                                       text: widget.email,
                                       style: TextStyle(
-                                        fontSize: screenWidth * 0.05,
+                                        fontSize: screenWidth * 0.04,
                                         fontWeight: FontWeight.normal,
-                                        color: Color(0xFF3B82F6),
+                                        color: Color(0xFF3B578F),
                                         fontFamily: 'Poppins',
                                       ),
                                     ),

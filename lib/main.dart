@@ -3,7 +3,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/feedback_details_screen.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/feedback_list_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/location_management.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/send_notifications_screen.dart';
 import 'package:mubs_locator/firebase_options.dart';
 import 'package:mubs_locator/user%20pages/auth/forgot_password.dart';
 import 'package:mubs_locator/user%20pages/auth/otp_screen.dart';
@@ -18,7 +21,9 @@ import 'package:mubs_locator/user%20pages/map%20screens/location_select_screen.d
 import 'package:mubs_locator/user%20pages/other%20screens/about_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/adminguard.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/feedback_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/notification_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/terms_and_privacy_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
 
@@ -46,6 +51,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: const SplashScreen(),
       initialRoute: '/SplashScreen',
       routes: {
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
@@ -56,7 +62,9 @@ class MyApp extends StatelessWidget {
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
+        '/FeedbackScreen': (context) => const FeedbackScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
+        '/Terms&PrivacyScreen': (context) => const TermsAndPrivacyScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
         '/AdminDashboardScreen': (context) =>
             AdminGuard(child: const AdminDashboardScreen()),
@@ -66,12 +74,25 @@ class MyApp extends StatelessWidget {
             AdminGuard(child: const AddPlaceScreen()),
         '/EditPlaceScreen': (context) =>
             AdminGuard(child: const EditPlaceScreen(buildingId: '',)),
+        '/FeedbackListScreen': (context) => 
+            AdminGuard(child: const FeedbackListScreen()),
+        '/SendNotificationsScreen': (context) =>
+        AdminGuard(child: const SendNotificationScreen()),
+        '/FeedbackDetailsScreen': (context) => FeedbackDetailsScreen(feedbackId: '',),
         '/ProfileScreen': (context) => const ProfileScreen(),
-        '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) =>
             const ResetPasswordScreen(email: ''),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
         '/HomeScreen': (context) => const HomeScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/OTPScreen') {
+          final email = settings.arguments as String? ?? '';
+          return MaterialPageRoute(
+            builder: (context) => OTP_Screen(email: email),
+          );
+        }
+        return null;
       },
     );
   }

@@ -19,7 +19,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   String? _profileImagePath;
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
-  bool _isRectangleVisible = true;
+  final bool _isRectangleVisible = true;
 
   @override
   void initState() {
@@ -912,24 +912,32 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         left: screenWidth * 0.03,
                         top: screenHeight * 0.02,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chat,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Feedback & Reports',
-                            style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                            Navigator.pushNamed(context, '/FeedbackListScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.chat,
                               color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
+                              size: screenWidth * 0.06,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Feedback & Reports',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
@@ -969,24 +977,32 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         left: screenWidth * 0.03,
                         top: screenHeight * 0.02,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.notifications,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Push Notifications',
-                            style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications,
                               color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
+                              size: screenWidth * 0.06,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Push Notifications',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
@@ -995,24 +1011,32 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         left: screenWidth * 0.03,
                         top: screenHeight * 0.02,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.black,
-                            size: screenWidth * 0.06,
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Locations',
-                            style: TextStyle(
+                      child: GestureDetector(
+                        onTap: () {
+                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
                               color: Colors.black,
-                              fontSize: screenWidth * 0.04,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
+                              size: screenWidth * 0.06,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Locations',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
