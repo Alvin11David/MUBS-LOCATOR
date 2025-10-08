@@ -11,6 +11,7 @@ import 'dart:math';
 import '../../services/navigation_service.dart';
 import 'navigation_screen.dart';
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -111,41 +112,42 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  Future<void> fetchAllData() async {
-    try {
-      BuildingRepository buildingRepository = BuildingRepository();
-      final buildings = await buildingRepository.getAllBuildings();
-      fetchedBuildings.addAll(buildings);
-      setState(() {
-        for (var element in buildings) {
-          markers.add(
-            Marker(
-              markerId: MarkerId(element.id),
-              position: LatLng(
-                element.location.latitude,
-                element.location.longitude,
-              ),
-              infoWindow: InfoWindow(
-                title: element.name,
-                snippet: element.description,
-              ),
-              onTap: () {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _showBuildingBottomSheet(context, element);
-                });
-              },
-            ),
-          );
-        }
-      });
+  List<Marker> processBuildings(List<Building> buildings) {
+  return buildings.map((element) {
+    return Marker(
+      markerId: MarkerId(element.id),
+      position: LatLng(
+        element.location.latitude,
+        element.location.longitude,
+      ),
+      infoWindow: InfoWindow(
+        title: element.name,
+        snippet: element.description,
+      ),
+    );
+  }).toList();
+}
 
-      print("✅ Successfully fetched ${buildings.length} buildings.");
-    } catch (e, stackTrace) {
-      print("❌ Failed to fetch buildings: $e");
-      print(stackTrace);
-      rethrow;
-    }
+  Future<void> fetchAllData() async {
+  try {
+    BuildingRepository buildingRepository = BuildingRepository();
+
+    final buildings = await buildingRepository.getAllBuildings();
+
+    final processedMarkers = await compute(processBuildings, buildings);
+
+    // Step 3: Update UI
+    setState(() {
+      fetchedBuildings.addAll(buildings);
+      markers.addAll(processedMarkers);
+    });
+
+    print("✅ Successfully fetched ${buildings.length} buildings.");
+  } catch (e, stackTrace) {
+    print("❌ Failed to fetch buildings: $e");
+    print(stackTrace);
   }
+}
 
   Future<void> createTheBuildings() async {
     try {
