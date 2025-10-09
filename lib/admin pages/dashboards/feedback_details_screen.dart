@@ -18,18 +18,24 @@ class FeedbackDetailsScreen extends StatefulWidget {
 
 class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     with SingleTickerProviderStateMixin {
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }
-
+  // State for dropdown, menu, and more menu visibility
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
   bool _isRectangleVisible = true;
   bool _isMoreMenuVisible = false;
   final TextEditingController _replyController = TextEditingController();
+
+  // Determine greeting based on time of day
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  }
 
   void _showCustomSnackBar(String message, Color backgroundColor,
       {required Duration duration}) {
@@ -102,6 +108,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     });
   }
 
+  // Logout
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -254,6 +261,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   @override
   void initState() {
     super.initState();
+    // Trigger animation after a short delay
     Future.delayed(const Duration(milliseconds: 100), () {
       setState(() {
         _isRectangleVisible = true;
@@ -271,6 +279,8 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
+
+    // Get the user's full name from Firebase
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
 
@@ -294,6 +304,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
             behavior: HitTestBehavior.opaque,
             child: Stack(
               children: [
+                // Glassy top bar
                 Positioned(
                   top: 0,
                   left: 0,
@@ -318,93 +329,100 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.02,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _isMenuVisible = !_isMenuVisible;
-                                    _isMoreMenuVisible = false;
-                                  });
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Icon(
-                                  Icons.menu,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
+                        child: Container(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.04,
+                              vertical: screenHeight * 0.02,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Menu icon
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isMenuVisible = !_isMenuVisible;
+                                      _isMoreMenuVisible = false;
+                                    });
+                                  },
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Icon(
+                                    Icons.menu,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.08,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: screenWidth * 0.04),
-                              Text(
-                                '${_getGreeting()}, $fullName',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.045,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
+                                SizedBox(width: screenWidth * 0.04),
+                                // Greeting text
+                                Text(
+                                  '${_getGreeting()}, $fullName',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.045,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                  ),
                                 ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                width: screenWidth * 0.17,
-                                height: screenHeight * 0.05,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: Colors.black, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.only(left: screenWidth * 0.01),
-                                      child: Container(
-                                        width: screenWidth * 0.09,
-                                        height: screenWidth * 0.09,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.black, width: 1),
-                                        ),
-                                        child: Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.04,
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.only(right: screenWidth * 0.01),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _isDropdownVisible = !_isDropdownVisible;
-                                            _isMoreMenuVisible = false;
-                                          });
-                                        },
-                                        behavior: HitTestBehavior.opaque,
-                                        child: Icon(
-                                          Icons.arrow_drop_down,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.04,
+                                const Spacer(),
+                                // Dropdown container
+                                Container(
+                                  width: screenWidth * 0.17,
+                                  height: screenHeight * 0.05,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: Colors.black, width: 1),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Padding(
+                                        padding: EdgeInsets.only(left: screenWidth * 0.01),
+                                        child: Container(
+                                          width: screenWidth * 0.09,
+                                          height: screenWidth * 0.09,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.black, width: 1),
+                                          ),
+                                          child: Icon(
+                                            Icons.person,
+                                            color: Colors.black,
+                                            size: screenWidth * 0.04,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      Padding(
+                                        padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _isDropdownVisible = !_isDropdownVisible;
+                                              _isMoreMenuVisible = false;
+                                            });
+                                          },
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.black,
+                                            size: screenWidth * 0.04,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
+                // Dropdown container
                 if (_isDropdownVisible)
                   Positioned(
                     top: screenHeight * 0.09,
@@ -428,36 +446,40 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                         borderRadius: BorderRadius.circular(16),
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.03,
-                              vertical: screenHeight * 0.01,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Profile',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins',
+                          child: Container(
+                            color: Colors.transparent,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.03,
+                                vertical: screenHeight * 0.01,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Profile',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins',
+                                    ),
                                   ),
-                                ),
-                                Image.asset(
-                                  'assets/images/edit.png',
-                                  color: Colors.black,
-                                  width: screenWidth * 0.04,
-                                  height: screenWidth * 0.04,
-                                ),
-                              ],
+                                  Image.asset(
+                                    'assets/images/edit.png',
+                                    color: Colors.black,
+                                    width: screenWidth * 0.04,
+                                    height: screenWidth * 0.04,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                // Feedback Details, Status, chevrons, and more button
                 Positioned(
                   top: screenHeight * 0.1,
                   left: screenWidth * 0.04,
@@ -595,7 +617,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                           ),
                         ],
                       ),
-                      SizedBox(height: screenHeight * 0.0),
+                      SizedBox(height: screenHeight * 0.01),
                       Align(
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
@@ -617,6 +639,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ],
                   ),
                 ),
+                // White container
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 500),
                   curve: Curves.easeInOut,
@@ -669,6 +692,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(height: screenHeight * 0.015),
+                              // Feedback ID
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -710,6 +734,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Submitted By
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -751,6 +776,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Email
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -792,6 +818,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Date & Time
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -833,6 +860,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Description
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -876,11 +904,13 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Divider
                               Divider(
                                 color: Colors.grey,
                                 thickness: 1,
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Admin Section
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Text(
@@ -894,6 +924,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.01),
+                              // Reply
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -952,6 +983,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
+                              // Send Button
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Align(
@@ -983,6 +1015,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               if (adminReply.isNotEmpty) ...[
                                 SizedBox(height: screenHeight * 0.015),
+                                // Admin Reply
                                 Padding(
                                   padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                   child: Row(
@@ -1034,6 +1067,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
+                // Sidebar
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -1119,14 +1153,14 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                         _buildMenuItem(context, Icons.settings, 'Profile Settings', '/ProfileScreen'),
                         _buildMenuItem(context, Icons.notifications, 'Push Notifications', '/SendNotificationsScreen'),
                         _buildMenuItem(context, Icons.location_on, 'Locations', '/LocationManagementScreen'),
-                        GestureDetector(
-                          onTap: _logout,
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              left: screenWidth * 0.03,
-                              top: screenHeight * 0.02,
-                            ),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: _logout,
+                            behavior: HitTestBehavior.opaque,
                             child: Row(
                               children: [
                                 Icon(
@@ -1152,6 +1186,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
+                // More menu container
                 if (_isMoreMenuVisible)
                   Positioned(
                     top: screenHeight * 0.19,
@@ -1193,6 +1228,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       fontFamily: 'Poppins',
                                     ),
                                   ),
+                                  Icon(
+                                    Icons.delete,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.04,
+                                  ),
                                 ],
                               ),
                             ),
@@ -1221,6 +1261,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Poppins',
                                     ),
+                                  ),
+                                  Icon(
+                                    Icons.check,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.04,
                                   ),
                                 ],
                               ),
