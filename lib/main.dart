@@ -47,16 +47,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const FeedbackDetailsScreen(),
-      initialRoute: '/FeedbackDetailsScreen',
+      initialRoute: '/SplashScreen',
       routes: {
+        '/SplashScreen': (context) => const SplashScreen(),
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
         '/SignInScreen': (context) => const SignInScreen(),
-        '/SplashScreen': (context) => const SplashScreen(),
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
+        '/HomeScreen': (context) => const HomeScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
         '/EditProfileScreen': (context) => const EditProfileScreen(),
@@ -68,12 +68,12 @@ class MyApp extends StatelessWidget {
             AdminGuard(child: const AddPlaceScreen()),
         '/EditPlaceScreen': (context) =>
             AdminGuard(child: const EditPlaceScreen(buildingId: '',)),
+        '/FeedbackDetailsScreen': (context) => const FeedbackDetailsScreen(),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/OTPScreen': (context) => const OTP_Screen(email: ''),
         '/ResetPasswordScreen': (context) =>
             const ResetPasswordScreen(email: ''),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
-        '/HomeScreen': (context) => const HomeScreen(),
       },
     );
   }

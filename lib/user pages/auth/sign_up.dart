@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -25,6 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   bool _isLoading = false;
 
   // Password strength state
@@ -206,15 +208,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         print('Display name updated to: ${_fullNameController.text.trim()}');
       }
 
-      // Save user info to Firestore
+      // Save user info to Firestore (WITHOUT password - security fix)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
             'fullName': _fullNameController.text.trim(),
             'email': _emailController.text.trim(),
-            'password': _passwordController.text
-                .trim(), // Not recommended to store plain passwords!
+            'authProvider': 'email',
             'createdAt': FieldValue.serverTimestamp(),
           });
       print('User info saved to Firestore');
@@ -274,6 +275,111 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
       print('Sign up process finished');
+    }
+  }
+
+  // Google Sign-In function
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _isLoading = true);
+    print('Attempting Google Sign-In...');
+
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        print('Google Sign-In cancelled by user');
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      print('Google user: ${googleUser.email}');
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = 
+          await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      UserCredential userCredential = 
+          await _auth.signInWithCredential(credential);
+      
+      print('Firebase sign-in successful: ${userCredential.user?.uid}');
+
+      // Save user info to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+            'fullName': userCredential.user!.displayName ?? 'Google User',
+            'email': userCredential.user!.email ?? '',
+            'photoUrl': userCredential.user!.photoURL,
+            'authProvider': 'google',
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true)); // Use merge to update existing users
+      
+      print('User info saved to Firestore');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signed up with Google successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Check if admin
+        if (userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      String message;
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          message = 'An account already exists with a different sign-in method.';
+          break;
+        case 'invalid-credential':
+          message = 'The credential is malformed or has expired.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Google sign-in is not enabled.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+        default:
+          message = 'Google sign-in failed: ${e.message ?? "Unknown error"}';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e, stackTrace) {
+      print('Google Sign-In error: $e\nStack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-in failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      print('Google Sign-In process finished');
     }
   }
 
@@ -660,14 +766,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: () {
-                                      // Add Google sign up logic here
-                                    },
+                                    onTap: _isLoading ? null : _signUpWithGoogle,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: const Color(0xFFD59A00),
+                                          color: _isLoading 
+                                              ? Colors.grey 
+                                              : const Color(0xFFD59A00),
                                           width: 1,
                                         ),
                                         color: Colors.white,
@@ -840,7 +946,7 @@ class _ResponsiveTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(
-          vertical: screenWidth * 0.03, // Unchanged as requested
+          vertical: screenWidth * 0.03,
           horizontal: screenWidth * 0.05,
         ),
       ),
@@ -941,7 +1047,7 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
           borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(
-          vertical: screenWidth * 0.03, // Unchanged as requested
+          vertical: screenWidth * 0.03,
           horizontal: screenWidth * 0.05,
         ),
       ),

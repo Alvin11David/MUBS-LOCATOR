@@ -19,7 +19,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   String? _profileImagePath;
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
-  bool _isRectangleVisible = true;
+  final bool _isRectangleVisible = true;
 
   @override
   void initState() {

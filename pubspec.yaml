@@ -30,6 +30,9 @@ dependencies:
   share_plus: 
   http: 
 
+  #this is for the google sign in staff #fidel in it
+  google_sign_in: ^6.2.1
+
   # Wave
   wave:
   # Image Select
