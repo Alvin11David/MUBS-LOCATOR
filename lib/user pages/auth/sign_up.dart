@@ -14,8 +14,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   // Focus nodes for field navigation
   final FocusNode _fullNameFocus = FocusNode();
@@ -28,13 +27,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isLoading = false;
 
   // Password strength state
-  double _passwordStrengthProgress = 0.0; // Progress from 0.0 to 1.0
-  Color _strengthColor = Colors.white; // Color based on strength
-  List<String> _passwordHints = []; // Hints for password strength
+  double _passwordStrengthProgress = 0.0;
+  Color _strengthColor = Colors.white;
+  List<String> _passwordHints = [];
 
   // Email availability state
-  String? _emailHint; // Hint for email availability
-  Timer? _debounce; // Debounce timer for email check
+  String? _emailHint;
+  Timer? _debounce;
 
   @override
   void dispose() {
@@ -46,7 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _emailFocus.dispose();
     _passwordFocus.dispose();
     _confirmPasswordFocus.dispose();
-    _debounce?.cancel(); // Cancel debounce timer
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -55,7 +54,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     int strengthScore = 0;
     List<String> hints = [];
 
-    // Minimum length
     bool hasMinLength = password.length >= 6;
     if (hasMinLength) {
       strengthScore++;
@@ -63,7 +61,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       hints.add("Password must be at least 6 characters long");
     }
 
-    // Lowercase check
     bool hasLowercase = password.contains(RegExp(r'[a-z]'));
     if (hasLowercase) {
       strengthScore++;
@@ -71,7 +68,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       hints.add("Add at least one lowercase letter (a-z)");
     }
 
-    // Uppercase check
     bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
     if (hasUppercase) {
       strengthScore++;
@@ -79,7 +75,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       hints.add("Add at least one uppercase letter (A-Z)");
     }
 
-    // Numbers check (optional)
     bool hasNumber = password.contains(RegExp(r'[0-9]'));
     if (hasNumber) {
       strengthScore++;
@@ -87,7 +82,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       hints.add("Consider adding a number (0-9)");
     }
 
-    // Special character check (optional)
     bool hasSpecial = password.contains(RegExp(r'[!@#\$&*~]'));
     if (hasSpecial) {
       strengthScore++;
@@ -96,19 +90,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     setState(() {
-      // Calculate progress based on 3 required criteria (length, lowercase, uppercase)
       double progress = (strengthScore / 3.0).clamp(0.0, 1.0);
-
-      // Turn green if minimum requirements are met (length, lowercase, uppercase)
       if (hasMinLength && hasLowercase && hasUppercase) {
-        _passwordStrengthProgress = 1.0; // Full progress for minimum requirements
-        _strengthColor = Colors.green; // Green for strong password
+        _passwordStrengthProgress = 1.0;
+        _strengthColor = Colors.green;
       } else {
         _passwordStrengthProgress = (strengthScore / 3.0).clamp(0.0, 0.6);
-        _strengthColor = Colors.red; // Weak password
+        _strengthColor = Colors.red;
       }
 
-      // Include optional hints only if progress is not full
       if (_passwordStrengthProgress < 1.0) {
         _passwordHints = hints;
       } else {
@@ -117,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  // Check email availability with debounce
+  // Check email availability with debounce using Firestore
   void _checkEmailAvailability(String email) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () async {
@@ -127,8 +117,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
       final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
       if (!emailRegex.hasMatch(email.trim())) {
-        setState(() => _emailHint = null);
+        setState(() => _emailHint = 'Invalid email format');
         return;
+      }
+      try {
+        final query = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: email.trim())
+            .limit(1)
+            .get();
+        setState(() {
+          _emailHint = query.docs.isNotEmpty ? 'Email already in use' : null;
+        });
+      } catch (e) {
+        print('Error checking email availability: $e');
+        setState(() => _emailHint = 'Error checking email');
       }
     });
   }
@@ -161,13 +164,61 @@ class _SignUpScreenState extends State<SignUpScreen> {
       print('Validation failed: Password too short');
       return 'Password must be at least 6 characters';
     }
-    if (_confirmPasswordController.text.trim() !=
-        _passwordController.text.trim()) {
+    if (_confirmPasswordController.text.trim() != _passwordController.text.trim()) {
       print('Validation failed: Passwords do not match');
       return 'Passwords do not match';
     }
     print('Validation passed');
     return null;
+  }
+
+  // Custom SnackBar method
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   // Firebase signup function
@@ -177,59 +228,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (error != null) {
       print('Form error: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red),
-        );
+        _showCustomSnackBar(context, error);
       }
       return;
     }
 
     setState(() => _isLoading = true);
-    print(
-      'Attempting Firebase sign up for email: ${_emailController.text.trim()}',
-    );
+    print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
 
     try {
-      // Create user with email/password
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       print('Firebase sign up successful: ${userCredential.user?.uid}');
 
-      // Update display name (optional)
       if (userCredential.user != null) {
-        await userCredential.user!.updateDisplayName(
-          _fullNameController.text.trim(),
-        );
+        await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
         print('Display name updated to: ${_fullNameController.text.trim()}');
-      }
 
-      // Save user info to Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-            'fullName': _fullNameController.text.trim(),
-            'email': _emailController.text.trim(),
-            'password': _passwordController.text
-                .trim(), // Not recommended to store plain passwords!
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-      print('User info saved to Firestore');
+        // Create Firestore document for the user with all fields, including password
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text.trim(), // Added password field (SECURITY WARNING: Not recommended for production)
+          'phone': '', // Initialize as empty, editable in EditProfileScreen
+          'location': '', // Initialize as empty, editable in EditProfileScreen
+          'profilePicUrl': null, // Initialize as null for default person icon
+          'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        print('User info, including password, saved to Firestore');
+      }
 
       if (mounted) {
         print('Navigating based on email');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Check if the email is adminuser@gmail.com
-        if (_emailController.text.trim().toLowerCase() ==
-            'adminuser@gmail.com') {
+        _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
+        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
+        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
@@ -254,22 +291,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
           message = 'Email/password accounts are not enabled.';
           break;
         default:
-          message =
-              'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+          message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
+        _showCustomSnackBar(context, message);
       }
     } catch (e, stackTrace) {
       print('Signup error: $e\nStack trace: $stackTrace');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Unexpected error: $e'),
-            backgroundColor: Colors.red),
-        );
+        _showCustomSnackBar(context, 'Unexpected error: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -282,13 +312,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     bool hasMinLength = _passwordController.text.trim().length >= 6;
     bool hasLowercase = _passwordController.text.contains(RegExp(r'[a-z]'));
     bool hasUppercase = _passwordController.text.contains(RegExp(r'[A-Z]'));
-    return _passwordController.text.trim() ==
-            _confirmPasswordController.text.trim() &&
+    return _passwordController.text.trim() == _confirmPasswordController.text.trim() &&
         _passwordController.text.trim().isNotEmpty &&
         hasMinLength &&
         hasLowercase &&
         hasUppercase &&
-        _emailHint == null; // Disable if email is already in use
+        _emailHint == null;
   }
 
   @override
@@ -297,20 +326,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent resizing when keyboard appears
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Stack(
               children: [
-                // Background
                 Container(
                   width: screenWidth,
                   height: screenHeight,
                   color: const Color(0xFF93C5FD),
                 ),
-
-                // Logo at center top
                 Positioned(
                   top: screenHeight * 0.05,
                   left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -319,12 +345,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: screenWidth * 0.2,
                     height: screenHeight * 0.1,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox(),
+                    errorBuilder: (context, error, stackTrace) => const SizedBox(),
                   ),
                 ),
-
-                // Ambasize top left
                 Positioned(
                   top: screenHeight * 0.04,
                   left: screenWidth * 0.02,
@@ -338,8 +361,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-
-                // Jackline top right
                 Positioned(
                   top: screenHeight * 0.09,
                   right: screenWidth * 0.02,
@@ -353,8 +374,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-
-                // "Let's get you signed up"
                 Positioned(
                   top: screenHeight * 0.17,
                   left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -369,13 +388,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-
-                // White container with inputs
                 Positioned(
                   top: screenHeight * 0.31,
                   left: screenWidth * 0.02,
                   right: screenWidth * 0.02,
-                  bottom: 0, // Fixed to bottom of screen
+                  bottom: 0,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -385,7 +402,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: screenHeight * 0.69, // Ensure minimum height
+                          minHeight: screenHeight * 0.69,
                         ),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
@@ -394,7 +411,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Subtitle
                               SizedBox(
                                 width: screenWidth * 0.8,
                                 child: Text(
@@ -411,12 +427,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Full Names Field
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.06,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                                 child: _ResponsiveTextField(
                                   controller: _fullNameController,
                                   label: 'Full Names',
@@ -428,12 +440,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Email Field
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.06,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                                 child: _ResponsiveTextField(
                                   controller: _emailController,
                                   label: 'Email',
@@ -445,7 +453,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   onChanged: _checkEmailAvailability,
                                 ),
                               ),
-                              // Email availability hint
                               if (_emailHint != null)
                                 Padding(
                                   padding: EdgeInsets.symmetric(
@@ -462,12 +469,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                 ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Password Field
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.06,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                                 child: _ResponsivePasswordField(
                                   controller: _passwordController,
                                   label: 'Password',
@@ -477,8 +480,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   onChanged: _checkPasswordStrength,
                                 ),
                               ),
-
-                              // Password Strength Indicator
                               Padding(
                                 padding: EdgeInsets.symmetric(
                                   vertical: screenHeight * 0.01,
@@ -488,7 +489,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   borderRadius: BorderRadius.circular(30),
                                   child: Stack(
                                     children: [
-                                      // Background of the strength indicator
                                       Container(
                                         width: double.infinity,
                                         height: 6,
@@ -496,25 +496,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(30),
                                           border: Border.all(
-                                            color: const Color.fromARGB(
-                                              255,
-                                              255,
-                                              253,
-                                              253,
-                                            ),
+                                            color: const Color.fromARGB(255, 255, 253, 253),
                                             width: 1,
                                           ),
                                         ),
                                       ),
-                                      // Progress bar with strength color
                                       FractionallySizedBox(
                                         widthFactor: _passwordStrengthProgress,
                                         child: Container(
                                           height: 6,
                                           decoration: BoxDecoration(
                                             color: _strengthColor,
-                                            borderRadius:
-                                                BorderRadius.circular(30),
+                                            borderRadius: BorderRadius.circular(30),
                                           ),
                                         ),
                                       ),
@@ -522,13 +515,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                 ),
                               ),
-                              // Show password hints if any
                               Builder(
                                 builder: (context) {
-                                  final List<String> hints =
-                                      (_passwordHints != null)
-                                          ? _passwordHints
-                                          : <String>[];
+                                  final List<String> hints = (_passwordHints != null) ? _passwordHints : <String>[];
                                   if (hints.isEmpty) return const SizedBox.shrink();
                                   return Padding(
                                     padding: EdgeInsets.symmetric(
@@ -536,14 +525,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       vertical: screenHeight * 0.005,
                                     ),
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: hints
                                           .map(
                                             (hint) => Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 2.0,
-                                              ),
+                                              padding: const EdgeInsets.only(bottom: 2.0),
                                               child: Text(
                                                 '• $hint',
                                                 style: TextStyle(
@@ -560,12 +546,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 },
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Confirm Password Field
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.06,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                                 child: _ResponsivePasswordField(
                                   controller: _confirmPasswordController,
                                   label: 'Confirm Password',
@@ -575,19 +557,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Sign Up button
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.06,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: _isLoading || !_isSignUpEnabled()
-                                        ? null
-                                        : _signUp,
+                                    onTap: _isLoading || !_isSignUpEnabled() ? null : _signUp,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
@@ -600,10 +576,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         gradient: _isLoading || !_isSignUpEnabled()
                                             ? null
                                             : const LinearGradient(
-                                                colors: [
-                                                  Color(0xFFE0E7FF),
-                                                  Color(0xFF93C5FD),
-                                                ],
+                                                colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
@@ -615,11 +588,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                               height: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                        Color>(
-                                                  Colors.black,
-                                                ),
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                                               ),
                                             )
                                           : Text(
@@ -627,9 +596,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                               style: TextStyle(
                                                 fontSize: screenWidth * 0.05,
                                                 fontWeight: FontWeight.bold,
-                                                color: _isSignUpEnabled()
-                                                    ? Colors.black
-                                                    : Colors.grey,
+                                                color: _isSignUpEnabled() ? Colors.black : Colors.grey,
                                                 fontFamily: 'Epunda Slab',
                                               ),
                                             ),
@@ -638,24 +605,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Or Divider
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.08,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                                 child: _OrDivider(
                                   fontSize: screenWidth * 0.04,
                                   horizontalPadding: screenWidth * 0.02,
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Sign Up with Google button
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.08,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
@@ -666,15 +625,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(
-                                          color: const Color(0xFFD59A00),
-                                          width: 1,
-                                        ),
+                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
                                         color: Colors.white,
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.12),
+                                            color: Colors.black.withOpacity(0.12),
                                             spreadRadius: 1,
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
@@ -683,8 +638,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       ),
                                       alignment: Alignment.center,
                                       child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Image.asset(
@@ -692,9 +646,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             width: screenWidth * 0.08,
                                             height: screenHeight * 0.03,
                                             fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    const SizedBox(),
+                                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
                                           ),
                                           SizedBox(width: screenWidth * 0.025),
                                           Text(
@@ -713,8 +665,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-
-                              // Already have account? Sign In
                               Center(
                                 child: SizedBox(
                                   width: screenWidth * 0.8,
@@ -732,10 +682,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/SignInScreen',
-                                          );
+                                          Navigator.pushNamed(context, '/SignInScreen');
                                         },
                                         child: Text(
                                           "Sign In",
@@ -768,7 +715,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 }
 
-// Responsive Text Field with focus logic
 class _ResponsiveTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -840,7 +786,7 @@ class _ResponsiveTextField extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(
-          vertical: screenWidth * 0.03, // Unchanged as requested
+          vertical: screenWidth * 0.03,
           horizontal: screenWidth * 0.05,
         ),
       ),
@@ -855,7 +801,6 @@ class _ResponsiveTextField extends StatelessWidget {
   }
 }
 
-// Responsive Password Field with focus logic
 class _ResponsivePasswordField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -874,8 +819,7 @@ class _ResponsivePasswordField extends StatefulWidget {
   });
 
   @override
-  State<_ResponsivePasswordField> createState() =>
-      _ResponsivePasswordFieldState();
+  State<_ResponsivePasswordField> createState() => _ResponsivePasswordFieldState();
 }
 
 class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
@@ -941,7 +885,7 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
           borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
         ),
         contentPadding: EdgeInsets.symmetric(
-          vertical: screenWidth * 0.03, // Unchanged as requested
+          vertical: screenWidth * 0.03,
           horizontal: screenWidth * 0.05,
         ),
       ),
@@ -956,7 +900,6 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
   }
 }
 
-// Responsive OR Divider
 class _OrDivider extends StatelessWidget {
   final double fontSize;
   final double horizontalPadding;

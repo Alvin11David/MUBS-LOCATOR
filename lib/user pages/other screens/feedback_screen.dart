@@ -109,6 +109,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
         setState(() {
           _userFullName = 'User';
         });
+        _showCustomSnackBar('Error fetching user data: $e', Colors.red);
       }
     }
   }
@@ -134,7 +135,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
     }
   }
 
-  void _showCustomSnackBar(String message, Color backgroundColor, {required Duration duration}) {
+  void _showCustomSnackBar(String message, Color backgroundColor) {
     final overlay = Overlay.of(context);
     late OverlayEntry overlayEntry;
     final controller = AnimationController(
@@ -163,7 +164,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(30),
               ),
               child: Row(
                 children: [
@@ -194,7 +195,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
 
     overlay.insert(overlayEntry);
     controller.forward();
-    Future.delayed(duration, () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         controller.reverse().then((_) {
           overlayEntry.remove();
@@ -214,10 +215,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
           context,
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
+        _showCustomSnackBar('Logout successful', Colors.green);
       }
     } catch (e) {
       if (mounted) {
-        _showCustomSnackBar('Error signing out: $e', Colors.red, duration: const Duration(seconds: 2));
+        _showCustomSnackBar('Error signing out: $e', Colors.red);
       }
     }
   }
@@ -260,7 +262,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
               onPressed: () {
                 Navigator.of(context).pop();
                 _logout();
-                _showCustomSnackBar('Logout successful', Colors.green, duration: const Duration(seconds: 2));
               },
               child: const Text(
                 'Logout',
@@ -295,7 +296,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
           'timestamp': FieldValue.serverTimestamp(),
         });
         if (mounted) {
-          _showCustomSnackBar('Thank you! Your feedback has been sent successfully.', Colors.green, duration: const Duration(seconds: 3));
+          _showCustomSnackBar('Thank you! Your feedback has been sent successfully.', Colors.green);
           setState(() {
             _feedbackController.clear();
             _selectedRating = 0;
@@ -303,12 +304,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
         }
       } else {
         if (mounted) {
-          _showCustomSnackBar('Error: User not signed in.', Colors.red, duration: const Duration(seconds: 2));
+          _showCustomSnackBar('Error: User not signed in.', Colors.red);
         }
       }
     } catch (e) {
       if (mounted) {
-        _showCustomSnackBar('Error submitting feedback: $e', Colors.red, duration: const Duration(seconds: 2));
+        _showCustomSnackBar('Error submitting feedback: $e', Colors.red);
       }
     }
   }

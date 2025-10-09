@@ -33,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
+  bool _isLoggingOut = false; // Added to prevent multiple logout triggers
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -56,6 +57,61 @@ class _HomeScreenState extends State<HomeScreen> {
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
+  }
+
+  // Custom SnackBar method with debug logging
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    print('Showing SnackBar: $message'); // Debug log
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      onVisible: () {
+        print('SnackBar is visible: $message'); // Debug log
+      },
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
+      print('SnackBar closed: $message, reason: $reason'); // Debug log
+    });
   }
 
   Future<void> _fetchUserFullName() async {
@@ -193,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> createTheBuildings() async {
     try {
-      List<Building> buildings = mubsBuildings;
+      List<Building> buildings = mubsBuildings; // Ensure mubsBuildings is defined
       BuildingRepository buildingRepository = BuildingRepository();
 
       for (var item in buildings) {
@@ -205,21 +261,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
+    if (_isLoggingOut) return; // Prevent multiple logout calls
+    setState(() {
+      _isLoggingOut = true;
+    });
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', false);
       await FirebaseAuth.instance.signOut();
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars(); // Clear existing SnackBars
+        _showCustomSnackBar(context, 'Logout successful', isSuccess: true);
+        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       }
     } catch (e) {
       print('Error signing out: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error signing out: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showCustomSnackBar(context, 'Error signing out: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingOut = false;
+        });
+      }
     }
   }
 
@@ -264,13 +331,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _logout();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logout successful')),
-                );
-              },
+              onPressed: _isLoggingOut
+                  ? null // Disable button when logging out
+                  : () {
+                      Navigator.of(context).pop();
+                      _logout();
+                    },
               child: const Text(
                 'Logout',
                 style: TextStyle(
@@ -1121,6 +1187,61 @@ class _BuildingBottomSheetContentState
     super.dispose();
   }
 
+  // Custom SnackBar method with debug logging
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    print('Showing SnackBar: $message'); // Debug log
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      onVisible: () {
+        print('SnackBar is visible: $message'); // Debug log
+      },
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
+      print('SnackBar closed: $message, reason: $reason'); // Debug log
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
@@ -1389,15 +1510,7 @@ class _BuildingBottomSheetContentState
             onTap: () {
               if (_issueTitleController.text.trim().isEmpty ||
                   _descriptionController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Please fill in all fields',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                _showCustomSnackBar(context, 'Please fill in all fields');
                 return;
               }
               widget.onFeedbackSubmit(
@@ -1410,15 +1523,7 @@ class _BuildingBottomSheetContentState
               setState(() {
                 _selectedIssueType = 'General';
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Feedback submitted successfully',
-                    style: TextStyle(fontFamily: 'Poppins'),
-                  ),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _showCustomSnackBar(context, 'Feedback submitted successfully', isSuccess: true);
             },
             child: Container(
               width: screenWidth * 0.3,

@@ -1,10 +1,8 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/feedback_details_screen.dart';
 
 class FeedbackListScreen extends StatefulWidget {
@@ -15,7 +13,7 @@ class FeedbackListScreen extends StatefulWidget {
 }
 
 class _FeedbackListScreenState extends State<FeedbackListScreen> {
-  String? _profileImagePath;
+  String? _profilePicUrl;
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
   bool _isFilterDropdownVisible = false;
@@ -30,10 +28,22 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
   }
 
   Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _profileImagePath = prefs.getString('profileImagePath');
-    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          setState(() {
+            _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
   }
 
   String _getGreeting() {
@@ -46,15 +56,34 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
+      Navigator.pushReplacementNamed(context, '/SignInScreen');
+    }
+  }
+
+  void _navigateToScreen(String routeName) {
+    print('Current route: ${ModalRoute.of(context)?.settings.name}, Target route: $routeName');
+    setState(() {
+      _isMenuVisible = false;
+      _isDropdownVisible = false;
+      _isFilterDropdownVisible = false;
+    });
+
+    try {
+      if (routeName == '/AdminDashboardScreen') {
+        Navigator.pushReplacementNamed(context, routeName);
+      } else {
+        Navigator.pushNamed(context, routeName);
+      }
+      print('Navigated to $routeName');
+    } catch (e) {
+      print('Navigation error to $routeName: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Navigation error: $e')),
       );
     }
   }
 
   Query<Map<String, dynamic>> _applyFilter(Query<Map<String, dynamic>> query) {
-    // Sort by timestamp in descending order to show latest feedback first
     query = query.orderBy('timestamp', descending: true);
 
     if (_selectedFilter == 'Unread') {
@@ -115,6 +144,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Header
             Positioned(
               top: 0,
               left: 0,
@@ -185,21 +215,25 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Padding(
-                                  padding: EdgeInsets.only(left: screenWidth * 0.01),
+                                  padding: EdgeInsets.only(left: screenWidth * 0.0),
                                   child: Container(
-                                    width: screenWidth * 0.09,
-                                    height: screenWidth * 0.09,
+                                    width: screenWidth * 0.1,
+                                    height: screenWidth * 0.1,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(color: Colors.black, width: 1),
                                     ),
-                                    child: _profileImagePath != null && _profileImagePath!.isNotEmpty
+                                    child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
                                         ? ClipOval(
-                                            child: Image.file(
-                                              File(_profileImagePath!),
+                                            child: Image.network(
+                                              _profilePicUrl!,
                                               fit: BoxFit.cover,
-                                              width: screenWidth * 0.1,
-                                              height: screenWidth * 0.1,
+                                              width: screenWidth * 0.09,
+                                              height: screenWidth * 0.09,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return const CircularProgressIndicator();
+                                              },
                                               errorBuilder: (context, error, stackTrace) {
                                                 return Icon(
                                                   Icons.person,
@@ -244,236 +278,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ),
               ),
             ),
-            if (_isDropdownVisible)
-              Positioned(
-                top: screenHeight * 0.09,
-                right: screenWidth * 0.04,
-                child: Container(
-                  width: screenWidth * 0.25,
-                  height: screenHeight * 0.06,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.03,
-                          vertical: screenHeight * 0.01,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Profile',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                            Image.asset(
-                              'assets/images/edit.png',
-                              color: Colors.black,
-                              width: screenWidth * 0.04,
-                              height: screenWidth * 0.04,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (_isFilterDropdownVisible)
-              Positioned(
-                top: screenHeight * 0.24,
-                left: screenWidth * 0.04,
-                child: Container(
-                  width: screenWidth * 0.4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildFilterItem(context, 'All Feedback', null),
-                      _buildFilterItem(context, 'Unread', 'Unread'),
-                      _buildFilterItem(context, 'Last 7 Days', 'Last 7 Days'),
-                      _buildFilterItem(context, 'Last 30 Days', 'Last 30 Days'),
-                      _buildFilterItem(context, 'Last 90 Days', 'Last 90 Days'),
-                      _buildFilterItem(context, 'Custom Range', 'Custom Range'),
-                    ],
-                  ),
-                ),
-              ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-              top: 0,
-              child: Container(
-                width: screenWidth * 0.6,
-                height: screenHeight * 0.8,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                      offset: Offset(2, 0),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(
-                      children: [
-                        Image.asset(
-                          'assets/images/sidebar.png',
-                          width: screenWidth * 0.6,
-                          height: screenHeight * 0.16,
-                          fit: BoxFit.cover,
-                        ),
-                        Positioned(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.03,
-                          child: Container(
-                            width: screenWidth * 0.15,
-                            height: screenWidth * 0.15,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1),
-                            ),
-                            child: _profileImagePath != null && _profileImagePath!.isNotEmpty
-                                ? ClipOval(
-                                    child: Image.file(
-                                      File(_profileImagePath!),
-                                      fit: BoxFit.cover,
-                                      width: screenWidth * 0.15,
-                                      height: screenWidth * 0.15,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.08,
-                                        );
-                                      },
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    color: Colors.black,
-                                    size: screenWidth * 0.08,
-                                  ),
-                          ),
-                        ),
-                        Positioned(
-                          left: screenWidth * 0.19,
-                          top: screenHeight * 0.05,
-                          child: Text(
-                            'MUBS Locator',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth * 0.05,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: screenWidth * 0.19,
-                          top: screenHeight * 0.09,
-                          child: Text(
-                            fullName,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth * 0.035,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildMenuItem(context, Icons.dashboard, 'Dashboard', '/AdminDashboardScreen'),
-                    _buildMenuItem(context, Icons.chat, 'Feedback & Reports', '/FeedbackListScreen'),
-                    _buildMenuItem(context, Icons.settings, 'Profile Settings', '/ProfileScreen'),
-                    _buildMenuItem(context, Icons.notifications, 'Push Notifications', '/SendNotificationsScreen'),
-                    _buildMenuItem(context, Icons.location_on, 'Locations', '/LocationManagementScreen'),
-                    GestureDetector(
-                      onTap: _logout,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.exit_to_app,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Logout',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_isMenuVisible || _isDropdownVisible || _isFilterDropdownVisible)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isMenuVisible = false;
-                      _isDropdownVisible = false;
-                      _isFilterDropdownVisible = false;
-                    });
-                  },
-                  behavior: HitTestBehavior.opaque,
-                ),
-              ),
+            // Title and Navigation Arrows
             Positioned(
               top: screenHeight * 0.1,
               left: screenWidth * 0.04,
@@ -529,6 +334,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ],
               ),
             ),
+            // Feedback Table
             Positioned(
               top: screenHeight * 0.22,
               left: screenWidth * 0.04,
@@ -865,6 +671,247 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ),
               ),
             ),
+            // Profile Dropdown
+            if (_isDropdownVisible)
+              Positioned(
+                top: screenHeight * 0.09,
+                right: screenWidth * 0.04,
+                child: Container(
+                  width: screenWidth * 0.25,
+                  height: screenHeight * 0.06,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.03,
+                          vertical: screenHeight * 0.01,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => _navigateToScreen('/ProfileScreen'),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Profile',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              Image.asset(
+                                'assets/images/edit.png',
+                                color: Colors.black,
+                                width: screenWidth * 0.04,
+                                height: screenWidth * 0.04,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Filter Dropdown
+            if (_isFilterDropdownVisible)
+              Positioned(
+                top: screenHeight * 0.24,
+                left: screenWidth * 0.04,
+                child: Container(
+                  width: screenWidth * 0.4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildFilterItem(context, 'All Feedback', null),
+                      _buildFilterItem(context, 'Unread', 'Unread'),
+                      _buildFilterItem(context, 'Last 7 Days', 'Last 7 Days'),
+                      _buildFilterItem(context, 'Last 30 Days', 'Last 30 Days'),
+                      _buildFilterItem(context, 'Last 90 Days', 'Last 90 Days'),
+                      _buildFilterItem(context, 'Custom Range', 'Custom Range'),
+                    ],
+                  ),
+                ),
+              ),
+            // Sidebar (Placed last to ensure it appears on top)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+              top: 0,
+              child: Container(
+                width: screenWidth * 0.6,
+                height: screenHeight * 0.8,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                      offset: Offset(2, 0),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      children: [
+                        Image.asset(
+                          'assets/images/sidebar.png',
+                          width: screenWidth * 0.6,
+                          height: screenHeight * 0.16,
+                          fit: BoxFit.cover,
+                        ),
+                        Positioned(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.03,
+                          child: Container(
+                            width: screenWidth * 0.15,
+                            height: screenWidth * 0.15,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
+                                ? ClipOval(
+                                    child: Image.network(
+                                      _profilePicUrl!,
+                                      fit: BoxFit.cover,
+                                      width: screenWidth * 0.15,
+                                      height: screenWidth * 0.15,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const CircularProgressIndicator();
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Icon(
+                                          Icons.person,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.08,
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.08,
+                                  ),
+                          ),
+                        ),
+                        Positioned(
+                          left: screenWidth * 0.19,
+                          top: screenHeight * 0.05,
+                          child: Text(
+                            'MUBS Locator',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.05,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Urbanist',
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: screenWidth * 0.19,
+                          top: screenHeight * 0.09,
+                          child: Text(
+                            fullName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.035,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Urbanist',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    _buildMenuItem(context, Icons.dashboard, 'Dashboard', '/AdminDashboardScreen'),
+                    _buildMenuItem(context, Icons.chat, 'Feedback & Reports', '/FeedbackListScreen'),
+                    _buildMenuItem(context, Icons.settings, 'Profile Settings', '/ProfileScreen'),
+                    _buildMenuItem(context, Icons.notifications, 'Push Notifications', '/SendNotificationsScreen'),
+                    _buildMenuItem(context, Icons.location_on, 'Locations', '/LocationManagementScreen'),
+                    GestureDetector(
+                      onTap: _logout,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.exit_to_app,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Logout',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Overlay for dismissing menus
+            if (_isMenuVisible || _isDropdownVisible || _isFilterDropdownVisible)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isMenuVisible = false;
+                      _isDropdownVisible = false;
+                      _isFilterDropdownVisible = false;
+                    });
+                  },
+                  behavior: HitTestBehavior.opaque,
+                ),
+              ),
           ],
         ),
       ),
@@ -879,12 +926,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
       padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
       child: GestureDetector(
         onTap: route != null
-            ? () {
-                Navigator.pushNamed(context, route);
-                setState(() {
-                  _isMenuVisible = false;
-                });
-              }
+            ? () => _navigateToScreen(route)
             : null,
         child: Row(
           children: [

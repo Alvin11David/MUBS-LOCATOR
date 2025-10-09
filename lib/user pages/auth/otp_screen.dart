@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:cloud_functions/cloud_functions.dart'; // FIXED IMPORT
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -63,6 +63,55 @@ class _OTP_ScreenState extends State<OTP_Screen> {
     });
   }
 
+  // Custom SnackBar method
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   // Generate a new OTP
   String _generateOTP() {
     return (1000 + Random().nextInt(9000)).toString();
@@ -74,51 +123,45 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       _isLoading = true;
     });
     try {
-      // Generate a new 4-digit OTP
       final otp = _generateOTP();
       final now = DateTime.now();
       final expiresAt = now.add(Duration(minutes: 10));
 
-      // Save the new OTP to Firestore
       await FirebaseFirestore.instance
           .collection('password_reset_tokens')
           .doc(widget.email)
           .set({
-            'email': widget.email,
-            'otp': otp,
-            'createdAt': now.millisecondsSinceEpoch,
-            'expiresAt': expiresAt.millisecondsSinceEpoch,
-          });
-      // Print the active OTP code to the console
+        'email': widget.email,
+        'otp': otp,
+        'createdAt': now.millisecondsSinceEpoch,
+        'expiresAt': expiresAt.millisecondsSinceEpoch,
+      });
       print('ACTIVE OTP CODE SENT: $otp');
 
-      // Call the Cloud Function to send the new OTP email
       await FirebaseFunctions.instance.httpsCallable('sendOTPEmail').call({
         'email': widget.email,
         'otp': otp,
       });
 
-      // Optionally clear the input fields
       for (var controller in _controllers) {
         controller.clear();
       }
 
-      // Restart the countdown
       _startCountdown();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('A new 4 digit code has been sent to ${widget.email}'),
-        ),
-      );
+      if (mounted) {
+        _showCustomSnackBar(context, 'A new 4 digit code has been sent to ${widget.email}', isSuccess: true);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error resending OTP: $e')));
+      if (mounted) {
+        _showCustomSnackBar(context, 'Error resending OTP: $e');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -146,46 +189,42 @@ class _OTP_ScreenState extends State<OTP_Screen> {
         final expiresAtMillis = data['expiresAt'] as int?;
 
         if (storedOTP == null || expiresAtMillis == null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Invalid OTP data')));
+          if (mounted) {
+            _showCustomSnackBar(context, 'Invalid OTP data');
+          }
           return;
         }
 
         final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
 
         if (DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP) {
-          // OTP is valid, navigate to SetPasswordScreen
-          Navigator.pushNamed(
-            context,
-            '/SetPasswordScreen',
-            arguments: widget.email,
-          );
-          // OR, if you use MaterialPageRoute:
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => SetPasswordScreen(email: widget.email),
-          //   ),
-          // );
+          if (mounted) {
+            Navigator.pushNamed(
+              context,
+              '/SetPasswordScreen',
+              arguments: widget.email,
+            );
+          }
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Invalid or expired OTP')));
+          if (mounted) {
+            _showCustomSnackBar(context, 'Invalid or expired OTP');
+          }
         }
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('No OTP found for this email')));
+        if (mounted) {
+          _showCustomSnackBar(context, 'No OTP found for this email');
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error verifying OTP: $e')));
+      if (mounted) {
+        _showCustomSnackBar(context, 'Error verifying OTP: $e');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -194,7 +233,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Make box size responsive: slightly taller than wide
     final otpBoxWidth = screenWidth * 0.14;
     final otpBoxHeight = otpBoxWidth * 1.3;
 
@@ -204,7 +242,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
         child: SizedBox.expand(
           child: Stack(
             children: [
-              // Logo
               Positioned(
                 top: screenHeight * 0.05,
                 left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -215,7 +252,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              // Ambasize text
               Positioned(
                 top: screenHeight * 0.04,
                 left: screenWidth * 0.02,
@@ -229,7 +265,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                   ),
                 ),
               ),
-              // Jackline text
               Positioned(
                 top: screenHeight * 0.09,
                 right: screenWidth * 0.02,
@@ -243,7 +278,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                   ),
                 ),
               ),
-              // "Let's get you sorted" text
               Positioned(
                 top: screenHeight * 0.17,
                 left: screenWidth * 0.5 - (screenWidth * 0.6) / 2,
@@ -271,7 +305,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                   ),
                   child: Stack(
                     children: [
-                      // Cone image at top right
                       Positioned(
                         top: 0,
                         right: -screenWidth * 0.1,
@@ -287,7 +320,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                           ),
                         ),
                       ),
-                      // Cone image at bottom left
                       Positioned(
                         bottom: 0,
                         left: -screenWidth * 0.15,
@@ -303,7 +335,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                           ),
                         ),
                       ),
-                      // Scrollable content
                       SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
@@ -312,7 +343,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                         ),
                         child: Column(
                           children: [
-                            // Mailbox icon in a circle
                             Container(
                               margin: EdgeInsets.only(top: screenHeight * 0.01),
                               width: 80,
@@ -327,7 +357,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 size: 50,
                               ),
                             ),
-                            // "Verify Your Email"
                             SizedBox(height: screenHeight * 0.02),
                             SizedBox(
                               width: screenWidth * 0.8,
@@ -344,7 +373,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 ),
                               ),
                             ),
-                            // "Please enter the code"
                             SizedBox(height: screenHeight * 0.02),
                             SizedBox(
                               width: screenWidth * 0.8,
@@ -355,8 +383,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 text: TextSpan(
                                   children: [
                                     TextSpan(
-                                      text:
-                                          'Please enter the 4 digit code we sent to\n',
+                                      text: 'Please enter the 4 digit code we sent to\n',
                                       style: TextStyle(
                                         fontSize: screenWidth * 0.04,
                                         fontWeight: FontWeight.normal,
@@ -377,7 +404,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 ),
                               ),
                             ),
-                            // OTP input boxes
                             SizedBox(height: screenHeight * 0.03),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -398,7 +424,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                   child: Stack(
                                     alignment: Alignment.bottomCenter,
                                     children: [
-                                      // Custom underline inside box
                                       Positioned(
                                         bottom: otpBoxHeight * 0.15,
                                         child: Container(
@@ -407,7 +432,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                           color: const Color(0xFFD59A00),
                                         ),
                                       ),
-                                      // Text field
                                       Center(
                                         child: TextFormField(
                                           controller: _controllers[index],
@@ -416,8 +440,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                           keyboardType: TextInputType.number,
                                           maxLength: 1,
                                           inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
+                                            FilteringTextInputFormatter.digitsOnly,
                                           ],
                                           decoration: const InputDecoration(
                                             counterText: '',
@@ -437,13 +460,10 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                           onChanged: (value) {
                                             if (value.isNotEmpty && index < 3) {
                                               _focusNodes[index].unfocus();
-                                              _focusNodes[index + 1]
-                                                  .requestFocus();
-                                            } else if (value.isEmpty &&
-                                                index > 0) {
+                                              _focusNodes[index + 1].requestFocus();
+                                            } else if (value.isEmpty && index > 0) {
                                               _focusNodes[index].unfocus();
-                                              _focusNodes[index - 1]
-                                                  .requestFocus();
+                                              _focusNodes[index - 1].requestFocus();
                                             }
                                             _checkOTPAndNavigate();
                                           },
@@ -454,26 +474,17 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                 );
                               }),
                             ),
-                            // Resend button with countdown
                             SizedBox(height: screenHeight * 0.05),
                             GestureDetector(
-                              onTap: (_isButtonEnabled && !_isLoading)
-                                  ? _resendOTP
-                                  : null,
+                              onTap: (_isButtonEnabled && !_isLoading) ? _resendOTP : null,
                               child: Container(
                                 width: screenWidth * 0.5,
                                 height: screenHeight * 0.06,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: _isButtonEnabled && !_isLoading
-                                        ? [
-                                            const Color(0xFFE0E7FF),
-                                            const Color(0xFF93C5FD),
-                                          ]
-                                        : [
-                                            Colors.grey[300]!,
-                                            Colors.grey[500]!,
-                                          ],
+                                        ? [const Color(0xFFE0E7FF), const Color(0xFF93C5FD)]
+                                        : [Colors.grey[300]!, Colors.grey[500]!],
                                     stops: [0.0, 0.47],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
@@ -518,8 +529,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                   SizedBox(
                                     width: screenWidth * 0.8,
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           'Already have an account, ',
@@ -532,10 +542,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                         ),
                                         GestureDetector(
                                           onTap: () {
-                                            Navigator.pushNamed(
-                                              context,
-                                              '/SignInScreen',
-                                            );
+                                            Navigator.pushNamed(context, '/SignInScreen');
                                           },
                                           child: Text(
                                             'Sign In',

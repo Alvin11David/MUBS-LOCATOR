@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mubs_locator/admin%20pages/admin_dashboard.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/add_place_screen.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
@@ -26,14 +28,92 @@ import 'package:mubs_locator/user%20pages/other%20screens/notification_screen.da
 import 'package:mubs_locator/user%20pages/other%20screens/terms_and_privacy_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-void main() async {
+// Background message handler
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Background message: ${message.notification?.title}");
+  // FCM handles notification display in the notification bar
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('Firebase initialized successfully');
+
+    // Initialize flutter_local_notifications
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    await FlutterLocalNotificationsPlugin().initialize(initializationSettings);
+
+    // Create Android notification channel
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'mubs_locator_notifications', // Channel ID
+      'MUBS Locator Notifications', // Channel name
+      description: 'Notifications for MUBS Locator app',
+      importance: Importance.max,
+    );
+    final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    // Set up FCM background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Request notification permissions (Android 13+)
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+
+    // Subscribe to all_users topic
+    final messaging = FirebaseMessaging.instance;
+    await messaging.subscribeToTopic('all_users');
+    print('Subscribed to all_users topic');
+
+    // Handle foreground notifications
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Foreground message: ${message.notification?.title}');
+      final notification = message.notification;
+      if (notification != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+              channelDescription: channel.description,
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+      }
+    });
+
+    // Handle notification tap (background/terminated)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Notification tapped: ${message.notification?.title}');
+      // Navigate to NotificationsScreen or other screen
+      // Example: Navigator.pushNamed(context, '/NotificationsScreen');
+    });
+
+    // Handle initial message (app opened from terminated state)
+    messaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        print('Opened from terminated: ${message.notification?.title}');
+        // Navigate to NotificationsScreen or other screen
+      }
+    });
+
   } catch (e) {
     print('Firebase init error: $e');
   }
@@ -77,7 +157,7 @@ class MyApp extends StatelessWidget {
         '/FeedbackListScreen': (context) => 
             AdminGuard(child: const FeedbackListScreen()),
         '/SendNotificationsScreen': (context) =>
-        AdminGuard(child: const SendNotificationScreen()),
+            AdminGuard(child: const SendNotificationScreen()),
         '/FeedbackDetailsScreen': (context) => FeedbackDetailsScreen(feedbackId: '',),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/ResetPasswordScreen': (context) =>
@@ -98,6 +178,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// MyHomePage remains unchanged
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 

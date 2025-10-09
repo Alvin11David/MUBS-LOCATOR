@@ -14,7 +14,7 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
@@ -85,6 +85,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         setState(() {
           _userFullName = 'User';
         });
+        _showCustomSnackBar('Error fetching user data: $e', Colors.red);
       }
     }
   }
@@ -99,6 +100,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
     } catch (e) {
       print('Error requesting notification permissions: $e');
+      if (mounted) {
+        _showCustomSnackBar('Error requesting notification permissions: $e', Colors.red);
+      }
     }
   }
 
@@ -116,6 +120,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       print('Error saving FCM token: $e');
+      if (mounted) {
+        _showCustomSnackBar('Error saving FCM token: $e', Colors.red);
+      }
     }
   }
 
@@ -138,22 +145,96 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       print('Error marking notifications as read: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading notifications: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        _showCustomSnackBar('Error loading notifications: $e', Colors.red);
+      }
     }
   }
 
+  void _showCustomSnackBar(String message, Color backgroundColor) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    final animation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SlideTransition(
+          position: animation,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.04,
+                vertical: MediaQuery.of(context).size.height * 0.02,
+              ),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/logo/logo.png',
+                    width: MediaQuery.of(context).size.width * 0.06,
+                    height: MediaQuery.of(context).size.width * 0.06,
+                  ),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: MediaQuery.of(context).size.width * 0.04,
+                        fontFamily: 'Poppins',
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+    controller.forward();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        controller.reverse().then((_) {
+          overlayEntry.remove();
+          controller.dispose();
+        });
+      }
+    });
+  }
+
   void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+        _showCustomSnackBar('Logout successful', Colors.green);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar('Error signing out: $e', Colors.red);
+      }
     }
   }
 
@@ -195,9 +276,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 _logout();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logout successful')),
-                );
               },
               child: const Text(
                 'Logout',
@@ -348,7 +426,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           .collection('users')
                           .doc(FirebaseAuth.instance.currentUser!.uid)
                           .collection('user_notifications')
-                          .orderBy('timestamp', descending: true) // Sort by timestamp, newest first
+                          .orderBy('timestamp', descending: true)
                           .snapshots()
                       : Stream.empty(),
                   builder: (context, snapshot) {
@@ -611,8 +689,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () =>
-                                  Navigator.pushNamed(context, '/HomeScreen'),
+                              onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
                               child: Row(
                                 children: [
                                   Icon(
@@ -641,9 +718,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () {
-                                Navigator.pushNamed(context, '/ProfileScreen');
-                              },
+                              onTap: () => Navigator.pushNamed(context, '/ProfileScreen'),
                               child: Row(
                                 children: [
                                   Icon(
@@ -672,10 +747,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                '/NotificationsScreen',
-                              ),
+                              onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
                               child: Row(
                                 children: [
                                   Icon(
@@ -704,10 +776,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                '/LocationSelectScreen',
-                              ),
+                              onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
                               child: Row(
                                 children: [
                                   Icon(

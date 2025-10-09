@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Added for storing login state
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -14,14 +14,14 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool isButtonEnabled = false;
   bool _isLoading = false;
-  bool _isForgotPasswordTapped = false; // State for tap feedback
+  bool _isForgotPasswordTapped = false;
 
   @override
   void initState() {
     super.initState();
     _emailController.addListener(_updateButtonState);
     _passwordController.addListener(_updateButtonState);
-    _checkLoginState(); // Check if user is already logged in
+    _checkLoginState();
   }
 
   void _updateButtonState() {
@@ -36,7 +36,6 @@ class _SignInScreenState extends State<SignInScreen> {
     final prefs = await SharedPreferences.getInstance();
     final loggedIn = prefs.getBool('isLoggedIn') ?? false;
     if (loggedIn && mounted) {
-      // Check if the current user is admin
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         if (user.email?.toLowerCase() == 'adminuser@gmail.com') {
@@ -53,17 +52,14 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-      // If sign-in succeeds, store login state
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
 
       if (mounted) {
-        // Check if the email is adminuser@gmail.com
         if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
@@ -79,16 +75,60 @@ class _SignInScreenState extends State<SignInScreen> {
       } else if (e.code == 'wrong-password') {
         message = 'Wrong password provided.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      _showCustomSnackBar(context, message);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      _showCustomSnackBar(context, 'Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showCustomSnackBar(BuildContext context, String message) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
@@ -101,7 +141,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent resizing when keyboard appears
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -110,13 +150,11 @@ class _SignInScreenState extends State<SignInScreen> {
 
             return Stack(
               children: [
-                // Background
                 Container(
                   width: screenWidth,
                   height: screenHeight,
                   color: const Color(0xFF93C5FD),
                 ),
-                // Logo at center top
                 Positioned(
                   top: screenHeight * 0.05,
                   left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -128,7 +166,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     errorBuilder: (context, error, stackTrace) => const SizedBox(),
                   ),
                 ),
-                // Ambasize top left
                 Positioned(
                   top: screenHeight * 0.04,
                   left: screenWidth * 0.02,
@@ -142,7 +179,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // Jackline top right
                 Positioned(
                   top: screenHeight * 0.09,
                   right: screenWidth * 0.02,
@@ -156,7 +192,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // "Let's get you signed in"
                 Positioned(
                   top: screenHeight * 0.17,
                   left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -171,12 +206,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // White container with inputs
                 Positioned(
                   top: screenHeight * 0.31,
                   left: screenWidth * 0.02,
                   right: screenWidth * 0.02,
-                  bottom: 0, // Fixed to bottom of screen
+                  bottom: 0,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -186,7 +220,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: screenHeight * 0.69, // Ensure minimum height
+                          minHeight: screenHeight * 0.69,
                         ),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
@@ -195,7 +229,6 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Subtitle
                               SizedBox(
                                 width: screenWidth * 0.8,
                                 child: Text(
@@ -403,7 +436,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: screenHeight * 0.05), // Fixed padding
+                              SizedBox(height: screenHeight * 0.05),
                             ],
                           ),
                         ),
@@ -420,7 +453,6 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
-// EMAIL FIELD
 class EmailField extends StatelessWidget {
   final TextEditingController controller;
   const EmailField({super.key, required this.controller});
@@ -488,7 +520,6 @@ class EmailField extends StatelessWidget {
   }
 }
 
-// PASSWORD FIELD
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   const PasswordField({super.key, required this.controller});
@@ -567,7 +598,6 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
-// OR DIVIDER
 class OrDivider extends StatelessWidget {
   const OrDivider({super.key});
 

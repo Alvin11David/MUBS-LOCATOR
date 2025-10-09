@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Existing OTP email function
+// Function to send OTP email
 exports.sendOTPEmail = functions
   .region('us-central1')
   .https.onCall(async (data, context) => {
@@ -52,9 +52,9 @@ The MUBS Locator Team`,
     }
   });
 
-// New function to send FCM notification on feedback submission
+// Function to send FCM notification on feedback submission
 exports.sendFeedbackNotification = functions
-  .region('us-central1') // Match region with sendOTPEmail
+  .region('us-central1')
   .firestore
   .document('feedback/{feedbackId}')
   .onCreate(async (snap, context) => {
@@ -87,6 +87,27 @@ exports.sendFeedbackNotification = functions
         title: 'MUBS Locator',
         body: 'Thank you! Your feedback has been sent successfully.',
       },
+      android: {
+        notification: {
+          channelId: 'mubs_locator_notifications', // Match Android channel
+          priority: 'high',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: {
+              title: 'MUBS Locator',
+              body: 'Thank you! Your feedback has been sent successfully.',
+            },
+            sound: 'default',
+            contentAvailable: true,
+          },
+        },
+      },
+      data: {
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
       token: fcmToken,
     };
 
@@ -98,5 +119,59 @@ exports.sendFeedbackNotification = functions
     } catch (error) {
       console.error('Error sending notification:', error);
       return null;
+    }
+  });
+
+// Function to send global notification to all_users topic
+exports.sendGlobalNotification = functions
+  .region('us-central1') // Match region with other functions
+  .https.onCall(async (data, context) => {
+    // Verify the user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be logged in.');
+    }
+
+    // Verify admin role (assumes custom claim 'admin' is set)
+    if (!context.auth.token.admin) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required.');
+    }
+
+    const { title, body, category } = data;
+
+    const message = {
+      notification: {
+        title: title || 'MUBS Locator Update',
+        body: body || 'New notification from MUBS Locator!',
+      },
+      topic: 'all_users',
+      android: {
+        notification: {
+          channelId: 'mubs_locator_notifications', // Match Android channel
+          priority: 'high',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: {
+              title: title || 'MUBS Locator Update',
+              body: body || 'New notification from MUBS Locator!',
+            },
+            sound: 'default',
+            contentAvailable: true,
+          },
+        },
+      },
+      data: {
+        category: category || 'General',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
+    };
+
+    try {
+      await admin.messaging().send(message);
+      return { success: true, message: 'Notification sent to all users.' };
+    } catch (error) {
+      throw new functions.https.HttpsError('internal', `Error sending notification: ${error.message}`);
     }
   });

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '/components/bottom_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,16 +10,16 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   String _fullName = 'Loading...';
   String _email = 'Loading...';
-  File? _profileImage; // Store the profile image
+  String? _profilePicUrl;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
-    _loadProfileImage(); // Load image from saved data or arguments
+    _loadProfileImage();
   }
 
   Future<void> _fetchUserData() async {
@@ -40,25 +38,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final userData = querySnapshot.docs.first.data();
           setState(() {
             _fullName = userData['fullName'] as String? ?? 'No name';
+            _profilePicUrl = userData['profilePicUrl'] as String?;
           });
         }
       }
     } catch (e) {
-      setState(() {
-        _fullName = 'Error loading name';
-        _email = 'Error loading email';
-      });
+      if (mounted) {
+        setState(() {
+          _fullName = 'Error loading name';
+          _email = 'Error loading email';
+        });
+        _showCustomSnackBar('Error fetching user data: $e', Colors.red);
+      }
     }
   }
 
   Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final imagePath = prefs.getString('profileImagePath');
-    if (imagePath != null) {
-      setState(() {
-        _profileImage = File(imagePath);
-      });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (mounted) {
+          setState(() {
+            _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+          });
+        }
+      } catch (e) {
+        print('Error loading profile picture: $e');
+      }
     }
+  }
+
+  void _showCustomSnackBar(String message, Color backgroundColor) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    final animation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SlideTransition(
+          position: animation,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.04,
+                vertical: MediaQuery.of(context).size.height * 0.02,
+              ),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/logo/logo.png',
+                    width: MediaQuery.of(context).size.width * 0.06,
+                    height: MediaQuery.of(context).size.width * 0.06,
+                  ),
+                  SizedBox(width: MediaQuery.of(context).size.width * 0.02),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: MediaQuery.of(context).size.width * 0.04,
+                        fontFamily: 'Poppins',
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+    controller.forward();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        controller.reverse().then((_) {
+          overlayEntry.remove();
+          controller.dispose();
+        });
+      }
+    });
   }
 
   @override
@@ -67,8 +148,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       setState(() {
-        if (args['imagePath'] != null) {
-          _profileImage = File(args['imagePath']);
+        if (args['profilePicUrl'] != null) {
+          _profilePicUrl = args['profilePicUrl'] as String?;
         }
         _fullName = args['fullName'] ?? _fullName;
         _email = args['email'] ?? _email;
@@ -125,12 +206,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   child: ClipOval(
-                    child: _profileImage != null
-                        ? Image.file(
-                            _profileImage!,
+                    child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
+                        ? Image.network(
+                            _profilePicUrl!,
                             width: screenWidth * 0.25,
                             height: screenWidth * 0.25,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person,
+                              size: screenWidth * 0.11,
+                              color: Colors.black,
+                            ),
                           )
                         : Icon(
                             Icons.person,
@@ -232,7 +318,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               arguments: {
                                 'fullName': _fullName,
                                 'email': _email,
-                                'imagePath': _profileImage?.path,
+                                'profilePicUrl': _profilePicUrl,
                               },
                             );
                           },
@@ -270,9 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           screenWidth: screenWidth,
                           screenHeight: screenHeight,
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Share App tapped')),
-                            );
+                            _showCustomSnackBar('Share App tapped', Colors.green);
                           },
                         ),
                         SizedBox(height: screenHeight * 0.020),
@@ -404,12 +488,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/SignInScreen');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logout successful')),
-                );
+                try {
+                  await FirebaseAuth.instance.signOut();
+                  if (mounted) {
+                    Navigator.pushNamed(context, '/SignInScreen');
+                    _showCustomSnackBar('Logout successful', Colors.green);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    _showCustomSnackBar('Error signing out: $e', Colors.red);
+                  }
+                }
               },
               child: const Text(
                 'Logout',
