@@ -56,37 +56,62 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
   }
 
   Future<void> _sendNotification() async {
-    if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
+  if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a category and enter a message.')),
+    );
+    return;
+  }
+
+  setState(() => _isSending = true);
+
+  try {
+    // Ensure user is signed in and refresh token
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category and enter a message.')),
+        const SnackBar(content: Text('You must be signed in to send notifications.')),
       );
+      setState(() => _isSending = false);
       return;
     }
+    // Force refresh the ID token to include admin claim
+    await user.getIdToken(true);
+    print('Token refreshed for user: ${user.uid}');
 
-    setState(() => _isSending = true);
+    // Debug: Print custom claims to verify admin status
+    final idTokenResult = await user.getIdTokenResult();
+    print('Custom claims: ${idTokenResult.claims}');
 
-    try {
-      final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
-      final result = await callable.call({
-        'title': 'MUBS Locator: $_selectedCategory',
-        'body': _messageController.text.trim(),
-        'category': _selectedCategory,
-      });
+    final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
+    final result = await callable.call({
+      'title': 'MUBS Locator: $_selectedCategory',
+      'body': _messageController.text.trim(),
+      'category': _selectedCategory,
+    });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.data['message'])),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.data['message'])),
+    );
 
-      _messageController.clear();
-      setState(() => _selectedCategory = null);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending notification: $e')),
-      );
-    } finally {
-      setState(() => _isSending = false);
+    _messageController.clear();
+    setState(() => _selectedCategory = null);
+  } on FirebaseFunctionsException catch (e) {
+    String errorMessage = 'Error sending notification: ${e.message}';
+    if (e.code == 'permission-denied') {
+      errorMessage = 'Admin access required to send notifications.';
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMessage)),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unexpected error: $e')),
+    );
+  } finally {
+    setState(() => _isSending = false);
   }
+}
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
