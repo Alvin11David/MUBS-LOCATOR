@@ -1062,7 +1062,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.3625,
                                       height: screenHeight * 0.05625,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF93C5FD),
+                                        color: const Color.fromARGB(255, 26, 47, 241),
                                         borderRadius: BorderRadius.circular(30),
                                       ),
                                       child: Center(
@@ -1449,10 +1449,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 ),
                 if (_isMoreMenuVisible)
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + screenHeight * 0.19,
-                    right: screenWidth * 0.04,
+                    top: MediaQuery.of(context).padding.top + screenHeight * 0.18,
+                    right: screenWidth * 0.06,
                     child: Container(
-                      width: screenWidth * 0.2525,
+                      width: screenWidth * 0.3527,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -1488,11 +1488,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       fontFamily: 'Poppins',
                                     ),
                                   ),
-                                  Icon(
-                                    Icons.delete,
-                                    color: Colors.black,
-                                    size: screenWidth * 0.04,
-                                  ),
                                 ],
                               ),
                             ),
@@ -1521,11 +1516,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Poppins',
                                     ),
-                                  ),
-                                  Icon(
-                                    Icons.check,
-                                    color: Colors.black,
-                                    size: screenWidth * 0.04,
                                   ),
                                 ],
                               ),
