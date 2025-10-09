@@ -4,15 +4,19 @@ import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 
 class AdminGuard extends StatelessWidget {
   final Widget child;
+
   const AdminGuard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    print('AdminGuard: Checking user ${user?.uid}, email: ${user?.email} for route ${ModalRoute.of(context)?.settings.name}');
+
     if (user != null && user.email == 'adminuser@gmail.com') {
+      print('AdminGuard: User is admin, rendering child');
       return child;
     } else {
-      // Redirect to SignInScreen after a short delay
+      print('AdminGuard: User not admin or not logged in, redirecting to /SignInScreen');
       Future.microtask(() {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const SignInScreen()),
@@ -20,9 +24,7 @@ class AdminGuard extends StatelessWidget {
         );
       });
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
   }
