@@ -22,6 +22,20 @@
       }
     }
   },
+  "hosting": {
+    "public": "web",
+    "headers": [
+      {
+        "source": "/firebase-messaging-sw.js",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/javascript"
+          }
+        ]
+      }
+    ]
+  },
   "functions": {
     "source": "functions",
     "runtime": "nodejs18",

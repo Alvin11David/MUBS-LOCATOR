@@ -1,41 +1,66 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
-import 'dart:ui';
-import 'package:intl/intl.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
-class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+class FeedbackScreen extends StatefulWidget {
+  const FeedbackScreen({super.key});
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  State<FeedbackScreen> createState() => _FeedbackScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
+class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProviderStateMixin {
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
+  final int _unreadNotifications = 0;
+  int _selectedRating = 0;
+  final TextEditingController _feedbackController = TextEditingController();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   @override
   void initState() {
     super.initState();
     _fetchUserFullName();
-    _markNotificationsAsRead();
-    _requestNotificationPermissions();
-    _saveFcmToken();
+    _loadProfileImage();
+    _initFCM();
+    _feedbackController.addListener(() {
+      setState(() {});
+    });
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good Morning';
-    } else if (hour < 17) {
-      return 'Good Afternoon';
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initFCM() async {
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('Notification permission granted');
     } else {
-      return 'Good Evening';
+      print('Notification permission denied');
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.email != null) {
+      String? fcmToken = await _firebaseMessaging.getToken();
+      if (fcmToken != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({'fcmToken': fcmToken, 'email': user.email}, SetOptions(merge: true));
+      }
     }
   }
 
@@ -80,7 +105,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         }
       }
     } catch (e) {
-      print('Error fetching user full name: $e');
       if (mounted) {
         setState(() {
           _userFullName = 'User';
@@ -90,64 +114,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     }
   }
 
-  Future<void> _requestNotificationPermissions() async {
-    try {
-      final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    } catch (e) {
-      print('Error requesting notification permissions: $e');
-      if (mounted) {
-        _showCustomSnackBar('Error requesting notification permissions: $e', Colors.red);
-      }
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profileImagePath');
+    if (imagePath != null) {
+      setState(() {
+        _profileImage = File(imagePath);
+      });
     }
   }
 
-  Future<void> _saveFcmToken() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final token = await FirebaseMessaging.instance.getToken();
-        if (token != null) {
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({'fcmToken': token}, SetOptions(merge: true));
-        }
-      }
-    } catch (e) {
-      print('Error saving FCM token: $e');
-      if (mounted) {
-        _showCustomSnackBar('Error saving FCM token: $e', Colors.red);
-      }
-    }
-  }
-
-  Future<void> _markNotificationsAsRead() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final notificationDocs = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('user_notifications')
-            .where('userRead', isEqualTo: false)
-            .get();
-
-        final batch = FirebaseFirestore.instance.batch();
-        for (var doc in notificationDocs.docs) {
-          batch.update(doc.reference, {'userRead': true});
-        }
-        await batch.commit();
-      }
-    } catch (e) {
-      print('Error marking notifications as read: $e');
-      if (mounted) {
-        _showCustomSnackBar('Error loading notifications: $e', Colors.red);
-      }
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
     }
   }
 
@@ -221,8 +205,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     });
   }
 
-  void _logout() async {
+  Future<void> _logout() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
       await FirebaseAuth.instance.signOut();
       if (mounted) {
         Navigator.pushReplacement(
@@ -292,10 +278,50 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     );
   }
 
+  void _selectRating(int rating) {
+    setState(() {
+      _selectedRating = rating;
+    });
+  }
+
+  Future<void> _submitFeedback() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        await FirebaseFirestore.instance.collection('feedback').add({
+          'userEmail': user.email,
+          'userName': _userFullName,
+          'rating': _selectedRating,
+          'feedbackText': _feedbackController.text.trim(),
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        if (mounted) {
+          _showCustomSnackBar('Thank you! Your feedback has been sent successfully.', Colors.green);
+          setState(() {
+            _feedbackController.clear();
+            _selectedRating = 0;
+          });
+        }
+      } else {
+        if (mounted) {
+          _showCustomSnackBar('Error: User not signed in.', Colors.red);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showCustomSnackBar('Error submitting feedback: $e', Colors.red);
+      }
+    }
+  }
+
+  bool _isFormValid() {
+    return _selectedRating > 0 && _feedbackController.text.trim().isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
 
     return Scaffold(
@@ -370,9 +396,61 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                                 '${_getGreeting()}, $_userFullName',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(15),
+                                  fontSize: textScaler.scale(screenWidth * 0.045),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
+                                ),
+                              ),
+                              const Spacer(),
+                              Padding(
+                                padding: EdgeInsets.only(right: screenWidth * 0.04),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, '/NotificationsScreen');
+                                  },
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        width: screenWidth * 0.09,
+                                        height: screenWidth * 0.09,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.notifications,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.05,
+                                        ),
+                                      ),
+                                      if (_unreadNotifications > 0)
+                                        Positioned(
+                                          top: -screenWidth * 0.01,
+                                          right: -screenWidth * 0.01,
+                                          child: Container(
+                                            width: screenWidth * 0.03,
+                                            height: screenWidth * 0.03,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '$_unreadNotifications',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: textScaler.scale(screenWidth * 0.025),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -384,199 +462,217 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                 ),
               ),
               Positioned(
-                top: screenHeight * 0.10,
+                top: screenHeight * 0.09 + 16,
                 left: 0,
                 right: 0,
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Provide Your Feedback',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: textScaler.scale(screenWidth * 0.05),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Icon(
+                                  Icons.chevron_left,
+                                  color: Colors.black,
+                                  size: textScaler.scale(screenWidth * 0.08),
+                                ),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey,
+                                size: textScaler.scale(screenWidth * 0.08),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: screenHeight * 0.01),
                       Text(
-                        'Notifications',
+                        'We value your input!\nPlease share your thoughts.',
                         style: TextStyle(
-                          color: Colors.black,
-                          fontSize: textScaler.scale(17),
-                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          fontSize: textScaler.scale(screenWidth * 0.035),
+                          fontWeight: FontWeight.w100,
                           fontFamily: 'Poppins',
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                        child: Icon(
-                          Icons.chevron_left,
-                          color: Colors.black,
-                          size: textScaler.scale(24),
-                        ),
+                        textAlign: TextAlign.left,
                       ),
                     ],
                   ),
                 ),
               ),
               Positioned(
-                top: screenHeight * 0.14,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseAuth.instance.currentUser != null
-                      ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(FirebaseAuth.instance.currentUser!.uid)
-                          .collection('user_notifications')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots()
-                      : Stream.empty(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Error loading notifications: ${snapshot.error}',
-                          style: TextStyle(
-                            fontSize: textScaler.scale(16),
-                            fontFamily: 'Poppins',
-                            color: Colors.red,
+                top: screenHeight * 0.09 + 75 + textScaler.scale(screenWidth * 0.05) + 8 + textScaler.scale(screenWidth * 0.04) + 16,
+                left: 4,
+                right: 4,
+                child: Container(
+                  height: screenHeight * 0.73 - textScaler.scale(screenWidth * 0.04) - 16,
+                  width: screenWidth - 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                            vertical: screenHeight * 0.02,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'How would you rate your experience?',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(screenWidth * 0.045),
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.015),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: List.generate(5, (index) {
+                                  final starIndex = index + 1;
+                                  return GestureDetector(
+                                    onTap: () => _selectRating(starIndex),
+                                    child: Padding(
+                                      padding: EdgeInsets.only(right: screenWidth * 0.02),
+                                      child: Icon(
+                                        starIndex <= _selectedRating
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: starIndex <= _selectedRating
+                                            ? Colors.amber
+                                            : Colors.grey,
+                                        size: textScaler.scale(screenWidth * 0.07),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                              SizedBox(height: screenHeight * 0.018),
+                              Text(
+                                'Please type below what you want us to improve',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(screenWidth * 0.045),
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.015),
+                              TextField(
+                                controller: _feedbackController,
+                                maxLines: 5,
+                                decoration: InputDecoration(
+                                  hintText: 'Tell us what you liked or what we can improve…',
+                                  hintStyle: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: textScaler.scale(screenWidth * 0.035),
+                                    fontFamily: 'Poppins',
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Color(0xFF93C5FD).withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.black.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Colors.black,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.1),
+                                ),
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(screenWidth * 0.035),
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: ElevatedButton(
+                                  onPressed: _isFormValid() ? _submitFeedback : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isFormValid()
+                                        ? const Color(0xFF93C5FD)
+                                        : Colors.grey.withOpacity(0.5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.06,
+                                      vertical: screenHeight * 0.015,
+                                    ),
+                                    elevation: _isFormValid() ? 2 : 0,
+                                  ),
+                                  child: Text(
+                                    'Submit',
+                                    style: TextStyle(
+                                      color: _isFormValid() ? Colors.white : Colors.white.withOpacity(0.7),
+                                      fontSize: textScaler.scale(screenWidth * 0.04),
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/vectors/nonotifications.png',
-                            width: screenWidth * 0.4,
-                            height: screenWidth * 0.4,
-                            fit: BoxFit.contain,
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                          Text(
-                            'No notifications yet',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(18),
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                          SizedBox(height: screenHeight * 0.01),
-                          Text(
-                            'Your notifications will appear here\nonce you’ve received them.',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: textScaler.scale(15),
-                              fontFamily: 'Poppins',
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      );
-                    }
-
-                    final notifications = snapshot.data!.docs;
-
-                    return ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.04,
-                          vertical: screenHeight * 0.02),
-                      itemCount: notifications.length,
-                      itemBuilder: (context, index) {
-                        final doc = notifications[index];
-                        final data = doc.data() as Map<String, dynamic>;
-                        final adminReply = data['adminReply'] as String? ?? 'No reply';
-                        final issueTitle = data['issueTitle'] as String? ?? 'No title';
-                        final buildingName = data['buildingName'] as String? ?? 'Unknown';
-                        final timestamp = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-                        final formattedTime = DateFormat('MMM d, yyyy h:mm a').format(timestamp);
-                        final feedbackId = data['feedbackId'] as String? ?? '';
-
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/FeedbackDetailsScreen',
-                              arguments: {
-                                'feedbackId': feedbackId,
-                                'issueTitle': issueTitle,
-                                'buildingName': buildingName,
-                                'adminReply': adminReply,
-                                'timestamp': timestamp,
-                              },
-                            );
-                          },
-                          child: Container(
-                            margin: EdgeInsets.only(bottom: screenHeight * 0.02),
-                            padding: EdgeInsets.all(screenWidth * 0.04),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Issue: $issueTitle',
-                                      style: TextStyle(
-                                        fontSize: textScaler.scale(14),
-                                        fontFamily: 'Poppins',
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.005),
-                                    Text(
-                                      'Admin Reply: $adminReply',
-                                      style: TextStyle(
-                                        fontSize: textScaler.scale(14),
-                                        fontFamily: 'Poppins',
-                                        color: Colors.black87,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.01),
-                                    Text(
-                                      'Replied on: $formattedTime',
-                                      style: TextStyle(
-                                        fontSize: textScaler.scale(12),
-                                        fontFamily: 'Poppins',
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                      ),
+                    ),
+                  ),
                 ),
               ),
               AnimatedPositioned(

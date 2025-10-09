@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
-import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+
+import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -13,20 +15,127 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
-    with SingleTickerProviderStateMixin {
-  String? _profileImagePath;
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  String? _profilePicUrl;
+  int _userCount = 0;
+  int _pendingFeedbackCount = 0;
+  int _activeUserCount = 0;
+  Timer? _activityTimer;
+  bool _isDropdownVisible = false;
+  bool _isMenuVisible = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProfileImage();
+    _loadUserCount();
+    _loadPendingFeedbackCount();
+    _loadActiveUserCount();
+    _startActivityTimer();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _activityTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startActivityTimer() {
+    _activityTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      updateLastActiveTimestamp();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      updateLastActiveTimestamp();
+    }
+  }
+
+  Future<void> updateLastActiveTimestamp() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+        final docSnapshot = await userDoc.get();
+        if (docSnapshot.exists) {
+          await userDoc.update({
+            'lastActiveTimestamp': Timestamp.now(),
+          });
+        } else {
+          await userDoc.set({
+            'lastActiveTimestamp': Timestamp.now(),
+            'uid': user.uid,
+            'displayName': user.displayName ?? 'User',
+            'email': user.email ?? '',
+          });
+        }
+        print('Updated lastActiveTimestamp for user ${user.uid}');
+      } catch (e) {
+        print('Error updating lastActiveTimestamp: $e');
+      }
+    }
   }
 
   Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _profileImagePath = prefs.getString('profileImagePath');
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+        });
+      } catch (e) {
+        print('Error loading profile picture: $e');
+      }
+    }
+  }
+
+  Future<void> _loadUserCount() async {
+    try {
+      final querySnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      setState(() {
+        _userCount = querySnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading user count: $e');
+    }
+  }
+
+  Future<void> _loadPendingFeedbackCount() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('feedback')
+          .where('adminReply', isNull: true)
+          .get();
+      setState(() {
+        _pendingFeedbackCount = querySnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading pending feedback count: $e');
+    }
+  }
+
+  Future<void> _loadActiveUserCount() async {
+    try {
+      final fiveMinutesAgo = Timestamp.fromDate(DateTime.now().subtract(const Duration(minutes: 5)));
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('lastActiveTimestamp', isGreaterThanOrEqualTo: fiveMinutesAgo)
+          .get();
+      setState(() {
+        _activeUserCount = querySnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error loading active user count: $e');
+    }
   }
 
   String _getGreeting() {
@@ -40,9 +149,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }
   }
 
-  bool _isDropdownVisible = false;
-  bool _isMenuVisible = false;
-
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -50,6 +156,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         context,
         MaterialPageRoute(builder: (context) => const SignInScreen()),
       );
+    }
+  }
+
+  void _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+    );
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _profilePicUrl = result['imageUrl'] as String?;
+        _isDropdownVisible = false;
+      });
     }
   }
 
@@ -167,15 +286,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               width: 1,
                                             ),
                                           ),
-                                          child:
-                                              (_profileImagePath != null &&
-                                                  _profileImagePath!.isNotEmpty)
+                                          child: (_profilePicUrl != null &&
+                                                  _profilePicUrl!.isNotEmpty)
                                               ? ClipOval(
-                                                  child: Image.file(
-                                                    File(_profileImagePath!),
+                                                  child: Image.network(
+                                                    _profilePicUrl!,
                                                     fit: BoxFit.cover,
                                                     width: screenWidth * 0.1,
                                                     height: screenWidth * 0.1,
+                                                    loadingBuilder: (context, child, loadingProgress) {
+                                                      if (loadingProgress == null) return child;
+                                                      return const CircularProgressIndicator();
+                                                    },
+                                                    errorBuilder: (context, error, stackTrace) =>
+                                                        Icon(
+                                                      Icons.person,
+                                                      color: Colors.black,
+                                                      size: screenWidth * 0.04,
+                                                    ),
                                                   ),
                                                 )
                                               : Icon(
@@ -190,13 +318,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                           right: screenWidth * 0.01,
                                         ),
                                         child: GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _isDropdownVisible =
-                                                  !_isDropdownVisible;
-                                              _isMenuVisible = false;
-                                            });
-                                          },
+                                          onTap: _navigateToEditProfile,
                                           behavior: HitTestBehavior.opaque,
                                           child: Icon(
                                             Icons.arrow_drop_down,
@@ -267,25 +389,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               horizontal: screenWidth * 0.03,
                               vertical: screenHeight * 0.01,
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Profile',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins',
+                            child: GestureDetector(
+                              onTap: _navigateToEditProfile,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Edit Profile',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Poppins',
+                                    ),
                                   ),
-                                ),
-                                Image.asset(
-                                  'assets/images/edit.png',
-                                  color: Colors.black,
-                                  width: screenWidth * 0.04,
-                                  height: screenWidth * 0.04,
-                                ),
-                              ],
+                                  Image.asset(
+                                    'assets/images/edit.png',
+                                    color: Colors.black,
+                                    width: screenWidth * 0.04,
+                                    height: screenWidth * 0.04,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -306,7 +431,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     height: screenHeight * 1.5,
                     child: Stack(
                       children: [
-                        // Card (Total Locations)
+                        // Card (Total Users)
                         Positioned(
                           top: screenHeight * 0.02,
                           left: screenWidth * 0.04,
@@ -323,7 +448,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   top: screenHeight * 0.01,
                                   left: screenWidth * 0.02,
                                   child: Text(
-                                    'Total\nLocations',
+                                    'Total\nUsers',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: screenWidth * 0.035,
@@ -347,7 +472,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       ),
                                     ),
                                     child: Icon(
-                                      Icons.location_on,
+                                      Icons.group,
                                       color: Colors.white,
                                       size: screenWidth * 0.04,
                                     ),
@@ -359,7 +484,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   right: 0,
                                   child: Center(
                                     child: Text(
-                                      '0',
+                                      '$_userCount',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: screenWidth * 0.06,
@@ -375,7 +500,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   right: 0,
                                   child: Center(
                                     child: Text(
-                                      'Places',
+                                      'Users',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: screenWidth * 0.05,
@@ -442,7 +567,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   right: 0,
                                   child: Center(
                                     child: Text(
-                                      '0',
+                                      '$_pendingFeedbackCount',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: screenWidth * 0.05,
@@ -525,7 +650,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   right: 0,
                                   child: Center(
                                     child: Text(
-                                      '0',
+                                      '$_activeUserCount',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: screenWidth * 0.05,
@@ -726,104 +851,109 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         Positioned(
                           top: screenHeight * 0.52,
                           left: screenWidth * 0.04,
-                          child: Container(
-                            width: screenWidth * 0.92,
-                            height: screenHeight * 0.23,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: -screenWidth * 0.2,
-                                  bottom: -screenHeight * 0.05,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      'assets/images/feedback.png',
-                                      width: screenWidth * 0.7,
-                                      height: screenWidth * 0.7,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) => Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                            size: screenWidth * 0.2,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/FeedbackListScreen');
+                            },
+                            child: Container(
+                              width: screenWidth * 0.92,
+                              height: screenHeight * 0.23,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: -screenWidth * 0.2,
+                                    bottom: -screenHeight * 0.05,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        'assets/images/feedback.png',
+                                        width: screenWidth * 0.7,
+                                        height: screenWidth * 0.7,
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (context, error, stackTrace) => Icon(
+                                              Icons.error,
+                                              color: Colors.red,
+                                              size: screenWidth * 0.2,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.022,
+                                    child: Text(
+                                      'User Feedback',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.070,
+                                    child: Text(
+                                      'Access all the user feedbacks from the\nMUBS Locator users.',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.04,
+                                        fontWeight: FontWeight.normal,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.152,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          'View the replies',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins',
                                           ),
+                                        ),
+                                        SizedBox(width: screenWidth * 0.02),
+                                        Icon(
+                                          Icons.double_arrow,
+                                          color: Colors.green,
+                                          size: screenWidth * 0.08,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.022,
-                                  child: Text(
-                                    'User Feedback',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.070,
-                                  child: Text(
-                                    'Access all the user feedbacks from the\nMUBS Locator users.',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.normal,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.152,
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        'View the replies',
-                                        style: TextStyle(
+                                  Positioned(
+                                    top: screenHeight * 0.02,
+                                    right: screenWidth * 0.02,
+                                    child: Container(
+                                      width: screenWidth * 0.08,
+                                      height: screenWidth * 0.08,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
                                           color: Colors.black,
-                                          fontSize: screenWidth * 0.04,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                          width: 1,
                                         ),
                                       ),
-                                      SizedBox(width: screenWidth * 0.02),
-                                      Icon(
-                                        Icons.double_arrow,
-                                        color: Colors.green,
-                                        size: screenWidth * 0.08,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Positioned(
-                                  top: screenHeight * 0.02,
-                                  right: screenWidth * 0.02,
-                                  child: Container(
-                                    width: screenWidth * 0.08,
-                                    height: screenWidth * 0.08,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                      child: Icon(
+                                        Icons.chat,
                                         color: Colors.black,
-                                        width: 1,
+                                        size: screenWidth * 0.04,
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.chat,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
-                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -859,104 +989,109 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         Positioned(
                           top: screenHeight * 0.81,
                           left: screenWidth * 0.04,
-                          child: Container(
-                            width: screenWidth * 0.92,
-                            height: screenHeight * 0.23,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: -screenWidth * 0.2,
-                                  bottom: -screenHeight * 0.05,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      'assets/images/notifications.png',
-                                      width: screenWidth * 0.7,
-                                      height: screenWidth * 0.7,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) => Icon(
-                                            Icons.error,
-                                            color: Colors.red,
-                                            size: screenWidth * 0.2,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            },
+                            child: Container(
+                              width: screenWidth * 0.92,
+                              height: screenHeight * 0.23,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    left: -screenWidth * 0.2,
+                                    bottom: -screenHeight * 0.05,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        'assets/images/notifications.png',
+                                        width: screenWidth * 0.7,
+                                        height: screenWidth * 0.7,
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (context, error, stackTrace) => Icon(
+                                              Icons.error,
+                                              color: Colors.red,
+                                              size: screenWidth * 0.2,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.022,
+                                    child: Text(
+                                      'Notifications',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.070,
+                                    child: Text(
+                                      'Manage all the app notifications\nhere.',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: screenWidth * 0.04,
+                                        fontWeight: FontWeight.normal,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: screenWidth * 0.26,
+                                    top: screenHeight * 0.152,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          'Add/Edit/ notifications here',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins',
                                           ),
+                                        ),
+                                        SizedBox(width: screenWidth * 0.02),
+                                        Icon(
+                                          Icons.double_arrow,
+                                          color: Colors.green,
+                                          size: screenWidth * 0.08,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.022,
-                                  child: Text(
-                                    'Notifications',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.070,
-                                  child: Text(
-                                    'Manage all the app notifications\nhere.',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.normal,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: screenWidth * 0.26,
-                                  top: screenHeight * 0.152,
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        'Add/Edit/ notifications here',
-                                        style: TextStyle(
+                                  Positioned(
+                                    top: screenHeight * 0.02,
+                                    right: screenWidth * 0.02,
+                                    child: Container(
+                                      width: screenWidth * 0.08,
+                                      height: screenWidth * 0.08,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
                                           color: Colors.black,
-                                          fontSize: screenWidth * 0.04,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
+                                          width: 1,
                                         ),
                                       ),
-                                      SizedBox(width: screenWidth * 0.02),
-                                      Icon(
-                                        Icons.double_arrow,
-                                        color: Colors.green,
-                                        size: screenWidth * 0.08,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Positioned(
-                                  top: screenHeight * 0.02,
-                                  right: screenWidth * 0.02,
-                                  child: Container(
-                                    width: screenWidth * 0.08,
-                                    height: screenWidth * 0.08,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+                                      child: Icon(
+                                        Icons.notifications,
                                         color: Colors.black,
-                                        width: 1,
+                                        size: screenWidth * 0.04,
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.notifications,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
-                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1014,15 +1149,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   width: 1,
                                 ),
                               ),
-                              child:
-                                  (_profileImagePath != null &&
-                                      _profileImagePath!.isNotEmpty)
+                              child: (_profilePicUrl != null &&
+                                      _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
-                                      child: Image.file(
-                                        File(_profileImagePath!),
+                                      child: Image.network(
+                                        _profilePicUrl!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return const CircularProgressIndicator();
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                          Icons.person,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.08,
+                                        ),
                                       ),
                                     )
                                   : Icon(
@@ -1071,6 +1216,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               context,
                               '/AdminDashboardScreen',
                             );
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
                           },
                           child: Row(
                             children: [
@@ -1093,31 +1241,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           ),
                         ),
                       ),
-
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
                         padding: EdgeInsets.only(
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.chat,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Feedback & Reports',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/FeedbackListScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.chat,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Feedback & Reports',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1126,24 +1281,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.settings,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Profile Settings',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                            );
+                            if (result != null && result is Map<String, dynamic>) {
+                              setState(() {
+                                _profilePicUrl = result['imageUrl'] as String?;
+                                _isMenuVisible = false;
+                              });
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1152,24 +1321,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.notifications,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Push Notifications',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Push Notifications',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -1178,24 +1355,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           left: screenWidth * 0.03,
                           top: screenHeight * 0.02,
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Locations',
-                              style: TextStyle(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),

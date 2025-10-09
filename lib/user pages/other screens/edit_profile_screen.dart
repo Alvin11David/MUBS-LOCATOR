@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,56 +14,44 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  File? _selectedImage; // Store the selected image
-  final _fullNameController = TextEditingController(); // Controller for full name field
-  final _emailController = TextEditingController(); // Controller for email field
-  final _phoneController = TextEditingController(); // Controller for phone contact field
-  final _locationController = TextEditingController(); // Controller for location field
-  String? _savedImagePath; // Store the saved image path
+  File? _selectedImage; // Store the selected image temporarily
+  String? _profilePicUrl; // Store the Firestore profile pic URL
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _locationController = TextEditingController();
+  bool _isUploading = false; // Track upload state
 
   @override
   void initState() {
     super.initState();
-    _loadSavedImage();
     _fetchUserData(); // Fetch data from Firestore on init
-  }
-
-  Future<void> _loadSavedImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _savedImagePath = prefs.getString('profileImagePath');
-      if (_savedImagePath != null && _selectedImage == null) {
-        _selectedImage = File(_savedImagePath!);
-      }
-    });
   }
 
   Future<void> _fetchUserData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null && user.email != null) {
-        final querySnapshot = await FirebaseFirestore.instance
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
             .collection('users')
-            .where('email', isEqualTo: user.email)
-            .limit(1)
+            .doc(user.uid)
             .get();
 
-        if (querySnapshot.docs.isNotEmpty) {
-          final userData = querySnapshot.docs.first.data();
+        if (doc.exists) {
+          final userData = doc.data();
           setState(() {
-            _fullNameController.text = userData['fullName'] ?? '';
-            _emailController.text = userData['email'] ?? '';
-            _phoneController.text = userData['phone'] ?? '';
-            _locationController.text = userData['location'] ?? '';
+            _fullNameController.text = userData?['fullName'] ?? '';
+            _emailController.text = userData?['email'] ?? user.email ?? '';
+            _phoneController.text = userData?['phone'] ?? '';
+            _locationController.text = userData?['location'] ?? '';
+            _profilePicUrl = userData?['profilePicUrl'];
           });
         }
       }
     } catch (e) {
       print('Error fetching user data: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        _showSnackBar('Error loading data: $e');
       }
     }
   }
@@ -81,40 +70,88 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _saveProfileData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null && user.email != null) {
+      if (user != null) {
+        setState(() => _isUploading = true);
+
+        String? downloadUrl = _profilePicUrl;
+        if (_selectedImage != null) {
+          // Upload image to Firebase Storage
+          final ref = FirebaseStorage.instance
+              .ref()
+              .child('profile_pics/${user.uid}/profile.jpg');
+          final uploadTask = ref.putFile(_selectedImage!);
+          final snapshot = await uploadTask;
+          downloadUrl = await snapshot.ref.getDownloadURL();
+        }
+
+        // Update Firestore with profile data
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'fullName': _fullNameController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
           'location': _locationController.text.trim(),
+          'profilePicUrl': downloadUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
+        // Clear SharedPreferences to prevent residual image paths
         final prefs = await SharedPreferences.getInstance();
-        if (_selectedImage != null) {
-          await prefs.setString('profileImagePath', _selectedImage!.path);
-        }
+        await prefs.remove('profileImagePath');
 
         if (mounted) {
           Navigator.pop(context, {
-            'imagePath': _selectedImage?.path,
+            'imageUrl': downloadUrl,
             'fullName': _fullNameController.text,
             'email': _emailController.text,
             'phone': _phoneController.text,
             'location': _locationController.text,
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated successfully!')),
-          );
+          _showSnackBar('Profile updated successfully!');
         }
       }
     } catch (e) {
       print('Error saving profile data: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
-        );
+        _showSnackBar('Error updating profile: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
       }
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(top: 10, left: 10, right: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _locationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -166,27 +203,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                       child: Center(
-                        child: _selectedImage != null
-                            ? ClipOval(
-                                child: Image.file(
-                                  _selectedImage!,
-                                  width: screenWidth * 0.25,
-                                  height: screenWidth * 0.25,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : Icon(
-                                Icons.person,
-                                color: Colors.black,
-                                size: screenWidth * 0.12,
-                              ),
+                        child: _isUploading
+                            ? const CircularProgressIndicator()
+                            : _selectedImage != null
+                                ? ClipOval(
+                                    child: Image.file(
+                                      _selectedImage!,
+                                      width: screenWidth * 0.25,
+                                      height: screenWidth * 0.25,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : _profilePicUrl != null
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          _profilePicUrl!,
+                                          width: screenWidth * 0.25,
+                                          height: screenWidth * 0.25,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const CircularProgressIndicator();
+                                          },
+                                          errorBuilder: (context, error, stackTrace) => Icon(
+                                            Icons.person,
+                                            color: Colors.black,
+                                            size: screenWidth * 0.12,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.black,
+                                        size: screenWidth * 0.12,
+                                      ),
                       ),
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: _pickImage,
+                        onTap: _isUploading ? null : _pickImage,
                         child: Container(
                           width: screenWidth * 0.08,
                           height: screenWidth * 0.08,
@@ -262,7 +319,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 right: 0,
                 child: Center(
                   child: Text(
-                    'Feel in the fields below',
+                    'Fill in the fields below',
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: screenWidth * 0.05,

@@ -32,7 +32,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
         Navigator.pushReplacementNamed(context, '/LocationSelectScreen');
         break;
       case 2:
-        // Feedback item: No navigation defined yet
+        Navigator.pushReplacementNamed(context, '/FeedbackScreen');
         break;
       case 3:
         Navigator.pushReplacementNamed(context, '/ProfileScreen');

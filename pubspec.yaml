@@ -29,6 +29,7 @@ dependencies:
   flutter_typeahead: ^5.2.0
   share_plus: 
   http: 
+  permission_handler:
 
   # Wave
   wave:
@@ -44,6 +45,9 @@ dependencies:
   cloud_functions:
   # Firebase storage
   firebase_storage:
+  flutter_local_notifications:
+  # Firebase Message
+  firebase_messaging: 
 
 dev_dependencies:
   flutter_test:
