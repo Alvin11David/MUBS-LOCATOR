@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 import 'dart:ui';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,32 +22,6 @@ class EditPlaceScreen extends StatefulWidget {
 class _EditPlaceScreenState extends State<EditPlaceScreen>
     with SingleTickerProviderStateMixin {
   String? _profileImagePath;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfileImage();
-    _fetchBuildingDetails();
-  }
-
-  Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _profileImagePath = prefs.getString('profileImagePath');
-    });
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good Morning';
-    } else if (hour < 17) {
-      return 'Good Afternoon';
-    } else {
-      return 'Good Evening';
-    }
-  }
-
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
 
@@ -69,7 +44,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
   bool _isLocationSelected = false;
   List<XFile?> _images = [null, null, null, null];
   List<String> _imageUrls = [];
-
   List<String> _selectedDays = [];
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
@@ -79,49 +53,96 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
     zoom: 16.0,
   );
 
-  Future<void> _fetchBuildingDetails() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('buildings')
-        .doc(widget.buildingId)
-        .get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        _buildingNameController.text = data['name'] ?? '';
-        _descriptionController.text = data['description'] ?? '';
-        _otherNamesController.text = data['otherNames'] ?? '';
-        _selectedLocation = LatLng(
-          (data['latitude'] ?? 0.32848299678238435) as double,
-          (data['longitude'] ?? 32.61717974633408) as double,
-        );
-        _isLocationSelected = true;
-        _imageUrls = List<String>.from(data['imageUrls'] ?? []);
-        _mtnNumberController.text = data['mtnNumber'] ?? '';
-        _airtelNumberController.text = data['airtelNumber'] ?? '';
-        _selectedDays = List<String>.from(data['days'] ?? []);
-        if (data['startTime'] != null) {
-          _startTime = TimeOfDay(
-            hour: data['startTime']['hour'],
-            minute: data['startTime']['minute'],
-          );
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+    _fetchBuildingDetails();
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists) {
+          setState(() {
+            _profileImagePath = doc.data()?['profilePicUrl'] as String?;
+          });
         }
-        if (data['endTime'] != null) {
-          _endTime = TimeOfDay(
-            hour: data['endTime']['hour'],
-            minute: data['endTime']['minute'],
-          );
-        }
-      });
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load profile image: $e')),
+      );
     }
   }
 
-  void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
+  Future<void> _fetchBuildingDetails() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('buildings')
+          .doc(widget.buildingId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _buildingNameController.text = data['name'] ?? '';
+          _descriptionController.text = data['description'] ?? '';
+          _otherNamesController.text = data['otherNames'] ?? '';
+          _selectedLocation = LatLng(
+            (data['latitude'] ?? 0.32848299678238435) as double,
+            (data['longitude'] ?? 32.61717974633408) as double,
+          );
+          _isLocationSelected = true;
+          _imageUrls = List<String>.from(data['imageUrls'] ?? []);
+          _mtnNumberController.text = data['mtnNumber'] ?? '';
+          _airtelNumberController.text = data['airtelNumber'] ?? '';
+          _selectedDays = List<String>.from(data['days'] ?? []);
+          if (data['startTime'] != null) {
+            _startTime = TimeOfDay(
+              hour: data['startTime']['hour'],
+              minute: data['startTime']['minute'],
+            );
+          }
+          if (data['endTime'] != null) {
+            _endTime = TimeOfDay(
+              hour: data['endTime']['hour'],
+              minute: data['endTime']['minute'],
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error fetching building details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load building details: $e')),
       );
+    }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  void _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/SignInScreen');
+      }
+    } catch (e) {
+      print('Logout error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to log out: $e')));
     }
   }
 
@@ -129,109 +150,32 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
     _mapController = controller;
   }
 
-  void _onTap(LatLng position) {
+  void _onTap(LatLng position) async {
     setState(() {
       _selectedLocation = position;
       _isLocationSelected = true;
     });
     _mapController?.animateCamera(CameraUpdate.newLatLng(_selectedLocation));
+    await _updateFirestoreField({
+      'latitude': _selectedLocation.latitude,
+      'longitude': _selectedLocation.longitude,
+    });
   }
 
-  Future<void> _saveLocation() async {
-    // Validate fields
-    final nameError = _validateName(_buildingNameController.text);
-    final descError = _validateDescription(_descriptionController.text);
-    final mtnError = _validateMtnNumber(_mtnNumberController.text);
-    final airtelError = _validateAirtelNumber(_airtelNumberController.text);
-    final locationError = _isLocationSelected
-        ? null
-        : 'Please select a location';
-    final daysError = _selectedDays.isNotEmpty ? null : 'Please select days';
-    final timeError = (_startTime != null && _endTime != null)
-        ? null
-        : 'Please select time range';
-    final imagesError =
-        (_images.any((img) => img != null) || _imageUrls.isNotEmpty)
-        ? null
-        : 'Please select at least one image';
-
-    if (nameError != null ||
-        descError != null ||
-        mtnError != null ||
-        airtelError != null ||
-        locationError != null ||
-        daysError != null ||
-        timeError != null ||
-        imagesError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            nameError ??
-                descError ??
-                mtnError ??
-                airtelError ??
-                locationError ??
-                daysError ??
-                timeError ??
-                imagesError ??
-                'Invalid input',
-          ),
-        ),
-      );
-      return;
-    }
-
+  Future<void> _updateFirestoreField(Map<String, dynamic> fieldData) async {
     try {
-      final docRef = FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('buildings')
-          .doc(widget.buildingId);
-      final newImageUrls = <String>[];
-
-      // Upload new images to Firebase Storage
-      for (int i = 0; i < _images.length; i++) {
-        if (_images[i] != null) {
-          final storageRef = FirebaseStorage.instance.ref().child(
-            'buildings/${docRef.id}/images/image_$i.jpg',
-          );
-          await storageRef.putFile(File(_images[i]!.path));
-          final url = await storageRef.getDownloadURL();
-          newImageUrls.add(url);
-        }
-      }
-
-      // Combine old and new images
-      final allImageUrls = List<String>.from(_imageUrls)..addAll(newImageUrls);
-
-      await docRef.update({
-        'name': _buildingNameController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'otherNames': _otherNamesController.text.trim().isEmpty
-            ? null
-            : _otherNamesController.text.trim(),
-        'latitude': _selectedLocation.latitude,
-        'longitude': _selectedLocation.longitude,
-        'days': _selectedDays,
-        'startTime': _startTime != null
-            ? {'hour': _startTime!.hour, 'minute': _startTime!.minute}
-            : null,
-        'endTime': _endTime != null
-            ? {'hour': _endTime!.hour, 'minute': _endTime!.minute}
-            : null,
-        'mtnNumber': _mtnNumberController.text.trim(),
-        'airtelNumber': _airtelNumberController.text.trim(),
-        'imageUrls': allImageUrls,
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location updated successfully')),
-        );
-        Navigator.pop(context);
-      }
+          .doc(widget.buildingId)
+          .update(fieldData);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Field updated successfully')),
+      );
     } catch (e) {
+      print('Error updating Firestore: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error updating location: $e')));
+      ).showSnackBar(SnackBar(content: Text('Failed to update field: $e')));
     }
   }
 
@@ -241,14 +185,44 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
       try {
         final ref = FirebaseStorage.instance.refFromURL(url);
         await ref.delete();
-      } catch (_) {}
-      setState(() {
-        _imageUrls.removeAt(index);
-      });
-      await FirebaseFirestore.instance
-          .collection('buildings')
-          .doc(widget.buildingId)
-          .update({'imageUrls': _imageUrls});
+        setState(() {
+          _imageUrls.removeAt(index);
+        });
+        await _updateFirestoreField({'imageUrls': _imageUrls});
+      } catch (e) {
+        print('Error deleting image: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to delete image: $e')));
+      }
+    }
+  }
+
+  Future<void> _addImage(int index) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _images[index] = pickedFile;
+        });
+        final storageRef = FirebaseStorage.instance.ref().child(
+          'buildings/${widget.buildingId}/images/image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+        await storageRef.putFile(File(pickedFile.path));
+        final url = await storageRef.getDownloadURL();
+        setState(() {
+          _imageUrls.add(url);
+        });
+        await _updateFirestoreField({'imageUrls': _imageUrls});
+      }
+    } catch (e) {
+      print('Error adding image: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add image: $e')));
     }
   }
 
@@ -332,23 +306,25 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF93C5FD),
       body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isMenuVisible = false;
-                    _isDropdownVisible = false;
-                  });
-                  FocusScope.of(context).unfocus();
-                },
-                behavior: HitTestBehavior.translucent,
-              ),
-            ),
-            Column(
-              children: [
-                Container(
+        child: GestureDetector(
+          onTap: () {
+            if (_isMenuVisible || _isDropdownVisible) {
+              setState(() {
+                _isMenuVisible = false;
+                _isDropdownVisible = false;
+              });
+            }
+            FocusScope.of(context).unfocus();
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Stack(
+            children: [
+              // Header
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
                   height: screenHeight * 0.09,
                   width: screenWidth,
                   decoration: BoxDecoration(
@@ -375,501 +351,539 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                     ),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        color: Colors.transparent,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.04,
-                            vertical: screenHeight * 0.02,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _isMenuVisible = !_isMenuVisible;
-                                    _isDropdownVisible = false;
-                                  });
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Icon(
-                                  Icons.menu,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.04,
+                          vertical: screenHeight * 0.02,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isMenuVisible = !_isMenuVisible;
+                                  _isDropdownVisible = false;
+                                });
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Icon(
+                                Icons.menu,
+                                color: Colors.black,
+                                size: screenWidth * 0.08,
+                              ),
+                            ),
+                            SizedBox(width: screenWidth * 0.04),
+                            Text(
+                              '${_getGreeting()}, $fullName',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.045,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              width: screenWidth * 0.17,
+                              height: screenHeight * 0.05,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
                                   color: Colors.black,
-                                  size: screenWidth * 0.08,
+                                  width: 1,
                                 ),
                               ),
-                              SizedBox(width: screenWidth * 0.04),
-                              Text(
-                                '${_getGreeting()}, $fullName',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.045,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                width: screenWidth * 0.17,
-                                height: screenHeight * 0.05,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: Colors.black,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        left: screenWidth * 0.00,
-                                      ),
-                                      child: Container(
-                                        width: screenWidth * 0.1,
-                                        height: screenWidth * 0.1,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child:
-                                            (_profileImagePath != null &&
-                                                _profileImagePath!.isNotEmpty)
-                                            ? ClipOval(
-                                                child: Image.file(
-                                                  File(_profileImagePath!),
-                                                  fit: BoxFit.cover,
-                                                  width: screenWidth * 0.09,
-                                                  height: screenWidth * 0.09,
-                                                ),
-                                              )
-                                            : Icon(
-                                                Icons.person,
-                                                color: Colors.black,
-                                                size: screenWidth * 0.04,
-                                              ),
-                                      ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: screenWidth * 0.0,
                                     ),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        right: screenWidth * 0.01,
-                                      ),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _isDropdownVisible =
-                                                !_isDropdownVisible;
-                                            _isMenuVisible = false;
-                                          });
-                                        },
-                                        behavior: HitTestBehavior.opaque,
-                                        child: Icon(
-                                          Icons.arrow_drop_down,
+                                    child: Container(
+                                      width: screenWidth * 0.1,
+                                      height: screenWidth * 0.1,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
                                           color: Colors.black,
-                                          size: screenWidth * 0.04,
+                                          width: 1,
                                         ),
                                       ),
+                                      child:
+                                          _profileImagePath != null &&
+                                              _profileImagePath!.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                _profileImagePath!,
+                                                fit: BoxFit.cover,
+                                                width: screenWidth * 0.09,
+                                                height: screenWidth * 0.09,
+                                                loadingBuilder:
+                                                    (
+                                                      context,
+                                                      child,
+                                                      loadingProgress,
+                                                    ) {
+                                                      if (loadingProgress ==
+                                                          null)
+                                                        return child;
+                                                      return const CircularProgressIndicator();
+                                                    },
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Icon(
+                                                        Icons.person,
+                                                        color: Colors.black,
+                                                        size:
+                                                            screenWidth * 0.04,
+                                                      );
+                                                    },
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              color: Colors.black,
+                                              size: screenWidth * 0.04,
+                                            ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      right: screenWidth * 0.01,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _isDropdownVisible =
+                                              !_isDropdownVisible;
+                                          _isMenuVisible = false;
+                                        });
+                                      },
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Colors.black,
+                                        size: screenWidth * 0.04,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.04,
-                    vertical: screenHeight * 0.01,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Edit a Place',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.05,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
+              ),
+              // Title and Navigation Arrows
+              Positioned(
+                top: screenHeight * 0.1,
+                left: screenWidth * 0.04,
+                right: screenWidth * 0.04,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Edit a Place',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenWidth * 0.05,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
                           ),
-                          SizedBox(height: screenHeight * 0.01),
-                          Text(
-                            'You can make changes to all the fields\nbelow.',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.038,
-                              fontWeight: FontWeight.normal,
-                              fontFamily: 'Poppins',
-                            ),
+                        ),
+                        SizedBox(height: screenHeight * 0.01),
+                        Text(
+                          'You can make changes to all the fields\nbelow.',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenWidth * 0.038,
+                            fontWeight: FontWeight.normal,
+                            fontFamily: 'Poppins',
                           ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: Icon(
-                              Icons.chevron_left,
-                              color: Colors.black,
-                              size: screenWidth * 0.08,
-                            ),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Icon(
-                            Icons.chevron_right,
-                            color: Colors.grey,
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                          child: Icon(
+                            Icons.chevron_left,
+                            color: Colors.black,
                             size: screenWidth * 0.08,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        SizedBox(width: screenWidth * 0.0),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey,
+                          size: screenWidth * 0.08,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            if (_isDropdownVisible)
+              ),
+              // Form Fields
               Positioned(
-                top: screenHeight * 0.09,
-                right: screenWidth * 0.04,
-                child: Container(
-                  width: screenWidth * 0.25,
-                  height: screenHeight * 0.06,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
+                top: screenHeight * 0.21,
+                left: screenWidth * 0.02,
+                right: screenWidth * 0.02,
+                bottom: 0,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            vertical: screenHeight * 0.04,
+                            horizontal: screenWidth * 0.04,
+                          ),
+                          child: Form(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.04,
+                                  ),
+                                  child: BuildingNameField(
+                                    controller: _buildingNameController,
+                                    label: 'Building Name',
+                                    hint: 'Enter Building Name',
+                                    icon: Icons.location_city,
+                                    focusNode: _buildingNameFocus,
+                                    nextFocusNode: _descriptionFocus,
+                                    textInputAction: TextInputAction.next,
+                                    onChanged: (value) {
+                                      final error = _validateName(value);
+                                      if (error == null) {
+                                        _updateFirestoreField({
+                                          'name': value.trim(),
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.04,
+                                  ),
+                                  child: DescriptionField(
+                                    controller: _descriptionController,
+                                    label: 'Building Description',
+                                    hint: 'Enter Place Description',
+                                    icon: Icons.description,
+                                    focusNode: _descriptionFocus,
+                                    textInputAction: TextInputAction.next,
+                                    nextFocusNode: _locationFocus,
+                                    onChanged: (value) {
+                                      final error = _validateDescription(value);
+                                      if (error == null) {
+                                        _updateFirestoreField({
+                                          'description': value.trim(),
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.04,
+                                  ),
+                                  child: TextFormField(
+                                    controller: _otherNamesController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Other Names',
+                                      labelStyle: TextStyle(
+                                        color: Colors.black,
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: screenWidth * 0.035,
+                                      ),
+                                      hintText: 'Enter other names (optional)',
+                                      hintStyle: TextStyle(
+                                        color: Colors.black.withOpacity(0.6),
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: screenWidth * 0.028,
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.edit,
+                                        color: const Color(0xFF93C5FD),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFF93C5FD),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFF93C5FD),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 20,
+                                      ),
+                                    ),
+                                    onChanged: (value) {
+                                      _updateFirestoreField({
+                                        'otherNames': value.trim().isEmpty
+                                            ? null
+                                            : value.trim(),
+                                      });
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.00,
+                                  ),
+                                  child: LocationSelectField(
+                                    controller: TextEditingController(),
+                                    label: 'Location Select',
+                                    hint: 'Tap on the map to select location',
+                                    icon: Icons.location_on,
+                                    focusNode: _locationFocus,
+                                    textInputAction: TextInputAction.next,
+                                    nextFocusNode: _mtnNumberFocus,
+                                    selectedLocation: _selectedLocation,
+                                    isLocationSelected: _isLocationSelected,
+                                    onMapCreated: _onMapCreated,
+                                    onTap: _onTap,
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.00,
+                                  ),
+                                  child: PhotosMediaField(
+                                    imageUrls: _imageUrls,
+                                    onImagesChanged: (images) {
+                                      setState(() {
+                                        _images = images;
+                                      });
+                                    },
+                                    onAddImage: _addImage,
+                                    onDeleteImage: _deleteImage,
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.00,
+                                  ),
+                                  child: OpeningClosingHoursField(
+                                    mtnNumberController: _mtnNumberController,
+                                    airtelNumberController:
+                                        _airtelNumberController,
+                                    selectedDays: _selectedDays,
+                                    startTime: _startTime,
+                                    endTime: _endTime,
+                                    onDaysChanged: (days) {
+                                      setState(() {
+                                        _selectedDays = days;
+                                      });
+                                      _updateFirestoreField({
+                                        'days': _selectedDays,
+                                      });
+                                    },
+                                    onTimeChanged: (start, end) {
+                                      setState(() {
+                                        _startTime = start;
+                                        _endTime = end;
+                                      });
+                                      _updateFirestoreField({
+                                        'startTime': start != null
+                                            ? {
+                                                'hour': start.hour,
+                                                'minute': start.minute,
+                                              }
+                                            : null,
+                                        'endTime': end != null
+                                            ? {
+                                                'hour': end.hour,
+                                                'minute': end.minute,
+                                              }
+                                            : null,
+                                      });
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.00,
+                                  ),
+                                  child: ContactInformationField(
+                                    mtnNumberController: _mtnNumberController,
+                                    airtelNumberController:
+                                        _airtelNumberController,
+                                    mtnNumberFocus: _mtnNumberFocus,
+                                    airtelNumberFocus: _airtelNumberFocus,
+                                    onMtnChanged: (value) {
+                                      final error = _validateMtnNumber(value);
+                                      if (error == null) {
+                                        _updateFirestoreField({
+                                          'mtnNumber': value.trim(),
+                                        });
+                                      }
+                                    },
+                                    onAirtelChanged: (value) {
+                                      final error = _validateAirtelNumber(
+                                        value,
+                                      );
+                                      if (error == null) {
+                                        _updateFirestoreField({
+                                          'airtelNumber': value.trim(),
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.04),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        color: Colors.transparent,
+                    );
+                  },
+                ),
+              ),
+
+              // Profile Dropdown
+              if (_isDropdownVisible)
+                Positioned(
+                  top: screenHeight * 0.09,
+                  right: screenWidth * 0.04,
+                  child: Container(
+                    width: screenWidth * 0.25,
+                    height: screenHeight * 0.06,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.03,
                             vertical: screenHeight * 0.01,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Profile',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
+                          child: GestureDetector(
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const EditProfileScreen(),
                                 ),
-                              ),
-                              Image.asset(
-                                'assets/images/edit.png',
-                                color: Colors.black,
-                                width: screenWidth * 0.04,
-                                height: screenWidth * 0.04,
-                              ),
-                            ],
+                              );
+                              if (result != null &&
+                                  result is Map<String, dynamic>) {
+                                setState(() {
+                                  _profileImagePath =
+                                      result['imageUrl'] as String?;
+                                  _isDropdownVisible = false;
+                                });
+                              }
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Edit Profile',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                                Image.asset(
+                                  'assets/images/edit.png',
+                                  color: Colors.black,
+                                  width: screenWidth * 0.04,
+                                  height: screenWidth * 0.04,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            Positioned(
-              top: screenHeight * 0.21,
-              left: screenWidth * 0.02,
-              right: screenWidth * 0.02,
-              bottom: 0,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: screenHeight * 0.04,
-                          horizontal: screenWidth * 0.04,
-                        ),
-                        child: Form(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.04,
-                                ),
-                                child: BuildingNameField(
-                                  controller: _buildingNameController,
-                                  label: 'Building Name',
-                                  hint: 'Enter Building Name',
-                                  icon: Icons.location_city,
-                                  focusNode: _buildingNameFocus,
-                                  nextFocusNode: _descriptionFocus,
-                                  textInputAction: TextInputAction.next,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.04,
-                                ),
-                                child: DescriptionField(
-                                  controller: _descriptionController,
-                                  label: 'Building Description',
-                                  hint: 'Enter Place Description',
-                                  icon: Icons.description,
-                                  focusNode: _descriptionFocus,
-                                  textInputAction: TextInputAction.next,
-                                  nextFocusNode: _locationFocus,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.04,
-                                ),
-                                child: TextFormField(
-                                  controller: _otherNamesController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Other Names',
-                                    labelStyle: TextStyle(
-                                      color: Colors.black,
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w500,
-                                      fontSize:
-                                          screenWidth *
-                                          0.035, // <-- Reduced font size
-                                    ),
-                                    hintText: 'Enter other names (optional)',
-                                    hintStyle: TextStyle(
-                                      color: Colors.black.withOpacity(0.6),
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w400,
-                                      fontSize:
-                                          screenWidth *
-                                          0.028, // <-- Reduced font size
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.edit,
-                                      color: const Color(0xFF93C5FD),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(
-                                        color: Color(0xFF93C5FD),
-                                        width: 1,
-                                      ), // Change color here
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(
-                                        color: Color(0xFF93C5FD),
-                                        width: 2,
-                                      ), // Change color here
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      vertical: 10, // Reduce height here
-                                      horizontal: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.00,
-                                ),
-                                child: LocationSelectField(
-                                  controller: TextEditingController(),
-                                  label: 'Location Select',
-                                  hint: 'Tap on the map to select location',
-                                  icon: Icons.location_on,
-                                  focusNode: _locationFocus,
-                                  textInputAction: TextInputAction.next,
-                                  nextFocusNode: _mtnNumberFocus,
-                                  selectedLocation: _selectedLocation,
-                                  isLocationSelected: _isLocationSelected,
-                                  onMapCreated: _onMapCreated,
-                                  onTap: _onTap,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.00,
-                                ),
-                                child: PhotosMediaField(
-                                  imageUrls: _imageUrls,
-                                  onImagesChanged: (images) {
-                                    setState(() {
-                                      _images = images;
-                                    });
-                                  },
-                                  onDeleteImage: _deleteImage,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.00,
-                                ),
-                                child: OpeningClosingHoursField(
-                                  mtnNumberController: _mtnNumberController,
-                                  airtelNumberController:
-                                      _airtelNumberController,
-                                  selectedDays: _selectedDays,
-                                  startTime: _startTime,
-                                  endTime: _endTime,
-                                  onDaysChanged: (days) =>
-                                      setState(() => _selectedDays = days),
-                                  onTimeChanged: (start, end) => setState(() {
-                                    _startTime = start;
-                                    _endTime = end;
-                                  }),
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.00,
-                                ),
-                                child: ContactInformationField(
-                                  mtnNumberController: _mtnNumberController,
-                                  airtelNumberController:
-                                      _airtelNumberController,
-                                  mtnNumberFocus: _mtnNumberFocus,
-                                  airtelNumberFocus: _airtelNumberFocus,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.04,
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _saveLocation,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF93C5FD),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: screenHeight * 0.015,
-                                      horizontal: screenWidth * 0.1,
-                                    ),
-                                    elevation: 8,
-                                    shadowColor: const Color(
-                                      0xFF93C5FD,
-                                    ).withOpacity(0.5),
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(30),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF93C5FD,
-                                          ).withOpacity(0.4),
-                                          blurRadius: 10,
-                                          spreadRadius: 2,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Text(
-                                      'Update Location',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: screenWidth * 0.045,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.04),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (_isMenuVisible)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isMenuVisible = false;
-                    });
-                  },
-                  behavior: HitTestBehavior.translucent,
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-              top: 0,
-              child: GestureDetector(
-                onTap: () {},
-                behavior: HitTestBehavior.opaque,
+              // Sidebar
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+                top: MediaQuery.of(context).padding.top,
                 child: Container(
                   width: screenWidth * 0.6,
                   height: screenHeight * 0.8,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.only(
+                    borderRadius: BorderRadius.only(
                       topRight: Radius.circular(30),
                       bottomRight: Radius.circular(30),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black26,
                         blurRadius: 8,
                         spreadRadius: 2,
-                        offset: const Offset(2, 0),
+                        offset: Offset(2, 0),
                       ),
                     ],
                   ),
@@ -885,7 +899,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                             fit: BoxFit.cover,
                           ),
                           Positioned(
-                            left: screenWidth * 0.03,
+                            left: screenWidth * 0.0,
                             top: screenHeight * 0.03,
                             child: Container(
                               width: screenWidth * 0.15,
@@ -899,14 +913,28 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                 ),
                               ),
                               child:
-                                  (_profileImagePath != null &&
-                                      _profileImagePath!.isNotEmpty)
+                                  _profileImagePath != null &&
+                                      _profileImagePath!.isNotEmpty
                                   ? ClipOval(
-                                      child: Image.file(
-                                        File(_profileImagePath!),
+                                      child: Image.network(
+                                        _profileImagePath!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return const CircularProgressIndicator();
+                                            },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Icon(
+                                                Icons.person,
+                                                color: Colors.black,
+                                                size: screenWidth * 0.08,
+                                              );
+                                            },
                                       ),
                                     )
                                   : Icon(
@@ -950,11 +978,16 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () {
+                            print('Dashboard row tapped');
                             Navigator.pushNamed(
                               context,
                               '/AdminDashboardScreen',
                             );
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
                           },
                           child: Row(
                             children: [
@@ -984,7 +1017,9 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () {
+                            print('Feedback & Reports row tapped');
                             Navigator.pushNamed(context, '/FeedbackListScreen');
                             setState(() {
                               _isMenuVisible = false;
@@ -1018,11 +1053,23 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/ProfileScreen');
-                            setState(() {
-                              _isMenuVisible = false;
-                            });
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () async {
+                            print('Profile Settings row tapped');
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EditProfileScreen(),
+                              ),
+                            );
+                            if (result != null &&
+                                result is Map<String, dynamic>) {
+                              setState(() {
+                                _profileImagePath =
+                                    result['imageUrl'] as String?;
+                                _isMenuVisible = false;
+                              });
+                            }
                           },
                           child: Row(
                             children: [
@@ -1052,8 +1099,13 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            print('Push Notifications row tapped');
+                            Navigator.pushNamed(
+                              context,
+                              '/SendNotificationsScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });
@@ -1086,8 +1138,13 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            print('Locations row tapped');
+                            Navigator.pushNamed(
+                              context,
+                              '/LocationManagementScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });
@@ -1120,7 +1177,11 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: _logout,
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            print('Logout row tapped');
+                            _logout();
+                          },
                           child: Row(
                             children: [
                               Icon(
@@ -1146,8 +1207,8 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1162,6 +1223,7 @@ class BuildingNameField extends StatelessWidget {
   final FocusNode focusNode;
   final FocusNode? nextFocusNode;
   final TextInputAction textInputAction;
+  final Function(String) onChanged;
 
   const BuildingNameField({
     super.key,
@@ -1172,6 +1234,7 @@ class BuildingNameField extends StatelessWidget {
     required this.focusNode,
     this.nextFocusNode,
     required this.textInputAction,
+    required this.onChanged,
   });
 
   @override
@@ -1190,6 +1253,7 @@ class BuildingNameField extends StatelessWidget {
               FocusScope.of(context).requestFocus(nextFocusNode);
             }
           },
+          onChanged: onChanged,
           decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(
@@ -1249,6 +1313,7 @@ class DescriptionField extends StatelessWidget {
   final FocusNode focusNode;
   final FocusNode? nextFocusNode;
   final TextInputAction textInputAction;
+  final Function(String) onChanged;
 
   const DescriptionField({
     super.key,
@@ -1259,6 +1324,7 @@ class DescriptionField extends StatelessWidget {
     required this.focusNode,
     this.nextFocusNode,
     required this.textInputAction,
+    required this.onChanged,
   });
 
   @override
@@ -1280,6 +1346,7 @@ class DescriptionField extends StatelessWidget {
               FocusScope.of(context).requestFocus(nextFocusNode);
             }
           },
+          onChanged: onChanged,
           decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(
@@ -1511,12 +1578,14 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
 class PhotosMediaField extends StatefulWidget {
   final Function(List<XFile?>) onImagesChanged;
   final List<String> imageUrls;
+  final Future<void> Function(int) onAddImage;
   final Future<void> Function(int) onDeleteImage;
 
   const PhotosMediaField({
     super.key,
     required this.onImagesChanged,
     required this.imageUrls,
+    required this.onAddImage,
     required this.onDeleteImage,
   });
 
@@ -1526,25 +1595,6 @@ class PhotosMediaField extends StatefulWidget {
 
 class _PhotosMediaFieldState extends State<PhotosMediaField> {
   final List<XFile?> _images = [null, null, null, null];
-  final ImagePicker _picker = ImagePicker();
-
-  Future<void> _addImage(int index) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: ImageSource.gallery,
-      );
-      if (pickedFile != null) {
-        setState(() {
-          _images[index] = pickedFile;
-          widget.onImagesChanged(_images);
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1610,22 +1660,30 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.error);
+                                  },
                                 ),
                               ),
                               Positioned(
                                 top: 4,
                                 right: 4,
                                 child: GestureDetector(
-                                  onTap: () async {
-                                    await widget.onDeleteImage(index);
-                                    setState(() {});
-                                  },
+                                  onTap: () => widget.onDeleteImage(index),
                                   child: Container(
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       color: Colors.black54,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.delete,
                                       color: Colors.white,
                                       size: 20,
@@ -1638,7 +1696,7 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
                         } else {
                           final imgIndex = index - widget.imageUrls.length;
                           return GestureDetector(
-                            onTap: () => _addImage(imgIndex),
+                            onTap: () => widget.onAddImage(imgIndex),
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
@@ -1716,8 +1774,6 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
   TimeOfDay? _endTime;
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
-  bool _isSaved = false;
-  int _saveClickCount = 0;
 
   final List<String> _daysOfWeek = [
     'Monday',
@@ -1990,19 +2046,6 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
     }
   }
 
-  void _save() {
-    if (_selectedDays.isEmpty || _startTime == null || _endTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select days and time range')),
-      );
-      return;
-    }
-    setState(() {
-      _saveClickCount++;
-      _isSaved = _saveClickCount >= 2;
-    });
-  }
-
   @override
   void dispose() {
     _daysController.dispose();
@@ -2185,32 +2228,7 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                           ],
                         ),
                         SizedBox(height: screenHeight * 0.015),
-                        SizedBox(
-                          width: screenWidth * 0.4,
-                          height: screenHeight * 0.05,
-                          child: ElevatedButton(
-                            onPressed: _save,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF93C5FD),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              'Save',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w500,
-                                fontSize: screenWidth * 0.04,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        if (_isSaved &&
-                            _saveClickCount >= 2 &&
-                            _selectedDays.isNotEmpty &&
+                        if (_selectedDays.isNotEmpty &&
                             _startTime != null &&
                             _endTime != null)
                           Container(
@@ -2257,6 +2275,8 @@ class ContactInformationField extends StatelessWidget {
   final TextEditingController airtelNumberController;
   final FocusNode mtnNumberFocus;
   final FocusNode airtelNumberFocus;
+  final Function(String) onMtnChanged;
+  final Function(String) onAirtelChanged;
 
   const ContactInformationField({
     super.key,
@@ -2264,6 +2284,8 @@ class ContactInformationField extends StatelessWidget {
     required this.airtelNumberController,
     required this.mtnNumberFocus,
     required this.airtelNumberFocus,
+    required this.onMtnChanged,
+    required this.onAirtelChanged,
   });
 
   @override
@@ -2322,6 +2344,7 @@ class ContactInformationField extends StatelessWidget {
                               context,
                             ).requestFocus(airtelNumberFocus);
                           },
+                          onChanged: onMtnChanged,
                           decoration: InputDecoration(
                             labelText: 'MTN Number',
                             labelStyle: TextStyle(
@@ -2385,6 +2408,7 @@ class ContactInformationField extends StatelessWidget {
                           keyboardType: TextInputType.phone,
                           focusNode: airtelNumberFocus,
                           textInputAction: TextInputAction.done,
+                          onChanged: onAirtelChanged,
                           decoration: InputDecoration(
                             labelText: 'Airtel Number',
                             labelStyle: TextStyle(

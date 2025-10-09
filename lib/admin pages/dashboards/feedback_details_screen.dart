@@ -6,6 +6,7 @@ import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class FeedbackDetailsScreen extends StatefulWidget {
   final String feedbackId;
@@ -23,7 +24,21 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   bool _isMenuVisible = false;
   bool _isRectangleVisible = true;
   bool _isMoreMenuVisible = false;
+  String? _profilePicUrl;
   final TextEditingController _replyController = TextEditingController();
+  
+  void _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+    );
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _profilePicUrl = result['imageUrl'] as String?;
+        _isDropdownVisible = false;
+      });
+    }
+  }
 
   // Determine greeting based on time of day
   String _getGreeting() {
@@ -52,7 +67,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
 
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: 0,
+        top: MediaQuery.of(context).padding.top, // Adjusted for status bar
         left: 0,
         right: 0,
         child: SlideTransition(
@@ -127,7 +142,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     }
 
     try {
-      // Fetch the feedback document
       final feedbackDoc = await FirebaseFirestore.instance
           .collection('feedback')
           .doc(widget.feedbackId)
@@ -142,7 +156,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
       final issueTitle = feedbackData['issueTitle'] as String? ?? 'No title';
       final buildingName = feedbackData['buildingName'] as String? ?? 'Unknown';
 
-      // Update the feedback document
       await FirebaseFirestore.instance
           .collection('feedback')
           .doc(widget.feedbackId)
@@ -154,7 +167,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
         'userRead': false,
       });
 
-      // Fetch the user document to get the user UID
       final userQuery = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: userEmail)
@@ -167,7 +179,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
       }
       final userUid = userQuery.docs.first.id;
 
-      // Save the notification to the user's user_notifications subcollection
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userUid)
@@ -181,7 +192,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
         'userRead': false,
       });
 
-      // Send FCM notification
       try {
         await FirebaseFunctions.instance
             .httpsCallable('sendFeedbackReplyNotification')
@@ -261,7 +271,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   @override
   void initState() {
     super.initState();
-    // Trigger animation after a short delay
     Future.delayed(const Duration(milliseconds: 100), () {
       setState(() {
         _isRectangleVisible = true;
@@ -280,19 +289,16 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
-    // Get the user's full name from Firebase
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent resizing when keyboard appears
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF93C5FD),
       body: Stack(
         children: [
-          // Root GestureDetector for closing menus, but excludes TextField
           GestureDetector(
             onTap: () {
-              // Only close menus if TextField is not focused
               if (!FocusScope.of(context).hasFocus) {
                 setState(() {
                   _isDropdownVisible = false;
@@ -306,7 +312,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
               children: [
                 // Glassy top bar
                 Positioned(
-                  top: 0,
+                  top: MediaQuery.of(context).padding.top, // Start below status bar
                   left: 0,
                   right: 0,
                   child: Container(
@@ -340,7 +346,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               mainAxisAlignment: MainAxisAlignment.start,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Menu icon
                                 GestureDetector(
                                   onTap: () {
                                     setState(() {
@@ -356,7 +361,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                   ),
                                 ),
                                 SizedBox(width: screenWidth * 0.04),
-                                // Greeting text
                                 Text(
                                   '${_getGreeting()}, $fullName',
                                   style: TextStyle(
@@ -367,7 +371,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                   ),
                                 ),
                                 const Spacer(),
-                                // Dropdown container
                                 Container(
                                   width: screenWidth * 0.17,
                                   height: screenHeight * 0.05,
@@ -376,33 +379,56 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                     border: Border.all(color: Colors.black, width: 1),
                                   ),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Padding(
-                                        padding: EdgeInsets.only(left: screenWidth * 0.01),
+                                        padding: EdgeInsets.only(
+                                          left: screenWidth * 0.00,
+                                        ),
                                         child: Container(
-                                          width: screenWidth * 0.09,
-                                          height: screenWidth * 0.09,
+                                          width: screenWidth * 0.1,
+                                          height: screenWidth * 0.1,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.black, width: 1),
+                                            border: Border.all(
+                                              color: Colors.black,
+                                              width: 1,
+                                            ),
                                           ),
-                                          child: Icon(
-                                            Icons.person,
-                                            color: Colors.black,
-                                            size: screenWidth * 0.04,
-                                          ),
+                                          child: (_profilePicUrl != null &&
+                                                  _profilePicUrl!.isNotEmpty)
+                                              ? ClipOval(
+                                                  child: Image.network(
+                                                    _profilePicUrl!,
+                                                    fit: BoxFit.cover,
+                                                    width: screenWidth * 0.1,
+                                                    height: screenWidth * 0.1,
+                                                    loadingBuilder: (context, child, loadingProgress) {
+                                                      if (loadingProgress == null) return child;
+                                                      return const CircularProgressIndicator();
+                                                    },
+                                                    errorBuilder: (context, error, stackTrace) =>
+                                                        Icon(
+                                                      Icons.person,
+                                                      color: Colors.black,
+                                                      size: screenWidth * 0.04,
+                                                    ),
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.04,
+                                                ),
                                         ),
                                       ),
                                       Padding(
-                                        padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                        padding: EdgeInsets.only(
+                                          right: screenWidth * 0.01,
+                                        ),
                                         child: GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _isDropdownVisible = !_isDropdownVisible;
-                                              _isMoreMenuVisible = false;
-                                            });
-                                          },
+                                          onTap: _navigateToEditProfile,
                                           behavior: HitTestBehavior.opaque,
                                           child: Icon(
                                             Icons.arrow_drop_down,
@@ -425,7 +451,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 // Dropdown container
                 if (_isDropdownVisible)
                   Positioned(
-                    top: screenHeight * 0.09,
+                    top: MediaQuery.of(context).padding.top + screenHeight * 0.09, // Adjusted
                     right: screenWidth * 0.04,
                     child: Container(
                       width: screenWidth * 0.25,
@@ -481,7 +507,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                   ),
                 // Feedback Details, Status, chevrons, and more button
                 Positioned(
-                  top: screenHeight * 0.1,
+                  top: MediaQuery.of(context).padding.top + screenHeight * 0.1, // Adjusted
                   left: screenWidth * 0.04,
                   right: screenWidth * 0.04,
                   child: Column(
@@ -643,7 +669,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 500),
                   curve: Curves.easeInOut,
-                  top: screenHeight * 0.22,
+                  top: MediaQuery.of(context).padding.top + screenHeight * 0.22, // Adjusted
                   left: _isRectangleVisible ? screenWidth * 0.04 : -screenWidth * 0.92,
                   child: Container(
                     width: screenWidth * 0.92,
@@ -692,7 +718,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(height: screenHeight * 0.015),
-                              // Feedback ID
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -734,7 +759,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Submitted By
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -776,7 +800,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Email
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -818,7 +841,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Date & Time
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -860,7 +882,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Description
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -904,13 +925,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Divider
                               Divider(
                                 color: Colors.grey,
                                 thickness: 1,
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Admin Section
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Text(
@@ -924,7 +943,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.01),
-                              // Reply
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Row(
@@ -945,10 +963,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                     ),
                                     SizedBox(width: screenWidth * 0.01),
                                     GestureDetector(
-                                      // Consume taps to prevent root GestureDetector from handling
-                                      onTap: () {
-                                        // Do nothing, let TextField handle focus
-                                      },
+                                      onTap: () {},
                                       behavior: HitTestBehavior.opaque,
                                       child: Container(
                                         width: screenWidth * 0.5575,
@@ -983,7 +998,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              // Send Button
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                 child: Align(
@@ -1015,7 +1029,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               if (adminReply.isNotEmpty) ...[
                                 SizedBox(height: screenHeight * 0.015),
-                                // Admin Reply
                                 Padding(
                                   padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                                   child: Row(
@@ -1067,27 +1080,26 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
-                // Sidebar
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                   left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-                  top: 0,
+                  top: MediaQuery.of(context).padding.top,
                   child: Container(
                     width: screenWidth * 0.6,
                     height: screenHeight * 0.8,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: const BorderRadius.only(
+                      borderRadius: BorderRadius.only(
                         topRight: Radius.circular(30),
                         bottomRight: Radius.circular(30),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black26,
                           blurRadius: 8,
                           spreadRadius: 2,
-                          offset: const Offset(2, 0),
+                          offset: Offset(2, 0),
                         ),
                       ],
                     ),
@@ -1103,7 +1115,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               fit: BoxFit.cover,
                             ),
                             Positioned(
-                              left: screenWidth * 0.03,
+                              left: screenWidth * 0.0,
                               top: screenHeight * 0.03,
                               child: Container(
                                 width: screenWidth * 0.15,
@@ -1111,13 +1123,35 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.white,
-                                  border: Border.all(color: Colors.black, width: 1),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
                                 ),
-                                child: Icon(
-                                  Icons.person,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
-                                ),
+                                child: (_profilePicUrl != null &&
+                                        _profilePicUrl!.isNotEmpty)
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          _profilePicUrl!,
+                                          fit: BoxFit.cover,
+                                          width: screenWidth * 0.15,
+                                          height: screenWidth * 0.15,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const CircularProgressIndicator();
+                                          },
+                                          errorBuilder: (context, error, stackTrace) => Icon(
+                                            Icons.person,
+                                            color: Colors.black,
+                                            size: screenWidth * 0.08,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.black,
+                                        size: screenWidth * 0.08,
+                                      ),
                               ),
                             ),
                             Positioned(
@@ -1148,11 +1182,185 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                             ),
                           ],
                         ),
-                        _buildMenuItem(context, Icons.dashboard, 'Dashboard', '/AdminDashboardScreen'),
-                        _buildMenuItem(context, Icons.chat, 'Feedback & Reports', '/FeedbackListScreen'),
-                        _buildMenuItem(context, Icons.settings, 'Profile Settings', '/ProfileScreen'),
-                        _buildMenuItem(context, Icons.notifications, 'Push Notifications', '/SendNotificationsScreen'),
-                        _buildMenuItem(context, Icons.location_on, 'Locations', '/LocationManagementScreen'),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/AdminDashboardScreen',
+                              );
+                              setState(() {
+                                _isMenuVisible = false;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.dashboard,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Dashboard',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/FeedbackListScreen');
+                              setState(() {
+                                _isMenuVisible = false;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.chat,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Feedback & Reports',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                              );
+                              if (result != null && result is Map<String, dynamic>) {
+                                setState(() {
+                                  _profilePicUrl = result['imageUrl'] as String?;
+                                  _isMenuVisible = false;
+                                });
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.settings,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Profile Settings',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/SendNotificationsScreen');
+                              setState(() {
+                                _isMenuVisible = false;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.notifications,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Push Notifications',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.02,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/LocationManagementScreen');
+                              setState(() {
+                                _isMenuVisible = false;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Locations',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.02),
                         Padding(
                           padding: EdgeInsets.only(
                             left: screenWidth * 0.03,
@@ -1160,7 +1368,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                           ),
                           child: GestureDetector(
                             onTap: _logout,
-                            behavior: HitTestBehavior.opaque,
                             child: Row(
                               children: [
                                 Icon(
@@ -1186,10 +1393,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
-                // More menu container
                 if (_isMoreMenuVisible)
                   Positioned(
-                    top: screenHeight * 0.19,
+                    top: MediaQuery.of(context).padding.top + screenHeight * 0.19, // Adjusted
                     right: screenWidth * 0.04,
                     child: Container(
                       width: screenWidth * 0.2525,
