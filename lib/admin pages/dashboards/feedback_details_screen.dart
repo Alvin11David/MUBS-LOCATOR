@@ -19,14 +19,42 @@ class FeedbackDetailsScreen extends StatefulWidget {
 
 class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     with SingleTickerProviderStateMixin {
-  // State for dropdown, menu, and more menu visibility
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
-  bool _isRectangleVisible = true;
   bool _isMoreMenuVisible = false;
   String? _profilePicUrl;
   final TextEditingController _replyController = TextEditingController();
-  
+  final FocusNode _replyFocusNode = FocusNode();
+  // Make _feedbackFuture nullable and initialize as null
+  Future<DocumentSnapshot>? _feedbackFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize _feedbackFuture with the actual feedbackId
+    _feedbackFuture = FirebaseFirestore.instance
+        .collection('feedback')
+        .doc(widget.feedbackId)
+        .get();
+
+    // Fetch profile image from Firebase Authentication
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.photoURL != null) {
+      setState(() {
+        _profilePicUrl = user.photoURL;
+      });
+    }
+
+    // Ensure TextField is scrolled into view when focused
+    _replyFocusNode.addListener(() {
+      if (_replyFocusNode.hasFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Scrollable.ensureVisible(context, alignment: 0.5);
+        });
+      }
+    });
+  }
+
   void _navigateToEditProfile() async {
     final result = await Navigator.push(
       context,
@@ -40,7 +68,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     }
   }
 
-  // Determine greeting based on time of day
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -67,7 +94,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
 
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top, // Adjusted for status bar
+        top: MediaQuery.of(context).padding.top,
         left: 0,
         right: 0,
         child: SlideTransition(
@@ -123,7 +150,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     });
   }
 
-  // Logout
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
@@ -207,6 +233,14 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
       _showCustomSnackBar('Reply sent successfully', Colors.green,
           duration: const Duration(seconds: 3));
       _replyController.clear();
+      _replyFocusNode.unfocus();
+      // Refresh the Future to update the UI after sending reply
+      setState(() {
+        _feedbackFuture = FirebaseFirestore.instance
+            .collection('feedback')
+            .doc(widget.feedbackId)
+            .get();
+      });
     } catch (e) {
       _showCustomSnackBar('Error sending reply: $e', Colors.red,
           duration: const Duration(seconds: 2));
@@ -261,6 +295,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           duration: const Duration(seconds: 2));
       setState(() {
         _isMoreMenuVisible = false;
+        _feedbackFuture = FirebaseFirestore.instance
+            .collection('feedback')
+            .doc(widget.feedbackId)
+            .get();
       });
     } catch (e) {
       _showCustomSnackBar('Error marking as read: $e', Colors.red,
@@ -269,18 +307,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   }
 
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      setState(() {
-        _isRectangleVisible = true;
-      });
-    });
-  }
-
-  @override
   void dispose() {
     _replyController.dispose();
+    _replyFocusNode.dispose();
     super.dispose();
   }
 
@@ -299,12 +328,13 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
         children: [
           GestureDetector(
             onTap: () {
-              if (!FocusScope.of(context).hasFocus) {
+              if (!_replyFocusNode.hasFocus) {
                 setState(() {
                   _isDropdownVisible = false;
                   _isMenuVisible = false;
                   _isMoreMenuVisible = false;
                 });
+                _replyFocusNode.unfocus();
               }
             },
             behavior: HitTestBehavior.opaque,
@@ -312,7 +342,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
               children: [
                 // Glassy top bar
                 Positioned(
-                  top: MediaQuery.of(context).padding.top, // Start below status bar
+                  top: MediaQuery.of(context).padding.top,
                   left: 0,
                   right: 0,
                   child: Container(
@@ -451,7 +481,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 // Dropdown container
                 if (_isDropdownVisible)
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + screenHeight * 0.09, // Adjusted
+                    top: MediaQuery.of(context).padding.top + screenHeight * 0.09,
                     right: screenWidth * 0.04,
                     child: Container(
                       width: screenWidth * 0.25,
@@ -507,7 +537,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                   ),
                 // Feedback Details, Status, chevrons, and more button
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + screenHeight * 0.1, // Adjusted
+                  top: MediaQuery.of(context).padding.top + screenHeight * 0.1,
                   left: screenWidth * 0.04,
                   right: screenWidth * 0.04,
                   child: Column(
@@ -530,12 +560,23 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.01),
-                              StreamBuilder<DocumentSnapshot>(
-                                stream: FirebaseFirestore.instance
-                                    .collection('feedback')
-                                    .doc(widget.feedbackId)
-                                    .snapshots(),
+                              FutureBuilder<DocumentSnapshot>(
+                                future: _feedbackFuture,
                                 builder: (context, snapshot) {
+                                  // Handle null _feedbackFuture
+                                  if (_feedbackFuture == null) {
+                                    return Container(
+                                      width: screenWidth * 0.2125,
+                                      height: screenHeight * 0.03,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFCCD36),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  }
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return Container(
                                       width: screenWidth * 0.2125,
@@ -666,11 +707,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                   ),
                 ),
                 // White container
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
-                  top: MediaQuery.of(context).padding.top + screenHeight * 0.22, // Adjusted
-                  left: _isRectangleVisible ? screenWidth * 0.04 : -screenWidth * 0.92,
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + screenHeight * 0.22,
+                  left: screenWidth * 0.04,
                   child: Container(
                     width: screenWidth * 0.92,
                     height: screenHeight * 0.78,
@@ -687,12 +726,16 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                       ],
                     ),
                     child: SingleChildScrollView(
-                      child: StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('feedback')
-                            .doc(widget.feedbackId)
-                            .snapshots(),
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + screenHeight * 0.1,
+                      ),
+                      child: FutureBuilder<DocumentSnapshot>(
+                        future: _feedbackFuture,
                         builder: (context, snapshot) {
+                          // Handle null _feedbackFuture
+                          if (_feedbackFuture == null) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: CircularProgressIndicator());
                           }
@@ -943,59 +986,69 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.01),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: screenWidth * 0.25,
-                                      child: Text(
-                                        'Reply:',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: screenWidth * 0.035,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Poppins',
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: screenWidth * 0.01),
-                                    GestureDetector(
-                                      onTap: () {},
-                                      behavior: HitTestBehavior.opaque,
-                                      child: Container(
-                                        width: screenWidth * 0.5575,
-                                        height: screenHeight * 0.15875,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: const Color(0xFFD59A00), width: 1),
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        child: SingleChildScrollView(
-                                          padding: EdgeInsets.all(screenWidth * 0.02),
-                                          child: TextField(
-                                            controller: _replyController,
-                                            maxLines: null,
-                                            minLines: 5,
+                              StatefulBuilder(
+                                builder: (context, setTextFieldState) {
+                                  return Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(
+                                          width: screenWidth * 0.25,
+                                          child: Text(
+                                            'Reply:',
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontSize: screenWidth * 0.035,
+                                              fontWeight: FontWeight.bold,
                                               fontFamily: 'Poppins',
                                             ),
-                                            decoration: InputDecoration(
-                                              border: InputBorder.none,
-                                              hintText: adminReply.isEmpty ? 'Enter reply here...' : '',
-                                              hintStyle: const TextStyle(color: Colors.grey),
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            textAlign: TextAlign.start,
                                           ),
                                         ),
-                                      ),
+                                        SizedBox(width: screenWidth * 0.01),
+                                        GestureDetector(
+                                          onTap: () {
+                                            _replyFocusNode.requestFocus();
+                                          },
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Container(
+                                            width: screenWidth * 0.5575,
+                                            height: screenHeight * 0.15875,
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            child: SingleChildScrollView(
+                                              padding: EdgeInsets.all(screenWidth * 0.02),
+                                              child: TextField(
+                                                controller: _replyController,
+                                                focusNode: _replyFocusNode,
+                                                maxLines: null,
+                                                minLines: 5,
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: screenWidth * 0.035,
+                                                  fontFamily: 'Poppins',
+                                                ),
+                                                decoration: InputDecoration(
+                                                  border: InputBorder.none,
+                                                  hintText: adminReply.isEmpty ? 'Enter reply here...' : '',
+                                                  hintStyle: const TextStyle(color: Colors.grey),
+                                                  contentPadding: EdgeInsets.symmetric(
+                                                    horizontal: screenWidth * 0.02,
+                                                    vertical: screenHeight * 0.01,
+                                                  ),
+                                                ),
+                                                textAlign: TextAlign.start,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
@@ -1080,6 +1133,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
+                // Sidebar menu
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -1395,7 +1449,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 ),
                 if (_isMoreMenuVisible)
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + screenHeight * 0.19, // Adjusted
+                    top: MediaQuery.of(context).padding.top + screenHeight * 0.19,
                     right: screenWidth * 0.04,
                     child: Container(
                       width: screenWidth * 0.2525,
