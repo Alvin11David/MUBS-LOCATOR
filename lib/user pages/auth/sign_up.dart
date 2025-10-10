@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -32,7 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   );
   bool _isLoading = false;
 
-  // Password str ength state
+  // Password strength state
   double _passwordStrengthProgress = 0.0;
   Color _strengthColor = Colors.white;
   List<String> _passwordHints = [];
@@ -140,6 +141,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() => _emailHint = 'Error checking email');
       }
     });
+  }
+
+  // Save FCM token to Firestore
+  Future<void> _saveFcmToken(String uid, String email) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+              'fcmToken': token,
+              'email': email.toLowerCase(),
+            }, SetOptions(merge: true));
+        print('FCM token saved: $token');
+      }
+    } catch (e) {
+      print('Error saving FCM token: $e');
+    }
   }
 
   // Validation function
@@ -253,10 +273,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
         print('Display name updated to: ${_fullNameController.text.trim()}');
 
-        // Create Firestore document for the user with all fields
+        // Save user info and FCM token to Firestore
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'fullName': _fullNameController.text.trim(),
-          'email': _emailController.text.trim(),
+          'email': _emailController.text.trim().toLowerCase(),
+          'password': _passwordController.text.trim(), // Added password field
           'phone': '', // Initialize as empty, editable in EditProfileScreen
           'location': '', // Initialize as empty, editable in EditProfileScreen
           'profilePicUrl': null, // Initialize as null for default person icon
@@ -264,14 +285,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        });
-        print('User info saved to Firestore');
+          'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+        }, SetOptions(merge: true));
+
+        print('User info and FCM token saved to Firestore');
       }
 
       if (mounted) {
         print('Navigating based on email');
         _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
         if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
@@ -354,6 +377,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'isAdmin': userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com',
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
+            'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
           }, SetOptions(merge: true));
       
       print('User info saved to Firestore');

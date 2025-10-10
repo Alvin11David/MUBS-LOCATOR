@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Function to send OTP email
+// Function to send OTP email and update Firestore
 exports.sendOTPEmail = functions
   .region('us-central1')
   .https.onCall(async (data, context) => {
@@ -45,10 +45,36 @@ The MUBS Locator Team`,
     };
 
     try {
+      // Send the OTP email
       await transporter.sendMail(mailOptions);
-      return { success: true };
+      console.log(`OTP email sent to: ${email}, OTP: ${otp}`);
+
+      // Update Firestore with the OTP
+      const docRef = admin.firestore()
+        .collection('password_reset_otp')
+        .doc(email.toLowerCase().trim());
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes from now
+
+      await admin.firestore().runTransaction(async (transaction) => {
+        transaction.set(
+          docRef,
+          {
+            email: email.toLowerCase().trim(),
+            otp: otp,
+            createdAt: now.getTime(), // Milliseconds since epoch
+            expiresAt: expiresAt.getTime(), // Milliseconds since epoch
+          },
+          { merge: true }
+        );
+      });
+
+      console.log(`Firestore updated for email: ${email}, OTP: ${otp}`);
+      return { success: true, message: 'OTP sent and stored successfully.' };
     } catch (error) {
-      throw new functions.https.HttpsError('internal', error.message);
+      console.error('Error in sendOTPEmail:', error);
+      throw new functions.https.HttpsError('internal', `Error processing OTP: ${error.message}`);
     }
   });
 
@@ -124,7 +150,7 @@ exports.sendFeedbackNotification = functions
 
 // Function to send global notification to all_users topic
 exports.sendGlobalNotification = functions
-  .region('us-central1') // Match region with other functions
+  .region('us-central1')
   .https.onCall(async (data, context) => {
     // Verify the user is authenticated
     if (!context.auth) {
@@ -172,6 +198,87 @@ exports.sendGlobalNotification = functions
       await admin.messaging().send(message);
       return { success: true, message: 'Notification sent to all users.' };
     } catch (error) {
+      throw new functions.https.HttpsError('internal', `Error sending notification: ${error.message}`);
+    }
+  });
+
+// Function to send feedback reply notification to a specific user
+exports.sendFeedbackReplyNotification = functions
+  .region('us-central1')
+  .https.onCall(async (data, context) => {
+    // Verify the user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be logged in.');
+    }
+
+    // Verify admin role (assumes custom claim 'admin' is set)
+    if (!context.auth.token.admin) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required.');
+    }
+
+    const { userEmail, title, body, feedbackId } = data;
+
+    if (!userEmail || !title || !body) {
+      throw new functions.https.HttpsError('invalid-argument', 'User email, title, and body are required.');
+    }
+
+    try {
+      // Fetch the user’s FCM token from the users collection
+      const userQuery = await admin.firestore()
+        .collection('users')
+        .where('email', '==', userEmail)
+        .limit(1)
+        .get();
+
+      if (userQuery.empty) {
+        throw new functions.https.HttpsError('not-found', `No user found with email: ${userEmail}`);
+      }
+
+      const userDoc = userQuery.docs[0];
+      const fcmToken = userDoc.data().fcmToken;
+
+      if (!fcmToken) {
+        throw new functions.https.HttpsError('failed-precondition', `No FCM token found for user: ${userEmail}`);
+      }
+
+      // Define the notification payload
+      const message = {
+        notification: {
+          title: title,
+          body: body,
+        },
+        android: {
+          notification: {
+            channelId: 'mubs_locator_notifications', // Match Android channel
+            priority: 'high',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                title: title,
+                body: body,
+              },
+              sound: 'default',
+              contentAvailable: true,
+            },
+          },
+        },
+        data: {
+          feedbackId: feedbackId || '',
+          type: 'feedback_reply',
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+        token: fcmToken,
+      };
+
+      // Send the notification
+      await admin.messaging().send(message);
+      console.log('Feedback reply notification sent to:', userEmail);
+      return { success: true, message: 'Notification sent successfully.' };
+    } catch (error) {
+      console.error('Error sending feedback reply notification:', error);
       throw new functions.https.HttpsError('internal', `Error sending notification: ${error.message}`);
     }
   });

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/feedback_details_screen.dart';
+import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class FeedbackListScreen extends StatefulWidget {
   const FeedbackListScreen({super.key});
@@ -20,11 +21,13 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
   String? _selectedFilter;
   DateTime? _startDate;
   DateTime? _endDate;
+  Future<QuerySnapshot>? _feedbackFuture;
 
   @override
   void initState() {
     super.initState();
     _loadProfileImage();
+    _feedbackFuture = _applyFilter(FirebaseFirestore.instance.collection('feedback')).get();
   }
 
   Future<void> _loadProfileImage() async {
@@ -43,6 +46,11 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
       }
     } catch (e) {
       print('Error loading profile image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
+      }
     }
   }
 
@@ -54,32 +62,22 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
   }
 
   void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/SignInScreen');
-    }
-  }
-
-  void _navigateToScreen(String routeName) {
-    print('Current route: ${ModalRoute.of(context)?.settings.name}, Target route: $routeName');
-    setState(() {
-      _isMenuVisible = false;
-      _isDropdownVisible = false;
-      _isFilterDropdownVisible = false;
-    });
-
     try {
-      if (routeName == '/AdminDashboardScreen') {
-        Navigator.pushReplacementNamed(context, routeName);
-      } else {
-        Navigator.pushNamed(context, routeName);
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+        print('Logged out and navigated to SignInScreen');
       }
-      print('Navigated to $routeName');
     } catch (e) {
-      print('Navigation error to $routeName: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Navigation error: $e')),
-      );
+      print('Logout error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout error: $e')),
+        );
+      }
     }
   }
 
@@ -128,6 +126,26 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
         _endDate = picked.end;
         _selectedFilter = 'Custom Range';
         _isFilterDropdownVisible = false;
+        _feedbackFuture = _applyFilter(FirebaseFirestore.instance.collection('feedback')).get();
+      });
+    }
+  }
+
+  void _refreshData() {
+    setState(() {
+      _feedbackFuture = _applyFilter(FirebaseFirestore.instance.collection('feedback')).get();
+    });
+  }
+
+  void _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+    );
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _profilePicUrl = result['imageUrl'] as String?;
+        _isDropdownVisible = false;
       });
     }
   }
@@ -140,13 +158,22 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
     final fullName = user?.displayName ?? 'User';
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF93C5FD),
-      body: SafeArea(
+      body: GestureDetector(
+        onTap: () {
+          setState(() {
+            _isMenuVisible = false;
+            _isDropdownVisible = false;
+            _isFilterDropdownVisible = false;
+          });
+        },
+        behavior: HitTestBehavior.opaque,
         child: Stack(
           children: [
-            // Header
+            // Glassy top bar
             Positioned(
-              top: 0,
+              top: MediaQuery.of(context).padding.top,
               left: 0,
               right: 0,
               child: Container(
@@ -169,118 +196,172 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.04,
-                        vertical: screenHeight * 0.02,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isMenuVisible = !_isMenuVisible;
-                                _isDropdownVisible = false;
-                                _isFilterDropdownVisible = false;
-                              });
-                            },
-                            behavior: HitTestBehavior.opaque,
-                            child: Icon(
-                              Icons.menu,
-                              color: Colors.black,
-                              size: screenWidth * 0.08,
+                    child: Container(
+                      color: Colors.transparent,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.04,
+                          vertical: screenHeight * 0.02,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isMenuVisible = !_isMenuVisible;
+                                  _isDropdownVisible = false;
+                                  _isFilterDropdownVisible = false;
+                                });
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Icon(
+                                Icons.menu,
+                                color: Colors.black,
+                                size: screenWidth * 0.08,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: screenWidth * 0.04),
-                          Text(
-                            '${_getGreeting()}, $fullName',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: screenWidth * 0.045,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
+                            SizedBox(width: screenWidth * 0.04),
+                            Text(
+                              '${_getGreeting()}, $fullName',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.045,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            width: screenWidth * 0.17,
-                            height: screenHeight * 0.05,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: Colors.black, width: 1),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: screenWidth * 0.0),
-                                  child: Container(
-                                    width: screenWidth * 0.1,
-                                    height: screenWidth * 0.1,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.black, width: 1),
-                                    ),
-                                    child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
-                                        ? ClipOval(
-                                            child: Image.network(
-                                              _profilePicUrl!,
-                                              fit: BoxFit.cover,
-                                              width: screenWidth * 0.09,
-                                              height: screenWidth * 0.09,
-                                              loadingBuilder: (context, child, loadingProgress) {
-                                                if (loadingProgress == null) return child;
-                                                return const CircularProgressIndicator();
-                                              },
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Icon(
-                                                  Icons.person,
-                                                  color: Colors.black,
-                                                  size: screenWidth * 0.04,
-                                                );
-                                              },
+                            const Spacer(),
+                            Container(
+                              width: screenWidth * 0.17,
+                              height: screenHeight * 0.05,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(color: Colors.black, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.only(left: screenWidth * 0.0),
+                                    child: Container(
+                                      width: screenWidth * 0.1,
+                                      height: screenWidth * 0.1,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.black, width: 1),
+                                      ),
+                                      child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                _profilePicUrl!,
+                                                fit: BoxFit.cover,
+                                                width: screenWidth * 0.09,
+                                                height: screenWidth * 0.09,
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return const CircularProgressIndicator();
+                                                },
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Icon(
+                                                    Icons.person,
+                                                    color: Colors.black,
+                                                    size: screenWidth * 0.04,
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              color: Colors.black,
+                                              size: screenWidth * 0.04,
                                             ),
-                                          )
-                                        : Icon(
-                                            Icons.person,
-                                            color: Colors.black,
-                                            size: screenWidth * 0.04,
-                                          ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.only(right: screenWidth * 0.01),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _isDropdownVisible = !_isDropdownVisible;
-                                        _isMenuVisible = false;
-                                        _isFilterDropdownVisible = false;
-                                      });
-                                    },
-                                    behavior: HitTestBehavior.opaque,
-                                    child: Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.04,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  Padding(
+                                    padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                    child: GestureDetector(
+                                      onTap: _navigateToEditProfile,
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Icon(
+                                        Icons.arrow_drop_down,
+                                        color: Colors.black,
+                                        size: screenWidth * 0.04,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            // Title and Navigation Arrows
+            // Dropdown container
+            if (_isDropdownVisible)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + screenHeight * 0.09,
+                right: screenWidth * 0.04,
+                child: Container(
+                  width: screenWidth * 0.25,
+                  height: screenHeight * 0.06,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.01,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Edit Profile',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              Image.asset(
+                                'assets/images/edit.png',
+                                color: Colors.black,
+                                width: screenWidth * 0.04,
+                                height: screenWidth * 0.04,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Feedback & Reports, chevrons
             Positioned(
-              top: screenHeight * 0.1,
+              top: MediaQuery.of(context).padding.top + screenHeight * 0.1,
               left: screenWidth * 0.04,
               right: screenWidth * 0.04,
               child: Row(
@@ -334,13 +415,13 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ],
               ),
             ),
-            // Feedback Table
+            // White container with feedback table
             Positioned(
-              top: screenHeight * 0.22,
+              top: MediaQuery.of(context).padding.top + screenHeight * 0.22,
               left: screenWidth * 0.04,
               right: screenWidth * 0.04,
               child: Container(
-                width: double.infinity,
+                width: screenWidth * 0.92,
                 height: screenHeight * 0.78,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.7),
@@ -395,6 +476,25 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                             ),
                           ),
                           const Spacer(),
+                          Padding(
+                            padding: EdgeInsets.only(right: screenWidth * 0.04),
+                            child: GestureDetector(
+                              onTap: _refreshData,
+                              child: Container(
+                                width: screenWidth * 0.1,
+                                height: screenWidth * 0.1,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: Colors.black, width: 1),
+                                ),
+                                child: Icon(
+                                  Icons.refresh,
+                                  color: Colors.black,
+                                  size: screenWidth * 0.06,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: screenHeight * 0.02),
@@ -413,8 +513,8 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.black, width: 1),
                           ),
-                          child: StreamBuilder<QuerySnapshot>(
-                            stream: _applyFilter(FirebaseFirestore.instance.collection('feedback')).snapshots(),
+                          child: FutureBuilder<QuerySnapshot>(
+                            future: _feedbackFuture,
                             builder: (context, snapshot) {
                               if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(child: CircularProgressIndicator());
@@ -620,9 +720,12 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                                                         .collection('feedback')
                                                         .doc(doc.id)
                                                         .delete();
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('Feedback deleted')),
-                                                    );
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Feedback deleted')),
+                                                      );
+                                                      _refreshData();
+                                                    }
                                                   }
                                                 },
                                                 child: Container(
@@ -671,67 +774,10 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ),
               ),
             ),
-            // Profile Dropdown
-            if (_isDropdownVisible)
-              Positioned(
-                top: screenHeight * 0.09,
-                right: screenWidth * 0.04,
-                child: Container(
-                  width: screenWidth * 0.25,
-                  height: screenHeight * 0.06,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.03,
-                          vertical: screenHeight * 0.01,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => _navigateToScreen('/ProfileScreen'),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Profile',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              Image.asset(
-                                'assets/images/edit.png',
-                                color: Colors.black,
-                                width: screenWidth * 0.04,
-                                height: screenWidth * 0.04,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // Filter Dropdown
+            // Filter dropdown
             if (_isFilterDropdownVisible)
               Positioned(
-                top: screenHeight * 0.24,
+                top: MediaQuery.of(context).padding.top + screenHeight * 0.24,
                 left: screenWidth * 0.04,
                 child: Container(
                   width: screenWidth * 0.4,
@@ -759,12 +805,12 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                   ),
                 ),
               ),
-            // Sidebar (Placed last to ensure it appears on top)
+            // Sidebar menu
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-              top: 0,
+              top: MediaQuery.of(context).padding.top,
               child: Container(
                 width: screenWidth * 0.6,
                 height: screenHeight * 0.8,
@@ -795,7 +841,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                           fit: BoxFit.cover,
                         ),
                         Positioned(
-                          left: screenWidth * 0.03,
+                          left: screenWidth * 0.0,
                           top: screenHeight * 0.03,
                           child: Container(
                             width: screenWidth * 0.15,
@@ -803,9 +849,13 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1),
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 1,
+                              ),
                             ),
-                            child: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
+                            child: (_profilePicUrl != null &&
+                                    _profilePicUrl!.isNotEmpty)
                                 ? ClipOval(
                                     child: Image.network(
                                       _profilePicUrl!,
@@ -816,13 +866,11 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                                         if (loadingProgress == null) return child;
                                         return const CircularProgressIndicator();
                                       },
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.08,
-                                        );
-                                      },
+                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                        Icons.person,
+                                        color: Colors.black,
+                                        size: screenWidth * 0.08,
+                                      ),
                                     ),
                                   )
                                 : Icon(
@@ -860,19 +908,200 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                         ),
                       ],
                     ),
-                    SizedBox(height: screenHeight * 0.02),
-                    _buildMenuItem(context, Icons.dashboard, 'Dashboard', '/AdminDashboardScreen'),
-                    _buildMenuItem(context, Icons.chat, 'Feedback & Reports', '/FeedbackListScreen'),
-                    _buildMenuItem(context, Icons.settings, 'Profile Settings', '/ProfileScreen'),
-                    _buildMenuItem(context, Icons.notifications, 'Push Notifications', '/SendNotificationsScreen'),
-                    _buildMenuItem(context, Icons.location_on, 'Locations', '/LocationManagementScreen'),
-                    GestureDetector(
-                      onTap: _logout,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/AdminDashboardScreen',
+                          );
+                          setState(() {
+                            _isMenuVisible = false;
+                          });
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.dashboard,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          if (ModalRoute.of(context)?.settings.name != '/FeedbackListScreen') {
+                            Navigator.pushNamed(context, '/FeedbackListScreen');
+                          }
+                          setState(() {
+                            _isMenuVisible = false;
+                          });
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.chat,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Feedback & Reports',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                          );
+                          if (result != null && result is Map<String, dynamic>) {
+                            setState(() {
+                              _profilePicUrl = result['imageUrl'] as String?;
+                              _isMenuVisible = false;
+                            });
+                          }
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.settings,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Profile Settings',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/SendNotificationsScreen');
+                          setState(() {
+                            _isMenuVisible = false;
+                          });
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Push Notifications',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/LocationManagementScreen');
+                          setState(() {
+                            _isMenuVisible = false;
+                          });
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: Colors.black,
+                              size: screenWidth * 0.06,
+                            ),
+                            SizedBox(width: screenWidth * 0.02),
+                            Text(
+                              'Locations',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: screenWidth * 0.03,
+                        top: screenHeight * 0.02,
+                      ),
+                      child: GestureDetector(
+                        onTap: _logout,
+                        behavior: HitTestBehavior.opaque,
                         child: Row(
                           children: [
                             Icon(
@@ -898,49 +1127,6 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                 ),
               ),
             ),
-            // Overlay for dismissing menus
-            if (_isMenuVisible || _isDropdownVisible || _isFilterDropdownVisible)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isMenuVisible = false;
-                      _isDropdownVisible = false;
-                      _isFilterDropdownVisible = false;
-                    });
-                  },
-                  behavior: HitTestBehavior.opaque,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(BuildContext context, IconData icon, String text, String? route) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    return Padding(
-      padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
-      child: GestureDetector(
-        onTap: route != null
-            ? () => _navigateToScreen(route)
-            : null,
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.black, size: screenWidth * 0.06),
-            SizedBox(width: screenWidth * 0.02),
-            Text(
-              text,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: screenWidth * 0.04,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Urbanist',
-              ),
-            ),
           ],
         ),
       ),
@@ -958,9 +1144,11 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
           setState(() {
             _selectedFilter = filter;
             _isFilterDropdownVisible = false;
+            _feedbackFuture = _applyFilter(FirebaseFirestore.instance.collection('feedback')).get();
           });
         }
       },
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: screenWidth * 0.03,
