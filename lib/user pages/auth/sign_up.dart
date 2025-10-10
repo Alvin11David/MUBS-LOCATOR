@@ -32,7 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   );
   bool _isLoading = false;
 
-  // Password strength state
+  // Password str ength state
   double _passwordStrengthProgress = 0.0;
   Color _strengthColor = Colors.white;
   List<String> _passwordHints = [];
