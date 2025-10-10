@@ -29,6 +29,7 @@ dependencies:
   flutter_typeahead: ^5.2.0
   share_plus: 
   http: 
+  permission_handler:
 
   #this is for the google sign in staff #fidel in it
   google_sign_in: ^6.2.1
@@ -47,6 +48,9 @@ dependencies:
   cloud_functions:
   # Firebase storage
   firebase_storage:
+  flutter_local_notifications:
+  # Firebase Message
+  firebase_messaging: 
 
 dev_dependencies:
   flutter_test:

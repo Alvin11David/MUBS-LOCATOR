@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -21,7 +20,7 @@ class _SignInScreenState extends State<SignInScreen> {
   
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206',
     scopes: ['email'],
   );
   
@@ -65,12 +64,10 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-      
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
 
@@ -90,38 +87,28 @@ class _SignInScreenState extends State<SignInScreen> {
       } else if (e.code == 'wrong-password') {
         message = 'Wrong password provided.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      _showCustomSnackBar(context, message);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      _showCustomSnackBar(context, 'Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Google Sign-In function
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
-    print('Attempting Google Sign-In...');
-
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       if (googleUser == null) {
-        print('Google Sign-In cancelled by user');
+        // User canceled the sign-in
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
-      print('Google user: ${googleUser.email}');
-
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = 
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -130,40 +117,16 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       // Sign in to Firebase with the Google credential
-      UserCredential userCredential = 
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       
-      print('Firebase sign-in successful: ${userCredential.user?.uid}');
-
-      // Save/update user info to Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-            'fullName': userCredential.user!.displayName ?? 'Google User',
-            'email': userCredential.user!.email ?? '',
-            'photoUrl': userCredential.user!.photoURL,
-            'authProvider': 'google',
-            'lastSignIn': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-      
-      print('User info saved to Firestore');
-
-      // Store login state
+      // Save login state
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Signed in with Google successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Check if admin
-        if (userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com') {
-          print('Admin email detected, navigating to AdminDashboardScreen');
+        final email = userCredential.user?.email?.toLowerCase();
+        if (email == 'adminuser@gmail.com') {
+          print('Admin user detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
           print('Regular user, navigating to HomeScreen');
@@ -171,43 +134,66 @@ class _SignInScreenState extends State<SignInScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException: ${e.code} - ${e.message}');
-      String message;
-      switch (e.code) {
-        case 'account-exists-with-different-credential':
-          message = 'An account already exists with a different sign-in method.';
-          break;
-        case 'invalid-credential':
-          message = 'The credential is malformed or has expired.';
-          break;
-        case 'operation-not-allowed':
-          message = 'Google sign-in is not enabled.';
-          break;
-        case 'user-disabled':
-          message = 'This account has been disabled.';
-          break;
-        default:
-          message = 'Google sign-in failed: ${e.message ?? "Unknown error"}';
+      String message = 'Google sign in failed';
+      if (e.code == 'account-exists-with-different-credential') {
+        message = 'An account already exists with the same email.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credential. Please try again.';
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('Google Sign-In error: $e\nStack trace: $stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Google sign-in failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showCustomSnackBar(context, message);
+    } catch (e) {
+      _showCustomSnackBar(context, 'Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-      print('Google Sign-In process finished');
     }
+  }
+
+  void _showCustomSnackBar(BuildContext context, String message) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
@@ -231,13 +217,11 @@ class _SignInScreenState extends State<SignInScreen> {
 
             return Stack(
               children: [
-                // Background
                 Container(
                   width: screenWidth,
                   height: screenHeight,
                   color: const Color(0xFF93C5FD),
                 ),
-                // Logo at center top
                 Positioned(
                   top: screenHeight * 0.05,
                   left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -249,7 +233,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     errorBuilder: (context, error, stackTrace) => const SizedBox(),
                   ),
                 ),
-                // Ambasize top left
                 Positioned(
                   top: screenHeight * 0.04,
                   left: screenWidth * 0.02,
@@ -263,7 +246,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // Jackline top right
                 Positioned(
                   top: screenHeight * 0.09,
                   right: screenWidth * 0.02,
@@ -277,7 +259,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // "Let's get you signed in"
                 Positioned(
                   top: screenHeight * 0.17,
                   left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -292,7 +273,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // White container with inputs
                 Positioned(
                   top: screenHeight * 0.31,
                   left: screenWidth * 0.02,
@@ -316,7 +296,6 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Subtitle
                               SizedBox(
                                 width: screenWidth * 0.8,
                                 child: Text(
@@ -556,7 +535,6 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
-// EMAIL FIELD
 class EmailField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
@@ -639,7 +617,6 @@ class EmailField extends StatelessWidget {
   }
 }
 
-// PASSWORD FIELD
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
@@ -729,7 +706,6 @@ class _PasswordFieldState extends State<PasswordField> {
   }
 }
 
-// OR DIVIDER
 class OrDivider extends StatelessWidget {
   const OrDivider({super.key});
 

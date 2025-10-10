@@ -13,6 +13,7 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final textScaler = MediaQuery.textScalerOf(context);
     final double mubsVerticalOffset = screenHeight * 0.05;
     final double locatorVerticalOffset = screenHeight * 0.08;
 
@@ -28,26 +29,29 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
             child: Container(
               height: screenHeight * 0.15,
               width: screenWidth,
-              padding: const EdgeInsets.all(1),
+              padding: EdgeInsets.all(screenWidth * 0.01),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(screenWidth * 0.1),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.5),
-                  width: 1,
+                  width: screenWidth * 0.002,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
+                    blurRadius: screenWidth * 0.025,
+                    spreadRadius: screenWidth * 0.005,
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(screenWidth * 0.075),
+                  bottomRight: Radius.circular(screenWidth * 0.075),
+                ),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  filter: ImageFilter.blur(sigmaX: screenWidth * 0.0125, sigmaY: screenWidth * 0.0125),
                   child: Stack(
                     children: [
                       Center(
@@ -60,13 +64,13 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                       ),
                       Positioned(
                         top: mubsVerticalOffset,
-                        left: screenWidth * -0.15,
+                        left: -screenWidth * 0.15,
                         right: screenWidth * 0.2,
-                        child: const Text(
+                        child: Text(
                           'MUBS',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 25,
+                            fontSize: textScaler.scale(screenWidth * 0.055),
                             color: Colors.black,
                           ),
                           textAlign: TextAlign.center,
@@ -81,19 +85,19 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                               'Locator',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 25,
+                                fontSize: textScaler.scale(screenWidth * 0.055),
                                 foreground: Paint()
                                   ..style = PaintingStyle.stroke
-                                  ..strokeWidth = 2
+                                  ..strokeWidth = screenWidth * 0.002
                                   ..color = Colors.black,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const Text(
+                            Text(
                               'Locator',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 25,
+                                fontSize: textScaler.scale(screenWidth * 0.045),
                                 color: Colors.transparent,
                               ),
                               textAlign: TextAlign.center,
@@ -142,12 +146,12 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
             top: screenHeight * 0.18,
             left: 0,
             right: 0,
-            child: const Text(
+            child: Text(
               'Terms & Conditions',
               style: TextStyle(
                 fontFamily: 'Montserrat',
                 fontWeight: FontWeight.bold,
-                fontSize: 25,
+                fontSize: textScaler.scale(screenWidth * 0.05),
                 color: Colors.black,
               ),
               textAlign: TextAlign.center,
@@ -156,144 +160,150 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
           // Bottom glass container with terms sections
           Positioned(
             top: screenHeight * 0.25,
-            left: 4,
-            right: 4,
+            left: screenWidth * 0.01,
+            right: screenWidth * 0.01,
             bottom: 0,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(screenWidth * 0.1),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.5),
-                  width: 1,
+                  width: screenWidth * 0.002,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
+                    blurRadius: screenWidth * 0.025,
+                    spreadRadius: screenWidth * 0.005,
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(screenWidth * 0.1),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  filter: ImageFilter.blur(sigmaX: screenWidth * 0.0125, sigmaY: screenWidth * 0.0125),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Introduction',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 24,
-                            color: Colors.black,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.04,
+                      vertical: screenHeight * 0.02,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Introduction',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
+                              fontSize: textScaler.scale(screenWidth * 0.045),
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'By using MUBS Locator, you agree to the following terms and conditions governing your use of the application and its services.',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 1,
-                          width: screenWidth - 32,
-                          color: const Color(0xFF000000),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Account & Data',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 24,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Responsibility for account security.\nHandling of user data.\nHow the app uses location and content.',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 1,
-                          width: screenWidth - 32,
-                          color: const Color(0xFF000000),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Third-Party Services',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 24,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Use of Google Maps, Firebase, or other tools\nLinks to their own terms (optional)',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 1,
-                          width: screenWidth - 32,
-                          color: const Color(0xFF000000),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Contact Us',
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 24,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        RichText(
-                          text: const TextSpan(
+                          SizedBox(height: screenHeight * 0.01),
+                          Text(
+                            'By using MUBS Locator, you agree to the following terms and conditions governing your use of the application and its services.',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,
-                              fontSize: 16,
+                              fontSize: textScaler.scale(screenWidth * 0.035),
                               color: Colors.black,
                             ),
-                            children: [
-                              TextSpan(
-                                text: 'If you have any questions about these terms, contact us at: ',
-                              ),
-                              TextSpan(
-                                text: 'alvin69david@gmail.com',
-                                style: TextStyle(
-                                  color: Color(0xFF077501),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                      ],
+                          SizedBox(height: screenHeight * 0.01),
+                          Container(
+                            height: screenHeight * 0.001,
+                            width: screenWidth * 0.9,
+                            color: const Color(0xFF000000),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Text(
+                            'Account & Data',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
+                              fontSize: textScaler.scale(screenWidth * 0.045),
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Text(
+                            'Responsibility for account security.\nHandling of user data.\nHow the app uses location and content.',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w400,
+                              fontSize: textScaler.scale(screenWidth * 0.035),
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Container(
+                            height: screenHeight * 0.001,
+                            width: screenWidth * 0.9,
+                            color: const Color(0xFF000000),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Text(
+                            'Third-Party Services',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
+                              fontSize: textScaler.scale(screenWidth * 0.045),
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Text(
+                            'Use of Google Maps, Firebase, or other tools\nLinks to their own terms (optional)',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w400,
+                              fontSize: textScaler.scale(screenWidth * 0.035),
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Container(
+                            height: screenHeight * 0.001,
+                            width: screenWidth * 0.9,
+                            color: const Color(0xFF000000),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Text(
+                            'Contact Us',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
+                              fontSize: textScaler.scale(screenWidth * 0.045),
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w400,
+                                fontSize: textScaler.scale(screenWidth * 0.035),
+                                color: Colors.black,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'If you have any questions about these terms, contact us at: ',
+                                ),
+                                TextSpan(
+                                  text: 'alvin69david@gmail.com',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 20, 111, 36),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                        ],
+                      ),
                     ),
                   ),
                 ),
