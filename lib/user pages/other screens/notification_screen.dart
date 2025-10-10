@@ -16,16 +16,18 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
   String _userFullName = 'User';
+  String? _profilePicUrl;
   bool _isMenuVisible = false;
   File? _profileImage;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserFullName();
+    _fetchUserData();
     _markNotificationsAsRead();
     _requestNotificationPermissions();
     _saveFcmToken();
+    _listenForTokenRefresh();
   }
 
   String _getGreeting() {
@@ -39,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
     }
   }
 
-  Future<void> _fetchUserFullName() async {
+  Future<void> _fetchUserData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.email != null) {
@@ -51,24 +53,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
 
         if (querySnapshot.docs.isNotEmpty) {
           final userData = querySnapshot.docs.first.data();
-          final fullName = userData['fullName'] as String?;
-          if (fullName != null && fullName.isNotEmpty) {
-            if (mounted) {
-              setState(() {
-                _userFullName = fullName;
-              });
-            }
-          } else {
-            if (mounted) {
-              setState(() {
-                _userFullName = 'User';
-              });
-            }
+          final fullName = userData['fullName'] as String? ?? 'User';
+          final profilePicUrl = userData['profilePicUrl'] as String?;
+          if (mounted) {
+            setState(() {
+              _userFullName = fullName;
+              _profilePicUrl = profilePicUrl;
+            });
           }
         } else {
           if (mounted) {
             setState(() {
               _userFullName = 'User';
+              _profilePicUrl = null;
             });
           }
         }
@@ -76,14 +73,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         if (mounted) {
           setState(() {
             _userFullName = 'User';
+            _profilePicUrl = null;
           });
         }
       }
     } catch (e) {
-      print('Error fetching user full name: $e');
+      print('Error fetching user data: $e');
       if (mounted) {
         setState(() {
           _userFullName = 'User';
+          _profilePicUrl = null;
         });
         _showCustomSnackBar('Error fetching user data: $e', Colors.red);
       }
@@ -93,11 +92,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
   Future<void> _requestNotificationPermissions() async {
     try {
       final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission(
+      final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
+      if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+        print('Notification permissions not granted');
+        if (mounted) {
+          _showCustomSnackBar('Please enable notifications for updates', Colors.orange);
+        }
+      }
     } catch (e) {
       print('Error requesting notification permissions: $e');
       if (mounted) {
@@ -116,6 +121,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
               .collection('users')
               .doc(user.uid)
               .set({'fcmToken': token}, SetOptions(merge: true));
+          print('FCM Token saved: $token');
+        } else {
+          print('FCM Token is null');
+          if (mounted) {
+            _showCustomSnackBar('Failed to retrieve FCM token', Colors.red);
+          }
+        }
+      } else {
+        print('No user signed in');
+        if (mounted) {
+          _showCustomSnackBar('No user signed in', Colors.red);
         }
       }
     } catch (e) {
@@ -124,6 +140,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         _showCustomSnackBar('Error saving FCM token: $e', Colors.red);
       }
     }
+  }
+
+  void _listenForTokenRefresh() {
+    FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({'fcmToken': token}, SetOptions(merge: true));
+          print('FCM Token refreshed: $token');
+        }
+      } catch (e) {
+        print('Error refreshing FCM token: $e');
+        if (mounted) {
+          _showCustomSnackBar('Error refreshing FCM token: $e', Colors.red);
+        }
+      }
+    });
   }
 
   Future<void> _markNotificationsAsRead() async {
@@ -142,11 +178,34 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
           batch.update(doc.reference, {'userRead': true});
         }
         await batch.commit();
+        print('Notifications marked as read');
       }
     } catch (e) {
       print('Error marking notifications as read: $e');
       if (mounted) {
         _showCustomSnackBar('Error loading notifications: $e', Colors.red);
+      }
+    }
+  }
+
+  Future<void> _deleteNotification(String notificationId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('user_notifications')
+            .doc(notificationId)
+            .delete();
+        if (mounted) {
+          _showCustomSnackBar('Notification deleted', Colors.green);
+        }
+      }
+    } catch (e) {
+      print('Error deleting notification: $e');
+      if (mounted) {
+        _showCustomSnackBar('Error deleting notification: $e', Colors.red);
       }
     }
   }
@@ -434,9 +493,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
+                      String errorMessage = 'Error loading notifications';
+                      if (snapshot.error.toString().contains('permission-denied')) {
+                        errorMessage = 'Permission denied. Please sign in again.';
+                      } else if (snapshot.error.toString().contains('network')) {
+                        errorMessage = 'Network error. Please check your connection.';
+                      }
                       return Center(
                         child: Text(
-                          'Error loading notifications: ${snapshot.error}',
+                          errorMessage,
                           style: TextStyle(
                             fontSize: textScaler.scale(16),
                             fontFamily: 'Poppins',
@@ -484,36 +549,56 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
 
                     return ListView.builder(
                       padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.04,
-                          vertical: screenHeight * 0.02),
+                          vertical: screenHeight * 0.02,
+                          horizontal: screenWidth * 0.02
+                          ), // Removed horizontal padding
                       itemCount: notifications.length,
                       itemBuilder: (context, index) {
                         final doc = notifications[index];
                         final data = doc.data() as Map<String, dynamic>;
                         final adminReply = data['adminReply'] as String? ?? 'No reply';
                         final issueTitle = data['issueTitle'] as String? ?? 'No title';
-                        final buildingName = data['buildingName'] as String? ?? 'Unknown';
                         final timestamp = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
                         final formattedTime = DateFormat('MMM d, yyyy h:mm a').format(timestamp);
-                        final feedbackId = data['feedbackId'] as String? ?? '';
+                        final notificationId = doc.id;
 
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/FeedbackDetailsScreen',
-                              arguments: {
-                                'feedbackId': feedbackId,
-                                'issueTitle': issueTitle,
-                                'buildingName': buildingName,
-                                'adminReply': adminReply,
-                                'timestamp': timestamp,
-                              },
+                        return Dismissible(
+                          key: Key(notificationId),
+                          direction: DismissDirection.startToEnd, // Swipe left to delete
+                          background: Container(
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.only(left: 4), // Match notification padding
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            return await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Notification'),
+                                content: const Text('Are you sure you want to delete this notification?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
                             );
+                          },
+                          onDismissed: (direction) {
+                            _deleteNotification(notificationId);
                           },
                           child: Container(
                             margin: EdgeInsets.only(bottom: screenHeight * 0.02),
-                            padding: EdgeInsets.all(screenWidth * 0.04),
+                            padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16), // 4px horizontal padding
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(16),
@@ -535,19 +620,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               child: BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    Text(
-                                      'Issue: $issueTitle',
-                                      style: TextStyle(
-                                        fontSize: textScaler.scale(14),
-                                        fontFamily: 'Poppins',
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
                                     SizedBox(height: screenHeight * 0.005),
                                     Text(
                                       'Admin Reply: $adminReply',
@@ -638,12 +712,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                                     ),
                                   ),
                                   child: ClipOval(
-                                    child: _profileImage != null
-                                        ? Image.file(
-                                            _profileImage!,
+                                    child: _profilePicUrl != null
+                                        ? Image.network(
+                                            _profilePicUrl!,
                                             width: screenWidth * 0.14,
                                             height: screenWidth * 0.14,
                                             fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Icon(
+                                              Icons.person,
+                                              color: Colors.black.withOpacity(0.8),
+                                              size: screenWidth * 0.07,
+                                            ),
                                           )
                                         : Icon(
                                             Icons.person,

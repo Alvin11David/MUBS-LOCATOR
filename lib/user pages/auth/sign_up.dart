@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -136,6 +137,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
+  // Save FCM token to Firestore
+  Future<void> _saveFcmToken(String uid, String email) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+              'fcmToken': token,
+              'email': email.toLowerCase(),
+            }, SetOptions(merge: true));
+        print('FCM Token saved: $token');
+      }
+    } catch (e) {
+      print('Error saving FCM token: $e');
+    }
+  }
+
   // Validation function
   String? _validateForm() {
     print('Validating form...');
@@ -247,19 +267,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
         print('Display name updated to: ${_fullNameController.text.trim()}');
 
-        // Create Firestore document for the user with all fields, including password
+        // Save user info, password, and FCM token to Firestore
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'fullName': _fullNameController.text.trim(),
-          'email': _emailController.text.trim(),
-          'password': _passwordController.text.trim(), // Added password field (SECURITY WARNING: Not recommended for production)
+          'email': _emailController.text.trim().toLowerCase(),
+          'password': _passwordController.text.trim(), // Kept as per your request
           'phone': '', // Initialize as empty, editable in EditProfileScreen
           'location': '', // Initialize as empty, editable in EditProfileScreen
           'profilePicUrl': null, // Initialize as null for default person icon
           'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        });
-        print('User info, including password, saved to Firestore');
+          'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+        }, SetOptions(merge: true));
+
+        print('User info, password, and FCM token saved to Firestore');
       }
 
       if (mounted) {

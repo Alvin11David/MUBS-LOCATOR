@@ -29,6 +29,8 @@ import 'package:mubs_locator/user%20pages/other%20screens/terms_and_privacy_scre
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Background message handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -36,6 +38,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Background message: ${message.notification?.title}");
   // FCM handles notification display in the notification bar
 }
+
+// Global NavigatorKey for navigation from notifications
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,10 +77,16 @@ Future<void> main() async {
       await Permission.notification.request();
     }
 
-    // Subscribe to all_users topic
+    // Initialize FCM and save token
     final messaging = FirebaseMessaging.instance;
+    await _saveFcmToken();
     await messaging.subscribeToTopic('all_users');
     print('Subscribed to all_users topic');
+
+    // Handle token refresh
+    messaging.onTokenRefresh.listen((token) {
+      _saveFcmToken();
+    });
 
     // Handle foreground notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -102,15 +113,35 @@ Future<void> main() async {
     // Handle notification tap (background/terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('Notification tapped: ${message.notification?.title}');
-      // Navigate to NotificationsScreen or other screen
-      // Example: Navigator.pushNamed(context, '/NotificationsScreen');
+      if (message.data['type'] == 'feedback_reply') {
+        final feedbackId = message.data['feedbackId'];
+        if (feedbackId != null) {
+          navigatorKey.currentState?.pushNamed(
+            '/FeedbackDetailsScreen',
+            arguments: feedbackId,
+          );
+        }
+      } else {
+        // Default to NotificationsScreen for other notifications
+        navigatorKey.currentState?.pushNamed('/NotificationsScreen');
+      }
     });
 
     // Handle initial message (app opened from terminated state)
     messaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         print('Opened from terminated: ${message.notification?.title}');
-        // Navigate to NotificationsScreen or other screen
+        if (message.data['type'] == 'feedback_reply') {
+          final feedbackId = message.data['feedbackId'];
+          if (feedbackId != null) {
+            navigatorKey.currentState?.pushNamed(
+              '/FeedbackDetailsScreen',
+              arguments: feedbackId,
+            );
+          }
+        } else {
+          navigatorKey.currentState?.pushNamed('/NotificationsScreen');
+        }
       }
     });
 
@@ -118,6 +149,25 @@ Future<void> main() async {
     print('Firebase init error: $e');
   }
   runApp(const MyApp());
+}
+
+// Function to save FCM token to Firestore
+Future<void> _saveFcmToken() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({'fcmToken': token}, SetOptions(merge: true));
+        print('FCM Token saved: $token');
+      }
+    }
+  } catch (e) {
+    print('Error saving FCM token: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -131,6 +181,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      navigatorKey: navigatorKey, // Add navigatorKey for notification navigation
       home: const SplashScreen(),
       initialRoute: '/SplashScreen',
       routes: {
@@ -152,16 +203,24 @@ class MyApp extends StatelessWidget {
             AdminGuard(child: const LocationManagementScreen()),
         '/AddPlaceScreen': (context) =>
             AdminGuard(child: const AddPlaceScreen()),
-        '/EditPlaceScreen': (context) =>
-            AdminGuard(child: const EditPlaceScreen(buildingId: '',)),
-        '/FeedbackListScreen': (context) => 
+        '/EditPlaceScreen': (context) => AdminGuard(
+              child: EditPlaceScreen(
+                buildingId:
+                    (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+              ),
+            ),
+        '/FeedbackListScreen': (context) =>
             AdminGuard(child: const FeedbackListScreen()),
         '/SendNotificationsScreen': (context) =>
             AdminGuard(child: const SendNotificationScreen()),
-        '/FeedbackDetailsScreen': (context) => FeedbackDetailsScreen(feedbackId: '',),
+        '/FeedbackDetailsScreen': (context) => FeedbackDetailsScreen(
+              feedbackId:
+                  (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+            ),
         '/ProfileScreen': (context) => const ProfileScreen(),
-        '/ResetPasswordScreen': (context) =>
-            const ResetPasswordScreen(email: ''),
+        '/ResetPasswordScreen': (context) => ResetPasswordScreen(
+              email: (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+            ),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
         '/HomeScreen': (context) => const HomeScreen(),
       },
