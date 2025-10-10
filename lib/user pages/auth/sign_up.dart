@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -25,6 +26,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // Add your OAuth Web Client ID from Firebase Console
+    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
+    scopes: ['email'],
+  );
   bool _isLoading = false;
 
   // Password strength state
@@ -149,7 +155,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               'fcmToken': token,
               'email': email.toLowerCase(),
             }, SetOptions(merge: true));
-        print('F upon token saved: $token');
+        print('FCM token saved: $token');
       }
     } catch (e) {
       print('Error saving FCM token: $e');
@@ -242,92 +248,184 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // Firebase signup function
-Future<void> _signUp() async {
-  print('Sign up button pressed');
-  final error = _validateForm();
-  if (error != null) {
-    print('Form error: $error');
-    if (mounted) {
-      _showCustomSnackBar(context, error);
-    }
-    return;
-  }
-
-  setState(() => _isLoading = true);
-  print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
-
-  try {
-    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-    print('Firebase sign up successful: ${userCredential.user?.uid}');
-
-    if (userCredential.user != null) {
-      await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
-      print('Display name updated to: ${_fullNameController.text.trim()}');
-
-      // Save user info and FCM token to Firestore
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'fullName': _fullNameController.text.trim(),
-        'email': _emailController.text.trim().toLowerCase(),
-        'password': _passwordController.text.trim(), // Added password field
-        'phone': '', // Initialize as empty, editable in EditProfileScreen
-        'location': '', // Initialize as empty, editable in EditProfileScreen
-        'profilePicUrl': null, // Initialize as null for default person icon
-        'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
-      }, SetOptions(merge: true));
-
-      print('User info and FCM token saved to Firestore');
-    }
-
-    if (mounted) {
-      print('Navigating based on email');
-      _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
-      await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
-      if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
-        print('Admin email detected, navigating to AdminDashboardScreen');
-        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
-      } else {
-        print('Regular user, navigating to HomeScreen');
-        Navigator.pushReplacementNamed(context, '/HomeScreen');
+  Future<void> _signUp() async {
+    print('Sign up button pressed');
+    final error = _validateForm();
+    if (error != null) {
+      print('Form error: $error');
+      if (mounted) {
+        _showCustomSnackBar(context, error);
       }
+      return;
     }
-  } on FirebaseAuthException catch (e) {
-    print('FirebaseAuthException: ${e.code} - ${e.message}');
-    String message;
-    switch (e.code) {
-      case 'email-already-in-use':
-        message = 'An account already exists for that email.';
-        break;
-      case 'weak-password':
-        message = 'The password provided is too weak.';
-        break;
-      case 'invalid-email':
-        message = 'The email address is not valid.';
-        break;
-      case 'operation-not-allowed':
-        message = 'Email/password accounts are not enabled.';
-        break;
-      default:
-        message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+
+    setState(() => _isLoading = true);
+    print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
+
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      print('Firebase sign up successful: ${userCredential.user?.uid}');
+
+      if (userCredential.user != null) {
+        await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
+        print('Display name updated to: ${_fullNameController.text.trim()}');
+
+        // Save user info and FCM token to Firestore
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim().toLowerCase(),
+          'password': _passwordController.text.trim(), // Added password field
+          'phone': '', // Initialize as empty, editable in EditProfileScreen
+          'location': '', // Initialize as empty, editable in EditProfileScreen
+          'profilePicUrl': null, // Initialize as null for default person icon
+          'authProvider': 'email',
+          'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+        }, SetOptions(merge: true));
+
+        print('User info and FCM token saved to Firestore');
+      }
+
+      if (mounted) {
+        print('Navigating based on email');
+        _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
+        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
+        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'An account already exists for that email.';
+          break;
+        case 'weak-password':
+          message = 'The password provided is too weak.';
+          break;
+        case 'invalid-email':
+          message = 'The email address is not valid.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Email/password accounts are not enabled.';
+          break;
+        default:
+          message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+      }
+      if (mounted) {
+        _showCustomSnackBar(context, message);
+      }
+    } catch (e, stackTrace) {
+      print('Signup error: $e\nStack trace: $stackTrace');
+      if (mounted) {
+        _showCustomSnackBar(context, 'Unexpected error: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      print('Sign up process finished');
     }
-    if (mounted) {
-      _showCustomSnackBar(context, message);
-    }
-  } catch (e, stackTrace) {
-    print('Signup error: $e\nStack trace: $stackTrace');
-    if (mounted) {
-      _showCustomSnackBar(context, 'Unexpected error: $e');
-    }
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
-    print('Sign up process finished');
   }
-}
+
+  // Google Sign-In function
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _isLoading = true);
+    print('Attempting Google Sign-In...');
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        print('Google Sign-In cancelled by user');
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      print('Google user: ${googleUser.email}');
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      UserCredential userCredential = await _auth.signInWithCredential(credential);
+      
+      print('Firebase sign-in successful: ${userCredential.user?.uid}');
+
+      // Save user info to Firestore with all fields
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+            'fullName': userCredential.user!.displayName ?? 'Google User',
+            'email': userCredential.user!.email ?? '',
+            'phone': '',
+            'location': '',
+            'profilePicUrl': userCredential.user!.photoURL,
+            'authProvider': 'google',
+            'isAdmin': userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com',
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+          }, SetOptions(merge: true));
+      
+      print('User info saved to Firestore');
+
+      if (mounted) {
+        _showCustomSnackBar(context, 'Signed up with Google successfully!', isSuccess: true);
+        await Future.delayed(const Duration(seconds: 2));
+
+        if (userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      String message;
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          message = 'An account already exists with a different sign-in method.';
+          break;
+        case 'invalid-credential':
+          message = 'The credential is malformed or has expired.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Google sign-in is not enabled.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+        default:
+          message = 'Google sign-in failed: ${e.message ?? "Unknown error"}';
+      }
+      if (mounted) {
+        _showCustomSnackBar(context, message);
+      }
+    } catch (e, stackTrace) {
+      print('Google Sign-In error: $e\nStack trace: $stackTrace');
+      if (mounted) {
+        _showCustomSnackBar(context, 'Google sign-in failed: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      print('Google Sign-In process finished');
+    }
+  }
 
   // Check if passwords match for enabling Sign Up button
   bool _isSignUpEnabled() {
@@ -641,13 +739,16 @@ Future<void> _signUp() async {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: () {
-                                      // Add Google sign up logic here
-                                    },
+                                    onTap: _isLoading ? null : _signUpWithGoogle,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: _isLoading 
+                                              ? Colors.grey 
+                                              : const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         color: Colors.white,
                                         boxShadow: [
                                           BoxShadow(

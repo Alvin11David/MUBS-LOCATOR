@@ -185,13 +185,14 @@ class MyApp extends StatelessWidget {
       home: const SplashScreen(),
       initialRoute: '/SplashScreen',
       routes: {
+        '/SplashScreen': (context) => const SplashScreen(),
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
         '/OnboardingScreen2': (context) => const OnboardingScreen2(),
         '/OnboardingScreen3': (context) => const OnboardingScreen3(),
         '/SignInScreen': (context) => const SignInScreen(),
-        '/SplashScreen': (context) => const SplashScreen(),
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
+        '/HomeScreen': (context) => const HomeScreen(),
         '/LocationSelectScreen': (context) => const LocationSelectScreen(),
         '/FeedbackScreen': (context) => const FeedbackScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
@@ -222,7 +223,6 @@ class MyApp extends StatelessWidget {
               email: (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
             ),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
-        '/HomeScreen': (context) => const HomeScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/OTPScreen') {

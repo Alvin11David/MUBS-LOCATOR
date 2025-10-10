@@ -31,6 +31,8 @@ dependencies:
   http: 
   # Request app permission
   permission_handler:
+  # Google Sign-In functionality
+  google_sign_in: ^6.2.1
   # Wave
   wave:
   # Image Select
