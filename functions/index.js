@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Function to send OTP email
+// Function to send OTP email and update Firestore
 exports.sendOTPEmail = functions
   .region('us-central1')
   .https.onCall(async (data, context) => {
@@ -45,10 +45,36 @@ The MUBS Locator Team`,
     };
 
     try {
+      // Send the OTP email
       await transporter.sendMail(mailOptions);
-      return { success: true };
+      console.log(`OTP email sent to: ${email}, OTP: ${otp}`);
+
+      // Update Firestore with the OTP
+      const docRef = admin.firestore()
+        .collection('password_reset_otp')
+        .doc(email.toLowerCase().trim());
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes from now
+
+      await admin.firestore().runTransaction(async (transaction) => {
+        transaction.set(
+          docRef,
+          {
+            email: email.toLowerCase().trim(),
+            otp: otp,
+            createdAt: now.getTime(), // Milliseconds since epoch
+            expiresAt: expiresAt.getTime(), // Milliseconds since epoch
+          },
+          { merge: true }
+        );
+      });
+
+      console.log(`Firestore updated for email: ${email}, OTP: ${otp}`);
+      return { success: true, message: 'OTP sent and stored successfully.' };
     } catch (error) {
-      throw new functions.https.HttpsError('internal', error.message);
+      console.error('Error in sendOTPEmail:', error);
+      throw new functions.https.HttpsError('internal', `Error processing OTP: ${error.message}`);
     }
   });
 
