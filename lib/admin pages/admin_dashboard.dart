@@ -3,8 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
-import 'dart:async';
-
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -14,70 +12,21 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String? _profilePicUrl;
   int _userCount = 0;
   int _pendingFeedbackCount = 0;
   int _activeUserCount = 0;
-  Timer? _activityTimer;
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _loadProfileImage();
     _loadUserCount();
     _loadPendingFeedbackCount();
     _loadActiveUserCount();
-    _startActivityTimer();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _activityTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startActivityTimer() {
-    _activityTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      updateLastActiveTimestamp();
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      updateLastActiveTimestamp();
-    }
-  }
-
-  Future<void> updateLastActiveTimestamp() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      try {
-        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-        final docSnapshot = await userDoc.get();
-        if (docSnapshot.exists) {
-          await userDoc.update({
-            'lastActiveTimestamp': Timestamp.now(),
-          });
-        } else {
-          await userDoc.set({
-            'lastActiveTimestamp': Timestamp.now(),
-            'uid': user.uid,
-            'displayName': user.displayName ?? 'User',
-            'email': user.email ?? '',
-          });
-        }
-        print('Updated lastActiveTimestamp for user ${user.uid}');
-      } catch (e) {
-        print('Error updating lastActiveTimestamp: $e');
-      }
-    }
   }
 
   Future<void> _loadProfileImage() async {

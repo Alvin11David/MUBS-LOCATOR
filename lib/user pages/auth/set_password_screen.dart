@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -128,6 +129,36 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       }
 
       final userDoc = userQuery.docs.first;
+      final oldPassword = userDoc.data()['password'] as String?;
+
+      if (oldPassword == null) {
+        throw Exception('No password found for user');
+      }
+
+      try {
+        // Attempt to sign in with the old password from Firestore
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: oldPassword,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'invalid-credential') {
+          // If Firestore password is incorrect, inform the user to sign in manually
+          throw Exception(
+              'Stored credentials are outdated. Please sign in with your current password and try again.');
+        } else {
+          throw e; // Rethrow other FirebaseAuth exceptions
+        }
+      }
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Failed to authenticate user');
+      }
+
+      // Update Firebase Authentication password
+      await user.updatePassword(newPassword);
+      print('Firebase Authentication password updated for email: $email');
 
       // Update password in Firestore
       await FirebaseFirestore.instance
@@ -161,7 +192,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       print('Error updating password: $e');
       print('Stack trace: $stackTrace');
       if (mounted) {
-        _showCustomSnackBar(context, 'Error updating password: $e');
+        _showCustomSnackBar(context, 'Error: $e');
       }
     } finally {
       if (mounted) {

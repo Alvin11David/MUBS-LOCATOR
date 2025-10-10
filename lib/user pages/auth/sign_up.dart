@@ -271,7 +271,7 @@ Future<void> _signUp() async {
       await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
         'fullName': _fullNameController.text.trim(),
         'email': _emailController.text.trim().toLowerCase(),
-        'password': _passwordController.text.trim(), // Added password field
+        'password': _passwordController.text.trim(), // Note: Storing passwords in Firestore is not recommended
         'phone': '', // Initialize as empty, editable in EditProfileScreen
         'location': '', // Initialize as empty, editable in EditProfileScreen
         'profilePicUrl': null, // Initialize as null for default person icon
@@ -279,9 +279,10 @@ Future<void> _signUp() async {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+        'lastActiveTimestamp': Timestamp.now(), // Add lastActiveTimestamp
       }, SetOptions(merge: true));
 
-      print('User info and FCM token saved to Firestore');
+      print('User info, FCM token, and lastActiveTimestamp saved to Firestore');
     }
 
     if (mounted) {

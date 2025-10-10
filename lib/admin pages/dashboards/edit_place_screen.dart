@@ -83,47 +83,47 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
   }
 
   Future<void> _fetchBuildingDetails() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('buildings')
-          .doc(widget.buildingId)
-          .get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        setState(() {
-          _buildingNameController.text = data['name'] ?? '';
-          _descriptionController.text = data['description'] ?? '';
-          _otherNamesController.text = data['otherNames'] ?? '';
-          _selectedLocation = LatLng(
-            (data['latitude'] ?? 0.32848299678238435) as double,
-            (data['longitude'] ?? 32.61717974633408) as double,
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('buildings')
+        .doc(widget.buildingId)
+        .get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        _buildingNameController.text = data['name'] ?? '';
+        _descriptionController.text = data['description'] ?? '';
+        _otherNamesController.text = data['otherNames'] ?? '';
+        _selectedLocation = LatLng(
+          (data['latitude'] ?? 0.32848299678238435) as double,
+          (data['longitude'] ?? 32.61717974633408) as double,
+        );
+        _isLocationSelected = true;
+        _imageUrls = List<String>.from(data['imageUrls'] ?? []);
+        _mtnNumberController.text = data['mtnNumber'] ?? '';
+        _airtelNumberController.text = data['airtelNumber'] ?? '';
+        _selectedDays = List<String>.from(data['days'] ?? []);
+        if (data['startTime'] != null) {
+          _startTime = TimeOfDay(
+            hour: data['startTime']['hour'],
+            minute: data['startTime']['minute'],
           );
-          _isLocationSelected = true;
-          _imageUrls = List<String>.from(data['imageUrls'] ?? []);
-          _mtnNumberController.text = data['mtnNumber'] ?? '';
-          _airtelNumberController.text = data['airtelNumber'] ?? '';
-          _selectedDays = List<String>.from(data['days'] ?? []);
-          if (data['startTime'] != null) {
-            _startTime = TimeOfDay(
-              hour: data['startTime']['hour'],
-              minute: data['startTime']['minute'],
-            );
-          }
-          if (data['endTime'] != null) {
-            _endTime = TimeOfDay(
-              hour: data['endTime']['hour'],
-              minute: data['endTime']['minute'],
-            );
-          }
-        });
-      }
-    } catch (e) {
-      print('Error fetching building details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load building details: $e')),
-      );
+        }
+        if (data['endTime'] != null) {
+          _endTime = TimeOfDay(
+            hour: data['endTime']['hour'],
+            minute: data['endTime']['minute'],
+          );
+        }
+      });
     }
+  } catch (e) {
+    print('Error fetching building details: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to load building details: $e')),
+    );
   }
+}
 
   String _getGreeting() {
     final hour = DateTime.now().hour;

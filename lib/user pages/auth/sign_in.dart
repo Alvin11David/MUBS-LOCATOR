@@ -73,41 +73,100 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signIn() async {
-    setState(() => _isLoading = true);
-    try {
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+  setState(() => _isLoading = true);
+  try {
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text.trim();
 
-      // Save FCM token and email after sign-in
-      await _saveFcmToken();
+    // Query Firestore to get the stored password
+    final userQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .limit(1)
+        .get();
 
-      if (mounted) {
-        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
-          print('Admin email detected, navigating to AdminDashboardScreen');
-          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
-        } else {
-          print('Regular user, navigating to HomeScreen');
-          Navigator.pushReplacementNamed(context, '/HomeScreen');
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      String message = 'Sign in failed';
-      if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided.';
-      }
-      _showCustomSnackBar(context, message);
-    } catch (e) {
-      _showCustomSnackBar(context, 'Error: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    if (userQuery.docs.isEmpty) {
+      throw Exception('No user found for that email.');
     }
+
+    final userDoc = userQuery.docs.first;
+    final storedPassword = userDoc.data()['password'] as String?;
+
+    if (storedPassword == null) {
+      throw Exception('No password found for this user.');
+    }
+
+    if (storedPassword != password) {
+      throw Exception('Incorrect password.');
+    }
+
+    // Password matches in Firestore, proceed with Firebase Authentication
+    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    // Update lastActiveTimestamp in Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userCredential.user!.uid)
+        .update({
+          'lastActiveTimestamp': Timestamp.now(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }).catchError((e) async {
+          // If document doesn't exist (edge case), create it
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
+                'uid': userCredential.user!.uid,
+                'email': email,
+                'displayName': userCredential.user!.displayName ?? 'User',
+                'lastActiveTimestamp': Timestamp.now(),
+                'createdAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+                'phone': '',
+                'location': '',
+                'profilePicUrl': null,
+                'isAdmin': email == 'adminuser@gmail.com',
+                'fcmToken': await FirebaseMessaging.instance.getToken(),
+              }, SetOptions(merge: true));
+        });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+
+    // Save FCM token and email after sign-in
+    await _saveFcmToken();
+
+    if (mounted) {
+      if (email == 'adminuser@gmail.com') {
+        print('Admin email detected, navigating to AdminDashboardScreen');
+        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      } else {
+        print('Regular user, navigating to HomeScreen');
+        Navigator.pushReplacementNamed(context, '/HomeScreen');
+      }
+    }
+  } on FirebaseAuthException catch (e) {
+    String message = 'Sign in failed';
+    if (e.code == 'user-not-found') {
+      message = 'No user found for that email.';
+    } else if (e.code == 'wrong-password') {
+      message = 'Wrong password provided.';
+    } else if (e.code == 'invalid-credential') {
+      message = 'Invalid credentials. Please check your email and password.';
+    }
+    print('FirebaseAuthException: ${e.code}, ${e.message}');
+    _showCustomSnackBar(context, message);
+  } catch (e, stackTrace) {
+    print('Error during sign-in: $e');
+    print('Stack trace: $stackTrace');
+    _showCustomSnackBar(context, 'Error: $e');
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   void _showCustomSnackBar(BuildContext context, String message) {
     final screenWidth = MediaQuery.of(context).size.width;

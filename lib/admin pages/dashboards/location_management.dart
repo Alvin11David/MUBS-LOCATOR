@@ -725,22 +725,11 @@ class _LocationTableState extends State<LocationTable> {
                     child: Container(
                       width: widget.screenWidth * 0.1,
                       height: widget.screenWidth * 0.1,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(color: Colors.black, width: 1),
-                      ),
-                      child: Icon(
-                        Icons.filter_list_rounded,
-                        color: Colors.black,
-                        size: widget.screenWidth * 0.06,
-                      ),
                     ),
                   ),
-                  SizedBox(width: widget.screenWidth * 0.04),
-                  
                   const Spacer(),
                   Padding(
-                    padding: EdgeInsets.only(right: widget.screenWidth * 0.04),
+                    padding: EdgeInsets.only(right: widget.screenWidth * 0.09),
                     child: Row(
                       children: [
                         GestureDetector(
