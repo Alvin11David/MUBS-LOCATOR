@@ -149,7 +149,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               'fcmToken': token,
               'email': email.toLowerCase(),
             }, SetOptions(merge: true));
-        print('FCM Token saved: $token');
+        print('F upon token saved: $token');
       }
     } catch (e) {
       print('Error saving FCM token: $e');
@@ -242,92 +242,92 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // Firebase signup function
-  Future<void> _signUp() async {
-    print('Sign up button pressed');
-    final error = _validateForm();
-    if (error != null) {
-      print('Form error: $error');
-      if (mounted) {
-        _showCustomSnackBar(context, error);
-      }
-      return;
+Future<void> _signUp() async {
+  print('Sign up button pressed');
+  final error = _validateForm();
+  if (error != null) {
+    print('Form error: $error');
+    if (mounted) {
+      _showCustomSnackBar(context, error);
     }
-
-    setState(() => _isLoading = true);
-    print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
-
-    try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      print('Firebase sign up successful: ${userCredential.user?.uid}');
-
-      if (userCredential.user != null) {
-        await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
-        print('Display name updated to: ${_fullNameController.text.trim()}');
-
-        // Save user info, password, and FCM token to Firestore
-        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-          'fullName': _fullNameController.text.trim(),
-          'email': _emailController.text.trim().toLowerCase(),
-          'password': _passwordController.text.trim(), // Kept as per your request
-          'phone': '', // Initialize as empty, editable in EditProfileScreen
-          'location': '', // Initialize as empty, editable in EditProfileScreen
-          'profilePicUrl': null, // Initialize as null for default person icon
-          'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
-        }, SetOptions(merge: true));
-
-        print('User info, password, and FCM token saved to Firestore');
-      }
-
-      if (mounted) {
-        print('Navigating based on email');
-        _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
-        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
-        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
-          print('Admin email detected, navigating to AdminDashboardScreen');
-          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
-        } else {
-          print('Regular user, navigating to HomeScreen');
-          Navigator.pushReplacementNamed(context, '/HomeScreen');
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException: ${e.code} - ${e.message}');
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'An account already exists for that email.';
-          break;
-        case 'weak-password':
-          message = 'The password provided is too weak.';
-          break;
-        case 'invalid-email':
-          message = 'The email address is not valid.';
-          break;
-        case 'operation-not-allowed':
-          message = 'Email/password accounts are not enabled.';
-          break;
-        default:
-          message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
-      }
-      if (mounted) {
-        _showCustomSnackBar(context, message);
-      }
-    } catch (e, stackTrace) {
-      print('Signup error: $e\nStack trace: $stackTrace');
-      if (mounted) {
-        _showCustomSnackBar(context, 'Unexpected error: $e');
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-      print('Sign up process finished');
-    }
+    return;
   }
+
+  setState(() => _isLoading = true);
+  print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
+
+  try {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+    print('Firebase sign up successful: ${userCredential.user?.uid}');
+
+    if (userCredential.user != null) {
+      await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
+      print('Display name updated to: ${_fullNameController.text.trim()}');
+
+      // Save user info and FCM token to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'fullName': _fullNameController.text.trim(),
+        'email': _emailController.text.trim().toLowerCase(),
+        'password': _passwordController.text.trim(), // Added password field
+        'phone': '', // Initialize as empty, editable in EditProfileScreen
+        'location': '', // Initialize as empty, editable in EditProfileScreen
+        'profilePicUrl': null, // Initialize as null for default person icon
+        'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+      }, SetOptions(merge: true));
+
+      print('User info and FCM token saved to Firestore');
+    }
+
+    if (mounted) {
+      print('Navigating based on email');
+      _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
+      await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
+      if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
+        print('Admin email detected, navigating to AdminDashboardScreen');
+        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      } else {
+        print('Regular user, navigating to HomeScreen');
+        Navigator.pushReplacementNamed(context, '/HomeScreen');
+      }
+    }
+  } on FirebaseAuthException catch (e) {
+    print('FirebaseAuthException: ${e.code} - ${e.message}');
+    String message;
+    switch (e.code) {
+      case 'email-already-in-use':
+        message = 'An account already exists for that email.';
+        break;
+      case 'weak-password':
+        message = 'The password provided is too weak.';
+        break;
+      case 'invalid-email':
+        message = 'The email address is not valid.';
+        break;
+      case 'operation-not-allowed':
+        message = 'Email/password accounts are not enabled.';
+        break;
+      default:
+        message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+    }
+    if (mounted) {
+      _showCustomSnackBar(context, message);
+    }
+  } catch (e, stackTrace) {
+    print('Signup error: $e\nStack trace: $stackTrace');
+    if (mounted) {
+      _showCustomSnackBar(context, 'Unexpected error: $e');
+    }
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+    print('Sign up process finished');
+  }
+}
 
   // Check if passwords match for enabling Sign Up button
   bool _isSignUpEnabled() {

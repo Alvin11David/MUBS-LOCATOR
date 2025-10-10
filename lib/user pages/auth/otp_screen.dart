@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
-// ignore: camel_case_types
 class OTP_Screen extends StatefulWidget {
   final String email;
 
@@ -15,7 +14,6 @@ class OTP_Screen extends StatefulWidget {
   State<OTP_Screen> createState() => _OTP_ScreenState();
 }
 
-// ignore: camel_case_types
 class _OTP_ScreenState extends State<OTP_Screen> {
   final List<TextEditingController> _controllers = List.generate(
     4,
@@ -30,6 +28,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
   @override
   void initState() {
     super.initState();
+    print('Received email: "${widget.email}"');
     _startCountdown();
   }
 
@@ -47,7 +46,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
 
   void _startCountdown() {
     setState(() {
-      _countdown = 10;
+      _countdown = 30;
       _isButtonEnabled = false;
     });
     _timer?.cancel();
@@ -123,36 +122,58 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       _isLoading = true;
     });
     try {
+      final email = widget.email.trim().toLowerCase();
+      print('Resending OTP for email: "$email"');
       final otp = _generateOTP();
-      final now = DateTime.now();
-      final expiresAt = now.add(Duration(minutes: 10));
+      print('Generated OTP: $otp');
 
-      await FirebaseFirestore.instance
-          .collection('password_reset_tokens')
-          .doc(widget.email)
-          .set({
-        'email': widget.email,
-        'otp': otp,
-        'createdAt': now.millisecondsSinceEpoch,
-        'expiresAt': expiresAt.millisecondsSinceEpoch,
-      });
-      print('ACTIVE OTP CODE SENT: $otp');
+      // Call Firebase Function to send OTP email and update Firestore
+      try {
+        final result = await FirebaseFunctions.instance
+            .httpsCallable('sendOTPEmail')
+            .call({
+          'email': email,
+          'otp': otp,
+        });
+        print('Firebase Function response: ${result.data}');
 
-      await FirebaseFunctions.instance.httpsCallable('sendOTPEmail').call({
-        'email': widget.email,
-        'otp': otp,
-      });
+        // Check if the response indicates success
+        if (result.data['success'] != true) {
+          print('Firebase Function failed: ${result.data}');
+          if (mounted) {
+            _showCustomSnackBar(context, 'Error sending OTP: ${result.data['message']}');
+          }
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      } catch (e) {
+        print('Firebase Function error: $e');
+        if (mounted) {
+          _showCustomSnackBar(context, 'Error sending OTP email: $e');
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
+      // Clear OTP input fields
       for (var controller in _controllers) {
         controller.clear();
       }
 
+      // Start countdown for resend button
       _startCountdown();
 
       if (mounted) {
-        _showCustomSnackBar(context, 'A new 4 digit code has been sent to ${widget.email}', isSuccess: true);
+        print('ACTIVE OTP CODE SENT: $otp');
+        _showCustomSnackBar(context, 'A new 4 digit code has been sent to $email', isSuccess: true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error resending OTP: $e');
+      print('Stack trace: $stackTrace');
       if (mounted) {
         _showCustomSnackBar(context, 'Error resending OTP: $e');
       }
@@ -168,54 +189,77 @@ class _OTP_ScreenState extends State<OTP_Screen> {
   // Verify OTP
   Future<void> _checkOTPAndNavigate() async {
     bool isComplete = _controllers.every(
-      (controller) => controller.text.length == 1,
+      (controller) => controller.text.trim().length == 1,
     );
-    if (!isComplete) return;
+    if (!isComplete) {
+      print('OTP incomplete: Not all fields filled');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final enteredOTP = _controllers.map((c) => c.text).join();
+      final enteredOTP = _controllers.map((c) => c.text.trim()).join();
+      print('Raw controller values: ${_controllers.map((c) => '"${c.text}"').toList()}');
+      print('Entered OTP: "$enteredOTP"');
+      final email = widget.email.trim().toLowerCase();
+      print('Checking OTP for email: "$email"');
+
       final doc = await FirebaseFirestore.instance
-          .collection('password_reset_tokens')
-          .doc(widget.email)
+          .collection('password_reset_otp')
+          .doc(email)
           .get();
 
-      if (doc.exists) {
-        final data = doc.data()!;
-        final storedOTP = data['otp'] as String?;
-        final expiresAtMillis = data['expiresAt'] as int?;
-
-        if (storedOTP == null || expiresAtMillis == null) {
-          if (mounted) {
-            _showCustomSnackBar(context, 'Invalid OTP data');
-          }
-          return;
-        }
-
-        final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
-
-        if (DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP) {
-          if (mounted) {
-            Navigator.pushNamed(
-              context,
-              '/SetPasswordScreen',
-              arguments: widget.email,
-            );
-          }
-        } else {
-          if (mounted) {
-            _showCustomSnackBar(context, 'Invalid or expired OTP');
-          }
-        }
-      } else {
+      print('Firestore document exists: ${doc.exists}');
+      if (!doc.exists) {
         if (mounted) {
           _showCustomSnackBar(context, 'No OTP found for this email');
         }
+        return;
       }
-    } catch (e) {
+
+      final data = doc.data()!;
+      final storedOTP = data['otp'] as String?;
+      final expiresAtMillis = data['expiresAt'] as int?;
+      print('Stored OTP: "$storedOTP"');
+      print('Expires At (ms): $expiresAtMillis');
+      print('Current Time (ms): ${DateTime.now().millisecondsSinceEpoch}');
+
+      if (storedOTP == null || expiresAtMillis == null) {
+        print('Invalid OTP data: storedOTP=$storedOTP, expiresAtMillis=$expiresAtMillis');
+        if (mounted) {
+          _showCustomSnackBar(context, 'Invalid OTP data');
+        }
+        return;
+      }
+
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
+      print('Expires At (formatted): ${expiresAt.toIso8601String()}');
+      print('Current Time (formatted): ${DateTime.now().toIso8601String()}');
+      print('Is OTP valid (before expiration and matching)? ${DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP}');
+
+      if (enteredOTP == storedOTP && DateTime.now().isBefore(expiresAt)) {
+        print('OTP verification successful');
+        if (mounted) {
+          Navigator.pushNamed(
+            context,
+            '/ResetPasswordScreen',
+            arguments: email,
+          );
+        }
+      } else {
+        print('OTP verification failed:');
+        print('  - OTP Mismatch: ${enteredOTP != storedOTP}');
+        print('  - Expired: ${!DateTime.now().isBefore(expiresAt)}');
+        if (mounted) {
+          _showCustomSnackBar(context, 'Invalid or expired OTP');
+        }
+      }
+    } catch (e, stackTrace) {
+      print('Error verifying OTP: $e');
+      print('Stack trace: $stackTrace');
       if (mounted) {
         _showCustomSnackBar(context, 'Error verifying OTP: $e');
       }
@@ -441,6 +485,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                           maxLength: 1,
                                           inputFormatters: [
                                             FilteringTextInputFormatter.digitsOnly,
+                                            LengthLimitingTextInputFormatter(1),
                                           ],
                                           decoration: const InputDecoration(
                                             counterText: '',
@@ -458,10 +503,12 @@ class _OTP_ScreenState extends State<OTP_Screen> {
                                           ),
                                           cursorColor: const Color(0xFF3B82F6),
                                           onChanged: (value) {
-                                            if (value.isNotEmpty && index < 3) {
+                                            final trimmedValue = value.trim();
+                                            if (trimmedValue.isNotEmpty && index < 3) {
+                                              _controllers[index].text = trimmedValue;
                                               _focusNodes[index].unfocus();
                                               _focusNodes[index + 1].requestFocus();
-                                            } else if (value.isEmpty && index > 0) {
+                                            } else if (trimmedValue.isEmpty && index > 0) {
                                               _focusNodes[index].unfocus();
                                               _focusNodes[index - 1].requestFocus();
                                             }

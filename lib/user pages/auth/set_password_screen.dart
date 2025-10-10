@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -14,11 +13,9 @@ class ResetPasswordScreen extends StatefulWidget {
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
-  final TextEditingController _currentPasswordController = TextEditingController();
   bool isButtonEnabled = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  final bool _obscureCurrentPassword = true;
   bool _isLoading = false;
   double _passwordStrengthProgress = 0.0;
   Color _strengthColor = Colors.white;
@@ -28,17 +25,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.initState();
     _passwordController.addListener(_updateButtonState);
     _confirmPasswordController.addListener(_updateButtonState);
-    _currentPasswordController.addListener(_updateButtonState);
   }
 
   void _updateButtonState() {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
-    final currentPassword = _currentPasswordController.text.trim();
     setState(() {
       isButtonEnabled = password.isNotEmpty &&
           confirmPassword.isNotEmpty &&
-          currentPassword.isNotEmpty &&
           password == confirmPassword &&
           _passwordStrengthProgress == 1.0;
     });
@@ -65,7 +59,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
   }
 
-  // Custom SnackBar method
   void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
@@ -120,56 +113,53 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      final auth = FirebaseAuth.instance;
-      final email = widget.email;
-      final currentPassword = _currentPasswordController.text.trim();
+      final email = widget.email.trim().toLowerCase();
       final newPassword = _passwordController.text.trim();
 
-      // Re-authenticate the user
-      final user = auth.currentUser;
-      if (user == null) {
-        await auth.signInWithEmailAndPassword(
-          email: email,
-          password: currentPassword,
-        );
-      } else if (user.email != email) {
-        throw Exception('Current user does not match provided email');
+      // Find user document in Firestore by email
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isEmpty) {
+        throw Exception('No user found with email: $email');
       }
 
-      final credential = EmailAuthProvider.credential(
-        email: email,
-        password: currentPassword,
-      );
-      await auth.currentUser!.reauthenticateWithCredential(credential);
-
-      // Update password
-      await auth.currentUser!.updatePassword(newPassword);
+      final userDoc = userQuery.docs.first;
 
       // Update password in Firestore
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(email)
-          .update({'password': newPassword});
+          .doc(userDoc.id)
+          .update({
+        'password': newPassword,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('Password updated in Firestore for email: $email');
 
       // Delete OTP from Firestore
       await FirebaseFirestore.instance
-          .collection('password_reset_tokens')
+          .collection('password_reset_otp')
           .doc(email)
           .delete();
+      print('OTP deleted from Firestore for email: $email');
 
       if (mounted) {
-        _currentPasswordController.text = _passwordController.text;
         _passwordController.clear();
         _confirmPasswordController.clear();
-
-        _showCustomSnackBar(context, 'Password updated successfully!', isSuccess: true);
+        _showCustomSnackBar(context, 'Password updated successfully! Please sign in.', isSuccess: true);
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/SignInScreen',
           (route) => false,
+          arguments: {'email': email},
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error updating password: $e');
+      print('Stack trace: $stackTrace');
       if (mounted) {
         _showCustomSnackBar(context, 'Error updating password: $e');
       }
@@ -186,7 +176,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _currentPasswordController.dispose();
     super.dispose();
   }
 
