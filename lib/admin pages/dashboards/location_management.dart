@@ -24,7 +24,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       print('Auth state changed: User ${user?.uid}, email: ${user?.email}');
     });
-    // Initialize future with initial query
     _refreshData();
   }
 
@@ -341,10 +340,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
               if (_isDropdownVisible)
                 Positioned(
                   top: screenHeight * 0.09,
-                  right: screenWidth * 0.04,
+                  right: screenWidth * 0.15, // Further shifted left
                   child: Container(
-                    width: screenWidth * 0.25,
+                    width: screenWidth * 0.20, // Further reduced width
                     height: screenHeight * 0.06,
+                    clipBehavior: Clip.antiAlias, // Prevent visual overflow
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
@@ -365,7 +365,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           color: Colors.transparent,
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.03,
+                              horizontal: screenWidth * 0.02,
                               vertical: screenHeight * 0.01,
                             ),
                             child: GestureDetector(
@@ -377,7 +377,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                                     'Edit Profile',
                                     style: TextStyle(
                                       color: Colors.black,
-                                      fontSize: screenWidth * 0.04,
+                                      fontSize: screenWidth * 0.03, // Smaller font size
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Poppins',
                                     ),
@@ -385,8 +385,8 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                                   Image.asset(
                                     'assets/images/edit.png',
                                     color: Colors.black,
-                                    width: screenWidth * 0.04,
-                                    height: screenWidth * 0.04,
+                                    width: screenWidth * 0.035, // Smaller icon
+                                    height: screenWidth * 0.035,
                                   ),
                                 ],
                               ),
@@ -659,7 +659,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
       ),
     );
   }
-  
+
   void _refreshData() {}
 }
 
@@ -737,7 +737,6 @@ class _LocationTableState extends State<LocationTable> {
                     ),
                   ),
                   SizedBox(width: widget.screenWidth * 0.04),
-                  
                   const Spacer(),
                   Padding(
                     padding: EdgeInsets.only(right: widget.screenWidth * 0.04),
