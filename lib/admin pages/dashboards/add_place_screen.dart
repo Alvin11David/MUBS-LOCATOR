@@ -17,7 +17,7 @@ class AddPlaceScreen extends StatefulWidget {
 }
 
 class _AddPlaceScreenState extends State<AddPlaceScreen> {
-  String? _profileImagePath;
+  String? _profilePicUrl;
 
   @override
   void initState() {
@@ -30,10 +30,23 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   }
 
   Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _profileImagePath = prefs.getString('profileImagePath');
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+        });
+      } catch (e) {
+        print('Error loading profile picture: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile picture: $e')),
+        );
+      }
+    }
   }
 
   String _getGreeting() {
@@ -390,14 +403,37 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                           ),
                                         ),
                                         child:
-                                            (_profileImagePath != null &&
-                                                _profileImagePath!.isNotEmpty)
+                                            (_profilePicUrl != null &&
+                                                _profilePicUrl!.isNotEmpty)
                                             ? ClipOval(
-                                                child: Image.file(
-                                                  File(_profileImagePath!),
+                                                child: Image.network(
+                                                  _profilePicUrl!,
                                                   fit: BoxFit.cover,
                                                   width: screenWidth * 0.09,
                                                   height: screenWidth * 0.09,
+                                                  loadingBuilder:
+                                                      (
+                                                        context,
+                                                        child,
+                                                        loadingProgress,
+                                                      ) {
+                                                        if (loadingProgress ==
+                                                            null) {
+                                                          return child;
+                                                        }
+                                                        return const CircularProgressIndicator();
+                                                      },
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        error,
+                                                        stackTrace,
+                                                      ) => Icon(
+                                                        Icons.person,
+                                                        color: Colors.black,
+                                                        size:
+                                                            screenWidth * 0.04,
+                                                      ),
                                                 ),
                                               )
                                             : Icon(
@@ -561,245 +597,251 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                 ),
               ),
             Positioned(
-  top: screenHeight * 0.21,
-  left: screenWidth * 0.02,
-  right: screenWidth * 0.02,
-  bottom: 0,
-  child: LayoutBuilder(
-    builder: (context, constraints) {
-      return SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: constraints.maxHeight,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            padding: EdgeInsets.symmetric(
-              vertical: screenHeight * 0.04,
-              horizontal: screenWidth * 0.04,
-            ),
-            child: Form(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    child: BuildingNameField(
-                      controller: _buildingNameController,
-                      label: 'Building Name',
-                      hint: 'Enter Building Name',
-                      icon: Icons.location_city,
-                      focusNode: _buildingNameFocus,
-                      nextFocusNode: _descriptionFocus,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    child: DescriptionField(
-                      controller: _descriptionController,
-                      label: 'Building Description',
-                      hint: 'Enter Place Description',
-                      icon: Icons.description,
-                      focusNode: _descriptionFocus,
-                      textInputAction: TextInputAction.next,
-                      nextFocusNode: _latitudeFocus,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.00,
-                    ),
-                    child: LocationSelectField(
-                      controller: TextEditingController(),
-                      label: 'Location Select',
-                      hint: 'Tap on the map to select location',
-                      icon: Icons.location_on,
-                      focusNode: _locationFocus,
-                      textInputAction: TextInputAction.next,
-                      selectedLocation: _selectedLocation,
-                      isLocationSelected: _isLocationSelected,
-                      onMapCreated: _onMapCreated,
-                      onTap: _onTap,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    child: LatitudeField(
-                      controller: _latitudeController,
-                      label: 'Latitude',
-                      hint: '0.328483',
-                      icon: Icons.north,
-                      focusNode: _latitudeFocus,
-                      nextFocusNode: _longitudeFocus,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    child: LongitudeField(
-                      controller: _longitudeController,
-                      label: 'Longitude',
-                      hint: '32.617180',
-                      icon: Icons.east,
-                      focusNode: _longitudeFocus,
-                      nextFocusNode: _mtnNumberFocus,
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.00,
-                    ),
-                    child: PhotosMediaField(
-                      onImagesChanged: (images) {
-                        setState(() {
-                          _images = images;
-                        });
-                      },
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.00,
-                    ),
-                    child: OpeningClosingHoursField(
-                      mtnNumberController: _mtnNumberController,
-                      airtelNumberController: _airtelNumberController,
-                      onAddEntry: (entry) {
-                        setState(() {
-                          _openingHoursEntries.add(entry);
-                        });
-                      },
-                    ),
-                  ),
-                  if (_openingHoursEntries.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(
-                        top: screenHeight * 0.02,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Saved Opening & Closing Hours:',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w600,
-                              fontSize: screenWidth * 0.04,
-                            ),
-                          ),
-                          ..._openingHoursEntries.map((entry) {
-                            final days = entry['days'] as List<String>;
-                            final startTime = entry['startTime'] as TimeOfDay;
-                            final endTime = entry['endTime'] as TimeOfDay;
-                            return Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: 4,
-                              ),
-                              child: Text(
-                                '${days.join(', ')}: ${startTime.format(context)} - ${endTime.format(context)}',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: screenWidth * 0.035,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                      ),
-                    ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.00,
-                    ),
-                    child: ContactInformationField(
-                      mtnNumberController: _mtnNumberController,
-                      airtelNumberController: _airtelNumberController,
-                      mtnNumberFocus: _mtnNumberFocus,
-                      airtelNumberFocus: _airtelNumberFocus,
-                    ),
-                  ),
-                  SizedBox(height: screenHeight * 0.02),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.04,
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _saveLocation,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF93C5FD),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: screenHeight * 0.015,
-                          horizontal: screenWidth * 0.1,
-                        ),
-                        elevation: 8,
-                        shadowColor: const Color(
-                          0xFF93C5FD,
-                        ).withOpacity(0.5),
+              top: screenHeight * 0.21,
+              left: screenWidth * 0.02,
+              right: screenWidth * 0.02,
+              bottom: 0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
                       child: Container(
                         decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF93C5FD,
-                              ).withOpacity(0.4),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
-                        child: Text(
-                          'Add Location',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                            fontSize: screenWidth * 0.045,
+                        padding: EdgeInsets.symmetric(
+                          vertical: screenHeight * 0.04,
+                          horizontal: screenWidth * 0.04,
+                        ),
+                        child: Form(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: BuildingNameField(
+                                  controller: _buildingNameController,
+                                  label: 'Building Name',
+                                  hint: 'Enter Building Name',
+                                  icon: Icons.location_city,
+                                  focusNode: _buildingNameFocus,
+                                  nextFocusNode: _descriptionFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: DescriptionField(
+                                  controller: _descriptionController,
+                                  label: 'Building Description',
+                                  hint: 'Enter Place Description',
+                                  icon: Icons.description,
+                                  focusNode: _descriptionFocus,
+                                  textInputAction: TextInputAction.next,
+                                  nextFocusNode: _latitudeFocus,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: LocationSelectField(
+                                  controller: TextEditingController(),
+                                  label: 'Location Select',
+                                  hint: 'Tap on the map to select location',
+                                  icon: Icons.location_on,
+                                  focusNode: _locationFocus,
+                                  textInputAction: TextInputAction.next,
+                                  selectedLocation: _selectedLocation,
+                                  isLocationSelected: _isLocationSelected,
+                                  onMapCreated: _onMapCreated,
+                                  onTap: _onTap,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: LatitudeField(
+                                  controller: _latitudeController,
+                                  label: 'Latitude',
+                                  hint: '0.328483',
+                                  icon: Icons.north,
+                                  focusNode: _latitudeFocus,
+                                  nextFocusNode: _longitudeFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: LongitudeField(
+                                  controller: _longitudeController,
+                                  label: 'Longitude',
+                                  hint: '32.617180',
+                                  icon: Icons.east,
+                                  focusNode: _longitudeFocus,
+                                  nextFocusNode: _mtnNumberFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: PhotosMediaField(
+                                  onImagesChanged: (images) {
+                                    setState(() {
+                                      _images = images;
+                                    });
+                                  },
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: OpeningClosingHoursField(
+                                  mtnNumberController: _mtnNumberController,
+                                  airtelNumberController:
+                                      _airtelNumberController,
+                                  onAddEntry: (entry) {
+                                    setState(() {
+                                      _openingHoursEntries.add(entry);
+                                    });
+                                  },
+                                ),
+                              ),
+                              if (_openingHoursEntries.isNotEmpty)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    top: screenHeight * 0.02,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Saved Opening & Closing Hours:',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: screenWidth * 0.04,
+                                        ),
+                                      ),
+                                      ..._openingHoursEntries.map((entry) {
+                                        final days =
+                                            entry['days'] as List<String>;
+                                        final startTime =
+                                            entry['startTime'] as TimeOfDay;
+                                        final endTime =
+                                            entry['endTime'] as TimeOfDay;
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          child: Text(
+                                            '${days.join(', ')}: ${startTime.format(context)} - ${endTime.format(context)}',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: screenWidth * 0.035,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ],
+                                  ),
+                                ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
+                                child: ContactInformationField(
+                                  mtnNumberController: _mtnNumberController,
+                                  airtelNumberController:
+                                      _airtelNumberController,
+                                  mtnNumberFocus: _mtnNumberFocus,
+                                  airtelNumberFocus: _airtelNumberFocus,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _saveLocation,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF93C5FD),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: screenHeight * 0.015,
+                                      horizontal: screenWidth * 0.1,
+                                    ),
+                                    elevation: 8,
+                                    shadowColor: const Color(
+                                      0xFF93C5FD,
+                                    ).withOpacity(0.5),
+                                  ),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(30),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF93C5FD,
+                                          ).withOpacity(0.4),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      'Add Location',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: screenWidth * 0.045,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.04),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: screenHeight * 0.04),
-                ],
+                  );
+                },
               ),
             ),
-          ),
-        ),
-      );
-    },
-  ),
-),
             if (_isMenuVisible)
               Positioned.fill(
                 child: GestureDetector(
@@ -864,14 +906,28 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                 ),
                               ),
                               child:
-                                  (_profileImagePath != null &&
-                                      _profileImagePath!.isNotEmpty)
+                                  (_profilePicUrl != null &&
+                                      _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
-                                      child: Image.file(
-                                        File(_profileImagePath!),
+                                      child: Image.network(
+                                        _profilePicUrl!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child;
+                                              }
+                                              return const CircularProgressIndicator();
+                                            },
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.08,
+                                                ),
                                       ),
                                     )
                                   : Icon(
