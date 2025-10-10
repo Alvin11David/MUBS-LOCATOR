@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -49,6 +51,27 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  Future<void> _saveFcmToken() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'fcmToken': token,
+                'email': user.email?.toLowerCase(),
+              }, SetOptions(merge: true));
+          print('FCM Token saved: $token');
+        }
+      }
+    } catch (e) {
+      print('Error saving FCM token: $e');
+    }
+  }
+
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
@@ -58,6 +81,9 @@ class _SignInScreenState extends State<SignInScreen> {
       );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
+
+      // Save FCM token and email after sign-in
+      await _saveFcmToken();
 
       if (mounted) {
         if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {

@@ -1,8 +1,7 @@
-// Import the Firebase Messaging scripts
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js');
-importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging.js');
+// firebase-messaging-sw.js
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso",
   authDomain: "mubs-locator.firebaseapp.com",
@@ -15,17 +14,14 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Initialize Firebase Cloud Messaging
 const messaging = firebase.messaging();
 
-// Optional: Handle background messages
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  // Customize notification here
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/logo.png', // Replace with your app's icon
+    icon: '/logo.png', // Ensure this file exists in web/
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
