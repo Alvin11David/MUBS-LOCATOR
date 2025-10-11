@@ -21,7 +21,7 @@ class EditPlaceScreen extends StatefulWidget {
 
 class _EditPlaceScreenState extends State<EditPlaceScreen>
     with SingleTickerProviderStateMixin {
-  String? _profileImagePath;
+  String? _profilePicUrl; // <-- Use this for the profile picture
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
 
@@ -61,69 +61,67 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
   }
 
   Future<void> _loadProfileImage() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-        if (doc.exists) {
-          setState(() {
-            _profileImagePath = doc.data()?['profilePicUrl'] as String?;
-          });
-        }
+        setState(() {
+          _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+        });
+      } catch (e) {
+        print('Error loading profile picture: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile picture: $e')),
+        );
       }
-    } catch (e) {
-      print('Error loading profile image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load profile image: $e')),
-      );
     }
   }
 
   Future<void> _fetchBuildingDetails() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('buildings')
-          .doc(widget.buildingId)
-          .get();
-      if (doc.exists) {
-        final data = doc.data()!;
-        setState(() {
-          _buildingNameController.text = data['name'] ?? '';
-          _descriptionController.text = data['description'] ?? '';
-          _otherNamesController.text = data['otherNames'] ?? '';
-          _selectedLocation = LatLng(
-            (data['latitude'] ?? 0.32848299678238435) as double,
-            (data['longitude'] ?? 32.61717974633408) as double,
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('buildings')
+        .doc(widget.buildingId)
+        .get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        _buildingNameController.text = data['name'] ?? '';
+        _descriptionController.text = data['description'] ?? '';
+        _otherNamesController.text = data['otherNames'] ?? '';
+        _selectedLocation = LatLng(
+          (data['latitude'] ?? 0.32848299678238435) as double,
+          (data['longitude'] ?? 32.61717974633408) as double,
+        );
+        _isLocationSelected = true;
+        _imageUrls = List<String>.from(data['imageUrls'] ?? []);
+        _mtnNumberController.text = data['mtnNumber'] ?? '';
+        _airtelNumberController.text = data['airtelNumber'] ?? '';
+        _selectedDays = List<String>.from(data['days'] ?? []);
+        if (data['startTime'] != null) {
+          _startTime = TimeOfDay(
+            hour: data['startTime']['hour'],
+            minute: data['startTime']['minute'],
           );
-          _isLocationSelected = true;
-          _imageUrls = List<String>.from(data['imageUrls'] ?? []);
-          _mtnNumberController.text = data['mtnNumber'] ?? '';
-          _airtelNumberController.text = data['airtelNumber'] ?? '';
-          _selectedDays = List<String>.from(data['days'] ?? []);
-          if (data['startTime'] != null) {
-            _startTime = TimeOfDay(
-              hour: data['startTime']['hour'],
-              minute: data['startTime']['minute'],
-            );
-          }
-          if (data['endTime'] != null) {
-            _endTime = TimeOfDay(
-              hour: data['endTime']['hour'],
-              minute: data['endTime']['minute'],
-            );
-          }
-        });
-      }
-    } catch (e) {
-      print('Error fetching building details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load building details: $e')),
-      );
+        }
+        if (data['endTime'] != null) {
+          _endTime = TimeOfDay(
+            hour: data['endTime']['hour'],
+            minute: data['endTime']['minute'],
+          );
+        }
+      });
     }
+  } catch (e) {
+    print('Error fetching building details: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to load building details: $e')),
+    );
   }
+}
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -413,39 +411,25 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                           width: 1,
                                         ),
                                       ),
-                                      child:
-                                          _profileImagePath != null &&
-                                              _profileImagePath!.isNotEmpty
+                                      child: (_profilePicUrl != null &&
+                                              _profilePicUrl!.isNotEmpty)
                                           ? ClipOval(
                                               child: Image.network(
-                                                _profileImagePath!,
+                                                _profilePicUrl!,
                                                 fit: BoxFit.cover,
                                                 width: screenWidth * 0.09,
                                                 height: screenWidth * 0.09,
-                                                loadingBuilder:
-                                                    (
-                                                      context,
-                                                      child,
-                                                      loadingProgress,
-                                                    ) {
-                                                      if (loadingProgress ==
-                                                          null)
-                                                        return child;
-                                                      return const CircularProgressIndicator();
-                                                    },
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return Icon(
-                                                        Icons.person,
-                                                        color: Colors.black,
-                                                        size:
-                                                            screenWidth * 0.04,
-                                                      );
-                                                    },
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) {
+                                                    return child;
+                                                  }
+                                                  return const CircularProgressIndicator();
+                                                },
+                                                errorBuilder: (context, error, stackTrace) => Icon(
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.04,
+                                                ),
                                               ),
                                             )
                                           : Icon(
@@ -785,7 +769,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           ),
                         ),
                       ),
-                    );
+                      );
                   },
                 ),
               ),
@@ -831,7 +815,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                               if (result != null &&
                                   result is Map<String, dynamic>) {
                                 setState(() {
-                                  _profileImagePath =
+                                  _profilePicUrl =
                                       result['imageUrl'] as String?;
                                   _isDropdownVisible = false;
                                 });
@@ -912,29 +896,25 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                   width: 1,
                                 ),
                               ),
-                              child:
-                                  _profileImagePath != null &&
-                                      _profileImagePath!.isNotEmpty
+                              child: (_profilePicUrl != null &&
+                                      _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
                                       child: Image.network(
-                                        _profileImagePath!,
+                                        _profilePicUrl!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                              if (loadingProgress == null)
-                                                return child;
-                                              return const CircularProgressIndicator();
-                                            },
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Icon(
-                                                Icons.person,
-                                                color: Colors.black,
-                                                size: screenWidth * 0.08,
-                                              );
-                                            },
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) {
+                                            return child;
+                                          }
+                                          return const CircularProgressIndicator();
+                                        },
+                                        errorBuilder: (context, error, stackTrace) => Icon(
+                                          Icons.person,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.08,
+                                        ),
                                       ),
                                     )
                                   : Icon(
@@ -1065,7 +1045,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                             if (result != null &&
                                 result is Map<String, dynamic>) {
                               setState(() {
-                                _profileImagePath =
+                                _profilePicUrl =
                                     result['imageUrl'] as String?;
                                 _isMenuVisible = false;
                               });

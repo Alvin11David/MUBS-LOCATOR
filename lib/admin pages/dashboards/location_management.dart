@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
@@ -9,10 +10,12 @@ class LocationManagementScreen extends StatefulWidget {
   const LocationManagementScreen({super.key});
 
   @override
-  State<LocationManagementScreen> createState() => _LocationManagementScreenState();
+  State<LocationManagementScreen> createState() =>
+      _LocationManagementScreenState();
 }
 
-class _LocationManagementScreenState extends State<LocationManagementScreen> with SingleTickerProviderStateMixin {
+class _LocationManagementScreenState extends State<LocationManagementScreen>
+    with SingleTickerProviderStateMixin {
   String? _profilePicUrl;
   bool _isDropdownVisible = false;
   bool _isMenuVisible = false;
@@ -31,7 +34,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         setState(() {
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
@@ -69,9 +75,9 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
       }
     } catch (e) {
       print('Logout error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to log out: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to log out: $e')));
     }
   }
 
@@ -92,25 +98,22 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
   void _navigateToScreen(String routeName) {
     final String? currentRoute = ModalRoute.of(context)?.settings.name;
     print('Current route: $currentRoute, Target route: $routeName');
-
     setState(() {
       _isMenuVisible = false;
       _isDropdownVisible = false;
     });
-
     if (routeName == currentRoute) {
       print('Same route, skipping navigation');
       return;
     }
-
     try {
       Navigator.pushReplacementNamed(context, routeName);
       print('Navigated to $routeName');
     } catch (e) {
       print('Navigation error to $routeName: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Navigation error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Navigation error: $e')));
     }
   }
 
@@ -120,7 +123,9 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
     final screenHeight = MediaQuery.of(context).size.height;
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
-    print('Building LocationManagementScreen for user: ${user?.uid}, email: ${user?.email}');
+    print(
+      'Building LocationManagementScreen for user: ${user?.uid}, email: ${user?.email}',
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF93C5FD),
@@ -146,8 +151,13 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                   width: screenWidth,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -158,7 +168,9 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
@@ -202,34 +214,54 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                                 height: screenHeight * 0.05,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: Colors.black, width: 1),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
-                                      padding: EdgeInsets.only(left: screenWidth * 0.0),
+                                      padding: EdgeInsets.only(
+                                        left: screenWidth * 0.0,
+                                      ),
                                       child: Container(
                                         width: screenWidth * 0.1,
                                         height: screenWidth * 0.1,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.black, width: 1),
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
                                         ),
-                                        child: (_profilePicUrl != null && _profilePicUrl!.isNotEmpty)
+                                        child: (_profilePicUrl != null &&
+                                                _profilePicUrl!.isNotEmpty)
                                             ? ClipOval(
                                                 child: Image.network(
                                                   _profilePicUrl!,
                                                   fit: BoxFit.cover,
                                                   width: screenWidth * 0.09,
                                                   height: screenWidth * 0.09,
-                                                  loadingBuilder: (context, child, loadingProgress) {
-                                                    if (loadingProgress == null) {
+                                                  loadingBuilder: (
+                                                    context,
+                                                    child,
+                                                    loadingProgress,
+                                                  ) {
+                                                    if (loadingProgress ==
+                                                        null) {
                                                       return child;
                                                     }
                                                     return const CircularProgressIndicator();
                                                   },
-                                                  errorBuilder: (context, error, stackTrace) => Icon(
+                                                  errorBuilder: (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) =>
+                                                      Icon(
                                                     Icons.person,
                                                     color: Colors.black,
                                                     size: screenWidth * 0.04,
@@ -244,11 +276,14 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                                       ),
                                     ),
                                     Padding(
-                                      padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                      padding: EdgeInsets.only(
+                                        right: screenWidth * 0.01,
+                                      ),
                                       child: GestureDetector(
                                         onTap: () {
                                           setState(() {
-                                            _isDropdownVisible = !_isDropdownVisible;
+                                            _isDropdownVisible =
+                                                !_isDropdownVisible;
                                             _isMenuVisible = false;
                                           });
                                         },
@@ -333,7 +368,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                   screenWidth: screenWidth,
                   screenHeight: screenHeight,
                   navigateToScreen: (routeName, {arguments}) {
-                    Navigator.pushNamed(context, routeName, arguments: arguments);
+                    Navigator.pushNamed(
+                      context,
+                      routeName,
+                      arguments: arguments,
+                    );
                   },
                 ),
               ),
@@ -371,7 +410,8 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                             child: GestureDetector(
                               onTap: _navigateToEditProfile,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Edit Profile',
@@ -440,22 +480,28 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white,
-                                border: Border.all(color: Colors.black, width: 1),
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 1,
+                                ),
                               ),
-                              child: (_profilePicUrl != null && _profilePicUrl!.isNotEmpty)
+                              child: (_profilePicUrl != null &&
+                                      _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
                                       child: Image.network(
                                         _profilePicUrl!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
-                                        loadingBuilder: (context, child, loadingProgress) {
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
                                           if (loadingProgress == null) {
                                             return child;
                                           }
                                           return const CircularProgressIndicator();
                                         },
-                                        errorBuilder: (context, error, stackTrace) => Icon(
+                                        errorBuilder:
+                                            (context, error, stackTrace) => Icon(
                                           Icons.person,
                                           color: Colors.black,
                                           size: screenWidth * 0.08,
@@ -498,7 +544,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                         ],
                       ),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -507,7 +556,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           },
                           child: Row(
                             children: [
-                              Icon(Icons.dashboard, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.dashboard,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Dashboard',
@@ -524,7 +577,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -533,7 +589,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           },
                           child: Row(
                             children: [
-                              Icon(Icons.chat, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.chat,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Feedback & Reports',
@@ -550,13 +610,20 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: _navigateToEditProfile,
                           child: Row(
                             children: [
-                              Icon(Icons.settings, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.settings,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Profile Settings',
@@ -573,7 +640,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -582,7 +652,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           },
                           child: Row(
                             children: [
-                              Icon(Icons.notifications, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.notifications,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Push Notifications',
@@ -599,7 +673,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -608,7 +685,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           },
                           child: Row(
                             children: [
-                              Icon(Icons.location_on, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Locations',
@@ -625,7 +706,10 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -634,7 +718,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen> wit
                           },
                           child: Row(
                             children: [
-                              Icon(Icons.exit_to_app, color: Colors.black, size: screenWidth * 0.06),
+                              Icon(
+                                Icons.exit_to_app,
+                                color: Colors.black,
+                                size: screenWidth * 0.06,
+                              ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
                                 'Logout',
@@ -690,7 +778,8 @@ class _LocationTableState extends State<LocationTable> {
 
   void _refreshData() {
     setState(() {
-      _buildingsFuture = FirebaseFirestore.instance.collection('buildings').get();
+      _buildingsFuture =
+          FirebaseFirestore.instance.collection('buildings').get();
       print('Refreshing buildings data');
     });
   }
@@ -725,21 +814,12 @@ class _LocationTableState extends State<LocationTable> {
                     child: Container(
                       width: widget.screenWidth * 0.1,
                       height: widget.screenWidth * 0.1,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(color: Colors.black, width: 1),
-                      ),
-                      child: Icon(
-                        Icons.filter_list_rounded,
-                        color: Colors.black,
-                        size: widget.screenWidth * 0.06,
-                      ),
                     ),
                   ),
                   SizedBox(width: widget.screenWidth * 0.04),
                   const Spacer(),
                   Padding(
-                    padding: EdgeInsets.only(right: widget.screenWidth * 0.04),
+                    padding: EdgeInsets.only(right: widget.screenWidth * 0.09),
                     child: Row(
                       children: [
                         GestureDetector(
@@ -758,7 +838,7 @@ class _LocationTableState extends State<LocationTable> {
                             ),
                           ),
                         ),
-                        SizedBox(width: widget.screenWidth * 0.02),
+                        SizedBox(width: widget.screenWidth * 0.04),
                         GestureDetector(
                           onTap: () {
                             widget.navigateToScreen('/AddPlaceScreen');
@@ -807,7 +887,9 @@ class _LocationTableState extends State<LocationTable> {
               ),
               SizedBox(height: widget.screenHeight * 0.01),
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
                 child: Container(
                   alignment: Alignment.center,
                   width: widget.screenWidth * 0.88,
@@ -829,10 +911,10 @@ class _LocationTableState extends State<LocationTable> {
                         print('FutureBuilder: No buildings found');
                         return const Center(child: Text('No buildings found'));
                       }
-
                       final docs = snapshot.data!.docs;
-                      print('FutureBuilder: Found ${docs.length} building documents');
-
+                      print(
+                        'FutureBuilder: Found ${docs.length} building documents',
+                      );
                       return Table(
                         columnWidths: const {
                           0: FlexColumnWidth(1),
@@ -840,16 +922,26 @@ class _LocationTableState extends State<LocationTable> {
                           2: FlexColumnWidth(1),
                         },
                         border: const TableBorder(
-                          verticalInside: BorderSide(color: Colors.black, width: 1),
-                          horizontalInside: BorderSide(color: Colors.black, width: 1),
+                          verticalInside: BorderSide(
+                            color: Colors.black,
+                            width: 1,
+                          ),
+                          horizontalInside: BorderSide(
+                            color: Colors.black,
+                            width: 1,
+                          ),
                           top: BorderSide.none,
                         ),
                         children: [
                           TableRow(
-                            decoration: const BoxDecoration(color: Color(0xFF93C5FD)),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF93C5FD),
+                            ),
                             children: [
                               Padding(
-                                padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                padding: EdgeInsets.all(
+                                  widget.screenWidth * 0.02,
+                                ),
                                 child: Text(
                                   'Building\nName',
                                   style: TextStyle(
@@ -862,7 +954,9 @@ class _LocationTableState extends State<LocationTable> {
                                 ),
                               ),
                               Padding(
-                                padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                padding: EdgeInsets.all(
+                                  widget.screenWidth * 0.02,
+                                ),
                                 child: Text(
                                   'Building\nPurpose',
                                   style: TextStyle(
@@ -875,7 +969,9 @@ class _LocationTableState extends State<LocationTable> {
                                 ),
                               ),
                               Padding(
-                                padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                padding: EdgeInsets.all(
+                                  widget.screenWidth * 0.02,
+                                ),
                                 child: Text(
                                   'Action\nButtons',
                                   style: TextStyle(
@@ -892,12 +988,17 @@ class _LocationTableState extends State<LocationTable> {
                           ...docs.map((doc) {
                             final data = doc.data() as Map<String, dynamic>;
                             final name = data['name'] as String? ?? 'Unnamed';
-                            final description = data['description'] as String? ?? 'No description';
-                            print('Document: ID=${doc.id}, Name=$name, Description=$description');
+                            final description = data['description'] as String? ??
+                                'No description';
+                            print(
+                              'Document: ID=${doc.id}, Name=$name, Description=$description',
+                            );
                             return TableRow(
                               children: [
                                 Padding(
-                                  padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                  padding: EdgeInsets.all(
+                                    widget.screenWidth * 0.02,
+                                  ),
                                   child: Text(
                                     name,
                                     style: TextStyle(
@@ -909,7 +1010,9 @@ class _LocationTableState extends State<LocationTable> {
                                   ),
                                 ),
                                 Padding(
-                                  padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                  padding: EdgeInsets.all(
+                                    widget.screenWidth * 0.02,
+                                  ),
                                   child: Text(
                                     description,
                                     style: TextStyle(
@@ -923,34 +1026,50 @@ class _LocationTableState extends State<LocationTable> {
                                   ),
                                 ),
                                 Padding(
-                                  padding: EdgeInsets.all(widget.screenWidth * 0.02),
+                                  padding: EdgeInsets.all(
+                                    widget.screenWidth * 0.02,
+                                  ),
                                   child: Column(
                                     children: [
                                       GestureDetector(
                                         onTap: () {
-                                          widget.navigateToScreen('/EditPlaceScreen', arguments: {'buildingId': doc.id});
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  EditPlaceScreen(
+                                                buildingId: doc.id,
+                                              ),
+                                            ),
+                                          );
                                         },
                                         child: Container(
                                           width: widget.screenWidth * 0.22,
                                           height: widget.screenWidth * 0.08,
                                           decoration: BoxDecoration(
                                             color: Colors.green,
-                                            borderRadius: BorderRadius.circular(20),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Icon(
                                                 Icons.edit,
                                                 color: Colors.white,
                                                 size: widget.screenWidth * 0.04,
                                               ),
-                                              SizedBox(width: widget.screenWidth * 0.015),
+                                              SizedBox(
+                                                width:
+                                                    widget.screenWidth * 0.015,
+                                              ),
                                               Text(
                                                 'Edit',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: widget.screenWidth * 0.03,
+                                                  fontSize:
+                                                      widget.screenWidth * 0.03,
                                                   fontFamily: 'Poppins',
                                                 ),
                                               ),
@@ -958,37 +1077,63 @@ class _LocationTableState extends State<LocationTable> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(height: widget.screenWidth * 0.02),
+                                      SizedBox(
+                                        height: widget.screenWidth * 0.02,
+                                      ),
                                       GestureDetector(
                                         onTap: () async {
                                           final confirm = await showDialog<bool>(
                                             context: context,
                                             builder: (context) => AlertDialog(
-                                              title: const Text('Delete Location'),
-                                              content: const Text('Are you sure you want to delete this location?'),
+                                              title:
+                                                  const Text('Delete Location'),
+                                              content: const Text(
+                                                'Are you sure you want to delete this location?',
+                                              ),
                                               actions: [
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(false),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
                                                   child: const Text('Cancel'),
                                                 ),
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(true),
-                                                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
+                                                  child: const Text(
+                                                    'Delete',
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           );
                                           if (confirm == true) {
                                             try {
-                                              await FirebaseFirestore.instance.collection('buildings').doc(doc.id).delete();
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Location deleted')),
+                                              await FirebaseFirestore.instance
+                                                  .collection('buildings')
+                                                  .doc(doc.id)
+                                                  .delete();
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content:
+                                                      Text('Location deleted'),
+                                                ),
                                               );
                                               _refreshData();
                                             } catch (e) {
-                                              print('Error deleting location: $e');
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Error deleting location: $e')),
+                                              print(
+                                                  'Error deleting location: $e');
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Error deleting location: $e'),
+                                                ),
                                               );
                                             }
                                           }
@@ -998,22 +1143,28 @@ class _LocationTableState extends State<LocationTable> {
                                           height: widget.screenWidth * 0.08,
                                           decoration: BoxDecoration(
                                             color: Colors.red,
-                                            borderRadius: BorderRadius.circular(20),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Icon(
                                                 Icons.delete,
                                                 color: Colors.black,
                                                 size: widget.screenWidth * 0.04,
                                               ),
-                                              SizedBox(width: widget.screenWidth * 0.015),
+                                              SizedBox(
+                                                width:
+                                                    widget.screenWidth * 0.015,
+                                              ),
                                               Text(
                                                 'Delete',
                                                 style: TextStyle(
                                                   color: Colors.black,
-                                                  fontSize: widget.screenWidth * 0.03,
+                                                  fontSize:
+                                                      widget.screenWidth * 0.03,
                                                   fontFamily: 'Poppins',
                                                 ),
                                               ),

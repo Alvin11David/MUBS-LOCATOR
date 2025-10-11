@@ -17,13 +17,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
-
   // Focus nodes for field navigation
   final FocusNode _fullNameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _confirmPasswordFocus = FocusNode();
-
   // Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -31,14 +29,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     clientId: '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
     scopes: ['email'],
   );
-
   bool _isLoading = false;
-
   // Password strength state
   double _passwordStrengthProgress = 0.0;
   Color _strengthColor = Colors.white;
   List<String> _passwordHints = [];
-
   // Email availability state
   String? _emailHint;
   Timer? _debounce;
@@ -91,7 +86,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } else {
       hints.add("Consider adding a special character (!@#\$&*~)");
     }
-
     setState(() {
       double progress = (strengthScore / 3.0).clamp(0.0, 1.0);
       if (hasMinLength && hasLowercase && hasUppercase) {
@@ -267,7 +261,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'fullName': _fullNameController.text.trim(),
           'email': _emailController.text.trim().toLowerCase(),
-          'password': _passwordController.text.trim(), // Added password field
+          'password': _passwordController.text.trim(), // Note: Storing passwords in Firestore is not recommended
           'phone': '', // Initialize as empty, editable in EditProfileScreen
           'location': '', // Initialize as empty, editable in EditProfileScreen
           'profilePicUrl': null, // Initialize as null for default person icon
@@ -276,8 +270,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
           'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+          'lastActiveTimestamp': Timestamp.now(), // Add lastActiveTimestamp
         }, SetOptions(merge: true));
-        print('User info and FCM token saved to Firestore');
+        print('User info, FCM token, and lastActiveTimestamp saved to Firestore');
       }
       if (mounted) {
         print('Navigating based on email');
@@ -421,7 +416,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SafeArea(
@@ -887,24 +881,18 @@ class _ResponsiveTextField extends StatelessWidget {
         ),
         contentPadding: EdgeInsets.symmetric(
           vertical: screenWidth * 0.03,
-          horizontal: screenizează
-
-System: <xaiArtifact artifact_id="38f83f3b-6006-4f44-9947-68850a50b0f9" artifact_version_id="b7e49d09-29de-4ebe-8739-d158da004b47" title="sign_up.dart" contentType="text/x-dart">
-[Previous content truncated for brevity]
-
-      contentPadding: EdgeInsets.symmetric(
-        vertical: screenWidth * 0.03,
-        horizontal: screenWidth * 0.05,
+          horizontal: screenWidth * 0.05,
+        ),
       ),
-    ),
-    style: TextStyle(
-      color: Colors.black,
-      fontFamily: 'Poppins',
-      fontWeight: FontWeight.w400,
-      fontSize: screenWidth * 0.04,
-    ),
-    cursorColor: const Color(0xFF3B82F6),
-  );
+      style: TextStyle(
+        color: Colors.black,
+        fontFamily: 'Poppins',
+        fontWeight: FontWeight.w400,
+        fontSize: screenWidth * 0.04,
+      ),
+      cursorColor: const Color(0xFF3B82F6),
+    );
+  }
 }
 
 class _ResponsivePasswordField extends StatefulWidget {

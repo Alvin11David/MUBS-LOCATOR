@@ -16,20 +16,37 @@ class AddPlaceScreen extends StatefulWidget {
   State<AddPlaceScreen> createState() => _AddPlaceScreenState();
 }
 
-class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProviderStateMixin {
-  String? _profileImagePath;
+class _AddPlaceScreenState extends State<AddPlaceScreen> {
+  String? _profilePicUrl;
 
   @override
   void initState() {
     super.initState();
     _loadProfileImage();
+    _latitudeController.addListener(_updateLocationFromText);
+    _longitudeController.addListener(_updateLocationFromText);
+    _latitudeController.text = _selectedLocation.latitude.toStringAsFixed(6);
+    _longitudeController.text = _selectedLocation.longitude.toStringAsFixed(6);
   }
 
   Future<void> _loadProfileImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _profileImagePath = prefs.getString('profileImagePath');
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+        });
+      } catch (e) {
+        print('Error loading profile picture: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile picture: $e')),
+        );
+      }
+    }
   }
 
   String _getGreeting() {
@@ -50,16 +67,24 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _mtnNumberController = TextEditingController();
   final TextEditingController _airtelNumberController = TextEditingController();
+  final TextEditingController _latitudeController = TextEditingController();
+  final TextEditingController _longitudeController = TextEditingController();
   final FocusNode _buildingNameFocus = FocusNode();
   final FocusNode _descriptionFocus = FocusNode();
   final FocusNode _locationFocus = FocusNode();
+  final FocusNode _latitudeFocus = FocusNode();
+  final FocusNode _longitudeFocus = FocusNode();
   final FocusNode _mtnNumberFocus = FocusNode();
   final FocusNode _airtelNumberFocus = FocusNode();
 
-  LatLng _selectedLocation = const LatLng(0.32848299678238435, 32.61717974633408);
+  LatLng _selectedLocation = const LatLng(
+    0.32848299678238435,
+    32.61717974633408,
+  );
   GoogleMapController? _mapController;
   bool _isLocationSelected = false;
   List<XFile?> _images = [null, null, null, null];
+  List<Map<String, dynamic>> _openingHoursEntries = [];
 
   static const CameraPosition _mubsCenter = CameraPosition(
     target: LatLng(0.32848299678238435, 32.61717974633408),
@@ -85,23 +110,62 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
       _selectedLocation = position;
       _isLocationSelected = true;
     });
+    _latitudeController.text = position.latitude.toStringAsFixed(6);
+    _longitudeController.text = position.longitude.toStringAsFixed(6);
     _mapController?.animateCamera(CameraUpdate.newLatLng(_selectedLocation));
   }
 
-  Future<void> _saveLocation(List<String> days, TimeOfDay? startTime, TimeOfDay? endTime) async {
+  void _updateLocationFromText() {
+    double? lat = double.tryParse(_latitudeController.text);
+    double? lng = double.tryParse(_longitudeController.text);
+    if (lat != null &&
+        lng != null &&
+        (lat != _selectedLocation.latitude ||
+            lng != _selectedLocation.longitude)) {
+      setState(() {
+        _selectedLocation = LatLng(lat, lng);
+        _isLocationSelected = true;
+      });
+      _mapController?.animateCamera(CameraUpdate.newLatLng(_selectedLocation));
+    }
+  }
+
+  Future<void> _saveLocation() async {
     // Validate fields
     final nameError = _validateName(_buildingNameController.text);
     final descError = _validateDescription(_descriptionController.text);
     final mtnError = _validateMtnNumber(_mtnNumberController.text);
     final airtelError = _validateAirtelNumber(_airtelNumberController.text);
-    final locationError = _isLocationSelected ? null : 'Please select a location';
-    final daysError = days.isNotEmpty ? null : 'Please select days';
-    final timeError = (startTime != null && endTime != null) ? null : 'Please select time range';
-    final imagesError = _images.any((img) => img != null) ? null : 'Please select at least one image';
+    final locationError = _isLocationSelected
+        ? null
+        : 'Please select a location';
+    final openingHoursError = _openingHoursEntries.isNotEmpty
+        ? null
+        : 'Please add opening hours';
+    final imagesError = _images.any((img) => img != null)
+        ? null
+        : 'Please select at least one image';
 
-    if (nameError != null || descError != null || mtnError != null || airtelError != null || locationError != null || daysError != null || timeError != null || imagesError != null) {
+    if (nameError != null ||
+        descError != null ||
+        mtnError != null ||
+        airtelError != null ||
+        locationError != null ||
+        openingHoursError != null ||
+        imagesError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(nameError ?? descError ?? mtnError ?? airtelError ?? locationError ?? daysError ?? timeError ?? imagesError ?? 'Invalid input')),
+        SnackBar(
+          content: Text(
+            nameError ??
+                descError ??
+                mtnError ??
+                airtelError ??
+                locationError ??
+                openingHoursError ??
+                imagesError ??
+                'Invalid input',
+          ),
+        ),
       );
       return;
     }
@@ -114,7 +178,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
       // Upload images to Firebase Storage
       for (int i = 0; i < _images.length; i++) {
         if (_images[i] != null) {
-          final storageRef = FirebaseStorage.instance.ref().child('buildings/${docRef.id}/images/image_$i.jpg');
+          final storageRef = FirebaseStorage.instance.ref().child(
+            'buildings/${docRef.id}/images/image_$i.jpg',
+          );
           await storageRef.putFile(File(_images[i]!.path));
           final url = await storageRef.getDownloadURL();
           imageUrls.add(url);
@@ -127,9 +193,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
         'description': _descriptionController.text.trim(),
         'latitude': _selectedLocation.latitude,
         'longitude': _selectedLocation.longitude,
-        'days': days,
-        'startTime': startTime != null ? {'hour': startTime.hour, 'minute': startTime.minute} : null,
-        'endTime': endTime != null ? {'hour': endTime.hour, 'minute': endTime.minute} : null,
+        'openingHours': _openingHoursEntries, // Save all entries
         'mtnNumber': _mtnNumberController.text.trim(),
         'airtelNumber': _airtelNumberController.text.trim(),
         'imageUrls': imageUrls,
@@ -142,9 +206,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
         Navigator.pop(context);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving location: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving location: $e')));
     }
   }
 
@@ -207,9 +271,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
     _descriptionController.dispose();
     _mtnNumberController.dispose();
     _airtelNumberController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     _buildingNameFocus.dispose();
     _descriptionFocus.dispose();
     _locationFocus.dispose();
+    _latitudeFocus.dispose();
+    _longitudeFocus.dispose();
     _mtnNumberFocus.dispose();
     _airtelNumberFocus.dispose();
     _mapController?.dispose();
@@ -248,8 +316,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                   width: screenWidth,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -260,7 +333,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
@@ -304,27 +379,61 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                                 height: screenHeight * 0.05,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(color: Colors.black, width: 1),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Padding(
-                                      padding: EdgeInsets.only(left: screenWidth * 0.00),
+                                      padding: EdgeInsets.only(
+                                        left: screenWidth * 0.00,
+                                      ),
                                       child: Container(
                                         width: screenWidth * 0.1,
                                         height: screenWidth * 0.1,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.black, width: 1),
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
                                         ),
-                                        child: (_profileImagePath != null && _profileImagePath!.isNotEmpty)
+                                        child:
+                                            (_profilePicUrl != null &&
+                                                _profilePicUrl!.isNotEmpty)
                                             ? ClipOval(
-                                                child: Image.file(
-                                                  File(_profileImagePath!),
+                                                child: Image.network(
+                                                  _profilePicUrl!,
                                                   fit: BoxFit.cover,
                                                   width: screenWidth * 0.09,
                                                   height: screenWidth * 0.09,
+                                                  loadingBuilder:
+                                                      (
+                                                        context,
+                                                        child,
+                                                        loadingProgress,
+                                                      ) {
+                                                        if (loadingProgress ==
+                                                            null) {
+                                                          return child;
+                                                        }
+                                                        return const CircularProgressIndicator();
+                                                      },
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        error,
+                                                        stackTrace,
+                                                      ) => Icon(
+                                                        Icons.person,
+                                                        color: Colors.black,
+                                                        size:
+                                                            screenWidth * 0.04,
+                                                      ),
                                                 ),
                                               )
                                             : Icon(
@@ -335,11 +444,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                                       ),
                                     ),
                                     Padding(
-                                      padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                      padding: EdgeInsets.only(
+                                        right: screenWidth * 0.01,
+                                      ),
                                       child: GestureDetector(
                                         onTap: () {
                                           setState(() {
-                                            _isDropdownVisible = !_isDropdownVisible;
+                                            _isDropdownVisible =
+                                                !_isDropdownVisible;
                                             _isMenuVisible = false;
                                           });
                                         },
@@ -423,51 +535,60 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
               Positioned(
                 top: screenHeight * 0.09,
                 right: screenWidth * 0.04,
-                child: Container(
-                  width: screenWidth * 0.25,
-                  height: screenHeight * 0.06,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        color: Colors.transparent,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.03,
-                            vertical: screenHeight * 0.01,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Profile',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins',
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/ProfileScreen');
+                    setState(() {
+                      _isDropdownVisible = false;
+                      _isMenuVisible = false;
+                    });
+                  },
+                  child: Container(
+                    width: screenWidth * 0.25,
+                    height: screenHeight * 0.06,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.03,
+                              vertical: screenHeight * 0.01,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Profile',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: screenWidth * 0.04,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                  ),
                                 ),
-                              ),
-                              Image.asset(
-                                'assets/images/edit.png',
-                                color: Colors.black,
-                                width: screenWidth * 0.04,
-                                height: screenWidth * 0.04,
-                              ),
-                            ],
+                                Image.asset(
+                                  'assets/images/edit.png',
+                                  color: Colors.black,
+                                  width: screenWidth * 0.04,
+                                  height: screenWidth * 0.04,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -485,7 +606,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                   return SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -501,7 +624,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: BuildingNameField(
                                   controller: _buildingNameController,
                                   label: 'Building Name',
@@ -514,7 +639,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: DescriptionField(
                                   controller: _descriptionController,
                                   label: 'Building Description',
@@ -522,12 +649,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                                   icon: Icons.description,
                                   focusNode: _descriptionFocus,
                                   textInputAction: TextInputAction.next,
-                                  nextFocusNode: _locationFocus,
+                                  nextFocusNode: _latitudeFocus,
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.00),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
                                 child: LocationSelectField(
                                   controller: TextEditingController(),
                                   label: 'Location Select',
@@ -535,7 +664,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                                   icon: Icons.location_on,
                                   focusNode: _locationFocus,
                                   textInputAction: TextInputAction.next,
-                                  nextFocusNode: _mtnNumberFocus,
                                   selectedLocation: _selectedLocation,
                                   isLocationSelected: _isLocationSelected,
                                   onMapCreated: _onMapCreated,
@@ -544,7 +672,39 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.00),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: LatitudeField(
+                                  controller: _latitudeController,
+                                  label: 'Latitude',
+                                  hint: '0.328483',
+                                  icon: Icons.north,
+                                  focusNode: _latitudeFocus,
+                                  nextFocusNode: _longitudeFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
+                                child: LongitudeField(
+                                  controller: _longitudeController,
+                                  label: 'Longitude',
+                                  hint: '32.617180',
+                                  icon: Icons.east,
+                                  focusNode: _longitudeFocus,
+                                  nextFocusNode: _mtnNumberFocus,
+                                  textInputAction: TextInputAction.next,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
                                 child: PhotosMediaField(
                                   onImagesChanged: (images) {
                                     setState(() {
@@ -555,53 +715,105 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.00),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
                                 child: OpeningClosingHoursField(
                                   mtnNumberController: _mtnNumberController,
-                                  airtelNumberController: _airtelNumberController,
-                                  onSave: _saveLocation,
+                                  airtelNumberController:
+                                      _airtelNumberController,
+                                  onAddEntry: (entry) {
+                                    setState(() {
+                                      _openingHoursEntries.add(entry);
+                                    });
+                                  },
                                 ),
                               ),
+                              if (_openingHoursEntries.isNotEmpty)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    top: screenHeight * 0.02,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Saved Opening & Closing Hours:',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: screenWidth * 0.04,
+                                        ),
+                                      ),
+                                      ..._openingHoursEntries.map((entry) {
+                                        final days =
+                                            entry['days'] as List<String>;
+                                        final startTime =
+                                            entry['startTime'] as TimeOfDay;
+                                        final endTime =
+                                            entry['endTime'] as TimeOfDay;
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          child: Text(
+                                            '${days.join(', ')}: ${startTime.format(context)} - ${endTime.format(context)}',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: screenWidth * 0.035,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ],
+                                  ),
+                                ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.00),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.00,
+                                ),
                                 child: ContactInformationField(
                                   mtnNumberController: _mtnNumberController,
-                                  airtelNumberController: _airtelNumberController,
+                                  airtelNumberController:
+                                      _airtelNumberController,
                                   mtnNumberFocus: _mtnNumberFocus,
                                   airtelNumberFocus: _airtelNumberFocus,
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    final openingHoursState = context.findAncestorStateOfType<_OpeningClosingHoursFieldState>();
-                                    if (openingHoursState != null) {
-                                      _saveLocation(
-                                        openingHoursState._selectedDays,
-                                        openingHoursState._startTime,
-                                        openingHoursState._endTime,
-                                      );
-                                    }
-                                  },
+                                  onPressed: _saveLocation,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF93C5FD),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
                                     padding: EdgeInsets.symmetric(
                                       vertical: screenHeight * 0.015,
                                       horizontal: screenWidth * 0.1,
                                     ),
                                     elevation: 8,
-                                    shadowColor: const Color(0xFF93C5FD).withOpacity(0.5),
+                                    shadowColor: const Color(
+                                      0xFF93C5FD,
+                                    ).withOpacity(0.5),
                                   ),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(30),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF93C5FD).withOpacity(0.4),
+                                          color: const Color(
+                                            0xFF93C5FD,
+                                          ).withOpacity(0.4),
                                           blurRadius: 10,
                                           spreadRadius: 2,
                                           offset: const Offset(0, 2),
@@ -655,7 +867,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                   height: screenHeight * 0.8,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.only(topRight: Radius.circular(30), bottomRight: Radius.circular(30)),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.2),
@@ -685,15 +900,34 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white,
-                                border: Border.all(color: Colors.black, width: 1),
+                                border: Border.all(
+                                  color: Colors.black,
+                                  width: 1,
+                                ),
                               ),
-                              child: (_profileImagePath != null && _profileImagePath!.isNotEmpty)
+                              child:
+                                  (_profilePicUrl != null &&
+                                      _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
-                                      child: Image.file(
-                                        File(_profileImagePath!),
+                                      child: Image.network(
+                                        _profilePicUrl!,
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child;
+                                              }
+                                              return const CircularProgressIndicator();
+                                            },
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.08,
+                                                ),
                                       ),
                                     )
                                   : Icon(
@@ -732,10 +966,19 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                         ],
                       ),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/AdminDashboardScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                            Navigator.pushNamed(
+                              context,
+                              '/AdminDashboardScreen',
+                            );
                           },
                           child: Row(
                             children: [
@@ -760,30 +1003,44 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.chat,
-                              color: Colors.black,
-                              size: screenWidth * 0.06,
-                            ),
-                            SizedBox(width: screenWidth * 0.02),
-                            Text(
-                              'Feedback & Reports',
-                              style: TextStyle(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/FeedbackScreen');
+                            setState(() {
+                              _isMenuVisible = false;
+                            });
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.chat,
                                 color: Colors.black,
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                                size: screenWidth * 0.06,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Feedback & Reports',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           onTap: () {
                             Navigator.pushNamed(context, '/ProfileScreen');
@@ -814,10 +1071,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            Navigator.pushNamed(
+                              context,
+                              '/SendNotificationsScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });
@@ -845,10 +1108,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            Navigator.pushNamed(
+                              context,
+                              '/LocationManagementScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });
@@ -876,7 +1145,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> with SingleTickerProvid
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       Padding(
-                        padding: EdgeInsets.only(left: screenWidth * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
                         child: GestureDetector(
                           onTap: _logout,
                           child: Row(
@@ -1062,7 +1334,10 @@ class DescriptionField extends StatelessWidget {
               heightFactor: 1.0,
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: EdgeInsets.only(left: screenWidth * 0.08, top: screenWidth * 0.005),
+                padding: EdgeInsets.only(
+                  left: screenWidth * 0.08,
+                  top: screenWidth * 0.005,
+                ),
                 child: Icon(
                   icon,
                   color: const Color.fromARGB(255, 69, 141, 224),
@@ -1108,7 +1383,6 @@ class LocationSelectField extends StatefulWidget {
   final IconData icon;
   final FocusNode focusNode;
   final TextInputAction textInputAction;
-  final FocusNode? nextFocusNode;
   final LatLng selectedLocation;
   final bool isLocationSelected;
   final void Function(GoogleMapController) onMapCreated;
@@ -1122,7 +1396,6 @@ class LocationSelectField extends StatefulWidget {
     required this.icon,
     required this.focusNode,
     required this.textInputAction,
-    this.nextFocusNode,
     required this.selectedLocation,
     required this.isLocationSelected,
     required this.onMapCreated,
@@ -1145,7 +1418,10 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.05, bottom: screenHeight * 0.01),
+              padding: EdgeInsets.only(
+                left: screenWidth * 0.05,
+                bottom: screenHeight * 0.01,
+              ),
               child: Text(
                 widget.label,
                 style: TextStyle(
@@ -1185,10 +1461,15 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
                           Marker(
                             markerId: const MarkerId('selected_location'),
                             position: widget.selectedLocation,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                            icon: BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueRed,
+                            ),
                             infoWindow: InfoWindow(
-                              title: widget.isLocationSelected ? 'Selected Location' : 'Tap to select location',
-                              snippet: '${widget.selectedLocation.latitude.toStringAsFixed(6)}, ${widget.selectedLocation.longitude.toStringAsFixed(6)}',
+                              title: widget.isLocationSelected
+                                  ? 'Selected Location'
+                                  : 'Tap to select location',
+                              snippet:
+                                  '${widget.selectedLocation.latitude.toStringAsFixed(6)}, ${widget.selectedLocation.longitude.toStringAsFixed(6)}',
                             ),
                           ),
                         },
@@ -1233,19 +1514,187 @@ class _LocationSelectFieldState extends State<LocationSelectField> {
                 ),
               ),
             ),
-            if (widget.isLocationSelected)
-              Padding(
-                padding: EdgeInsets.only(left: screenWidth * 0.05, top: screenHeight * 0.01),
-                child: Text(
-                  'Selected: ${widget.selectedLocation.latitude.toStringAsFixed(6)}, ${widget.selectedLocation.longitude.toStringAsFixed(6)}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontFamily: 'Poppins',
-                    fontSize: screenWidth * 0.035,
-                  ),
-                ),
-              ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class LatitudeField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final FocusNode focusNode;
+  final FocusNode? nextFocusNode;
+  final TextInputAction textInputAction;
+
+  const LatitudeField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.focusNode,
+    this.nextFocusNode,
+    required this.textInputAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        return TextFormField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(
+            decimal: true,
+            signed: true,
+          ),
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          enabled: true,
+          onFieldSubmitted: (_) {
+            if (nextFocusNode != null) {
+              FocusScope.of(context).requestFocus(nextFocusNode);
+            }
+          },
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+              fontSize: screenWidth * 0.05,
+            ),
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w400,
+              fontSize: screenWidth * 0.045,
+            ),
+            fillColor: const Color.fromARGB(255, 237, 236, 236),
+            filled: true,
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.02),
+              child: Icon(
+                icon,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: screenWidth * 0.05,
+              horizontal: screenWidth * 0.05,
+            ),
+          ),
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w400,
+            fontSize: screenWidth * 0.045,
+          ),
+          cursorColor: const Color(0xFF3B82F6),
+        );
+      },
+    );
+  }
+}
+
+class LongitudeField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final FocusNode focusNode;
+  final FocusNode? nextFocusNode;
+  final TextInputAction textInputAction;
+
+  const LongitudeField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.focusNode,
+    this.nextFocusNode,
+    required this.textInputAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        return TextFormField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(
+            decimal: true,
+            signed: true,
+          ),
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          enabled: true,
+          onFieldSubmitted: (_) {
+            if (nextFocusNode != null) {
+              FocusScope.of(context).requestFocus(nextFocusNode);
+            }
+          },
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+              fontSize: screenWidth * 0.05,
+            ),
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w400,
+              fontSize: screenWidth * 0.045,
+            ),
+            fillColor: const Color.fromARGB(255, 237, 236, 236),
+            filled: true,
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(left: screenWidth * 0.02),
+              child: Icon(
+                icon,
+                color: const Color.fromARGB(255, 69, 141, 224),
+                size: screenWidth * 0.06,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: screenWidth * 0.05,
+              horizontal: screenWidth * 0.05,
+            ),
+          ),
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w400,
+            fontSize: screenWidth * 0.045,
+          ),
+          cursorColor: const Color(0xFF3B82F6),
         );
       },
     );
@@ -1267,7 +1716,9 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
 
   Future<void> _addImage(int index) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+      );
       if (pickedFile != null) {
         setState(() {
           _images[index] = pickedFile;
@@ -1275,10 +1726,17 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _images[index] = null;
+      widget.onImagesChanged(_images);
+    });
   }
 
   @override
@@ -1292,7 +1750,10 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.05, bottom: screenHeight * 0.01),
+              padding: EdgeInsets.only(
+                left: screenWidth * 0.05,
+                bottom: screenHeight * 0.01,
+              ),
               child: Text(
                 'Photos & Media',
                 style: TextStyle(
@@ -1329,31 +1790,64 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
                       children: List.generate(4, (index) {
                         return GestureDetector(
                           onTap: () => _addImage(index),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF93C5FD), width: 1),
-                            ),
-                            child: _images[index] != null
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      File(_images[index]!.path),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
-                                  )
-                                : Container(
-                                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-                                    child: Center(
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF93C5FD),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: _images[index] != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.file(
+                                          File(_images[index]!.path),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        ),
+                                      )
+                                    : Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.add,
+                                            color: const Color(0xFF93C5FD),
+                                            size: screenWidth * 0.06,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              if (_images[index] != null)
+                                Positioned(
+                                  top: 5,
+                                  right: 5,
+                                  child: GestureDetector(
+                                    onTap: () => _removeImage(index),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: EdgeInsets.all(
+                                        screenWidth * 0.01,
+                                      ),
                                       child: Icon(
-                                        Icons.add,
-                                        color: const Color(0xFF93C5FD),
-                                        size: screenWidth * 0.06,
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: screenWidth * 0.04,
                                       ),
                                     ),
                                   ),
+                                ),
+                            ],
                           ),
                         );
                       }),
@@ -1372,17 +1866,18 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
 class OpeningClosingHoursField extends StatefulWidget {
   final TextEditingController mtnNumberController;
   final TextEditingController airtelNumberController;
-  final Function(List<String>, TimeOfDay?, TimeOfDay?) onSave;
+  final Function(Map<String, dynamic>) onAddEntry;
 
   const OpeningClosingHoursField({
     super.key,
     required this.mtnNumberController,
     required this.airtelNumberController,
-    required this.onSave,
+    required this.onAddEntry,
   });
 
   @override
-  State<OpeningClosingHoursField> createState() => _OpeningClosingHoursFieldState();
+  State<OpeningClosingHoursField> createState() =>
+      _OpeningClosingHoursFieldState();
 }
 
 class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
@@ -1391,8 +1886,6 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
   TimeOfDay? _endTime;
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
-  bool _isSaved = false;
-  int _saveClickCount = 0;
 
   final List<String> _daysOfWeek = [
     'Monday',
@@ -1431,11 +1924,14 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
 
   String _getDaysText() {
     if (_selectedDays.isEmpty) return 'Select days';
-    if (_selectedDays.length == 2 && _selectedDays.contains('Saturday') && _selectedDays.contains('Sunday')) {
+    if (_selectedDays.length == 2 &&
+        _selectedDays.contains('Saturday') &&
+        _selectedDays.contains('Sunday')) {
       return 'Weekends';
     }
     if (_selectedDays.length == 1) return _selectedDays.first;
-    final indices = _selectedDays.map((day) => _daysOfWeek.indexOf(day)).toList()..sort();
+    final indices =
+        _selectedDays.map((day) => _daysOfWeek.indexOf(day)).toList()..sort();
     bool isConsecutive = true;
     for (int i = 1; i < indices.length; i++) {
       if (indices[i] != indices[i - 1] + 1) {
@@ -1449,128 +1945,137 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
     return _selectedDays.join(', ');
   }
 
-  String _getWeekendsRowText() {
-    String daysText = _getDaysText();
-    String timeText = (_startTime != null && _endTime != null)
-        ? '${_startTime!.format(context)}–${_endTime!.format(context)}'
-        : 'Select time range';
-    return '$daysText: $timeText';
-  }
-
   Future<void> _showDaysPopup(BuildContext context) async {
     List<String> tempSelectedDays = List.from(_selectedDays);
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF93C5FD), width: 1),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Select Days of the Week',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w500,
-                    fontSize: MediaQuery.of(context).size.width * 0.045,
-                  ),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width * 0.04,
                 ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-                Wrap(
-                  spacing: MediaQuery.of(context).size.width * 0.02,
-                  runSpacing: MediaQuery.of(context).size.height * 0.01,
-                  children: _daysOfWeek.map((day) {
-                    return ChoiceChip(
-                      label: Text(
-                        day.substring(0, 3),
-                        style: TextStyle(
-                          color: tempSelectedDays.contains(day) ? Colors.white : Colors.black,
-                          fontSize: MediaQuery.of(context).size.width * 0.035,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      selected: tempSelectedDays.contains(day),
-                      selectedColor: const Color(0xFF93C5FD),
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: tempSelectedDays.contains(day) ? const Color(0xFF93C5FD) : Colors.black,
-                        ),
-                      ),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (tempSelectedDays.contains(day)) {
-                            tempSelectedDays.remove(day);
-                          } else {
-                            if (tempSelectedDays.isNotEmpty) {
-                              int startIndex = _daysOfWeek.indexOf(tempSelectedDays.last);
-                              int endIndex = _daysOfWeek.indexOf(day);
-                              if (startIndex > endIndex) {
-                                final temp = startIndex;
-                                startIndex = endIndex;
-                                endIndex = temp;
-                              }
-                              tempSelectedDays.clear();
-                              for (int i = startIndex; i <= endIndex; i++) {
-                                tempSelectedDays.add(_daysOfWeek[i]);
-                              }
-                            } else {
-                              tempSelectedDays.add(day);
-                            }
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF93C5FD), width: 1),
                 ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontFamily: 'Poppins',
-                          fontSize: MediaQuery.of(context).size.width * 0.04,
-                        ),
+                    Text(
+                      'Select Days of the Week',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                        fontSize: MediaQuery.of(context).size.width * 0.045,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedDays = List.from(tempSelectedDays);
-                          _daysController.text = _getDaysText();
-                        });
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        'OK',
-                        style: TextStyle(
-                          color: const Color(0xFF93C5FD),
-                          fontFamily: 'Poppins',
-                          fontSize: MediaQuery.of(context).size.width * 0.04,
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                    Wrap(
+                      spacing: MediaQuery.of(context).size.width * 0.02,
+                      runSpacing: MediaQuery.of(context).size.height * 0.01,
+                      children: _daysOfWeek.map((day) {
+                        return ChoiceChip(
+                          label: Text(
+                            day.substring(0, 3),
+                            style: TextStyle(
+                              color: tempSelectedDays.contains(day)
+                                  ? Colors.white
+                                  : Colors.black,
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.035,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          selected: tempSelectedDays.contains(day),
+                          selectedColor: const Color(0xFF93C5FD),
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: tempSelectedDays.contains(day)
+                                  ? const Color(0xFF93C5FD)
+                                  : Colors.black,
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              if (tempSelectedDays.contains(day)) {
+                                tempSelectedDays.remove(day);
+                              } else {
+                                if (tempSelectedDays.isNotEmpty) {
+                                  int startIndex = _daysOfWeek.indexOf(
+                                    tempSelectedDays.last,
+                                  );
+                                  int endIndex = _daysOfWeek.indexOf(day);
+                                  if (startIndex > endIndex) {
+                                    final temp = startIndex;
+                                    startIndex = endIndex;
+                                    endIndex = temp;
+                                  }
+                                  tempSelectedDays.clear();
+                                  for (int i = startIndex; i <= endIndex; i++) {
+                                    tempSelectedDays.add(_daysOfWeek[i]);
+                                  }
+                                } else {
+                                  tempSelectedDays.add(day);
+                                }
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontFamily: 'Poppins',
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.04,
+                            ),
+                          ),
                         ),
-                      ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _selectedDays = List.from(tempSelectedDays);
+                              _daysController.text = _getDaysText();
+                            });
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'OK',
+                            style: TextStyle(
+                              color: const Color(0xFF93C5FD),
+                              fontFamily: 'Poppins',
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.04,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1600,9 +2105,12 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
       setState(() {
         _startTime = start;
       });
-      final TimeOfDay? end = await showTimePicker(
+
+      final TimeOfDay? pickedEnd = await showTimePicker(
         context: context,
-        initialTime: _endTime ?? TimeOfDay(hour: (start.hour + 9) % 24, minute: start.minute),
+        initialTime:
+            _endTime ??
+            TimeOfDay(hour: (start.hour + 9) % 24, minute: start.minute),
         builder: (context, child) {
           return Theme(
             data: Theme.of(context).copyWith(
@@ -1619,43 +2127,25 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
           );
         },
       );
-      if (end != null && end != _endTime) {
+
+      if (pickedEnd != null && pickedEnd != _endTime) {
         final startMinutes = start.hour * 60 + start.minute;
-        final endMinutes = end.hour * 60 + end.minute;
+        final endMinutes = pickedEnd.hour * 60 + pickedEnd.minute;
+
         if (endMinutes <= startMinutes) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('End time must be after start time')),
           );
           return;
         }
+
         setState(() {
-          _endTime = end;
-          _timeController.text = '${start.format(context)}–${end.format(context)}';
+          _endTime = pickedEnd;
+          _timeController.text =
+              '${start.format(context)} – ${pickedEnd.format(context)}';
         });
       }
     }
-  }
-
-  String? _validateMtnNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Enter MTN number';
-    }
-    final mtnRegex = RegExp(r'^\+256(77|78|39)\d{7}$');
-    if (!mtnRegex.hasMatch(value.trim())) {
-      return 'Enter a valid MTN number (e.g., +25677XXXXXXX)';
-    }
-    return null;
-  }
-
-  String? _validateAirtelNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Enter Airtel number';
-    }
-    final airtelRegex = RegExp(r'^\+256(70|75)\d{7}$');
-    if (!airtelRegex.hasMatch(value.trim())) {
-      return 'Enter a valid Airtel number (e.g., +25670XXXXXXX)';
-    }
-    return null;
   }
 
   void _save() {
@@ -1665,9 +2155,19 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
       );
       return;
     }
+    // Add entry to parent
+    widget.onAddEntry({
+      'days': List<String>.from(_selectedDays),
+      'startTime': _startTime!,
+      'endTime': _endTime!,
+    });
+    // Reset fields
     setState(() {
-      _saveClickCount++;
-      _isSaved = _saveClickCount >= 2;
+      _selectedDays = [];
+      _startTime = null;
+      _endTime = null;
+      _daysController.text = '';
+      _timeController.text = '';
     });
   }
 
@@ -1689,7 +2189,10 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.05, bottom: screenHeight * 0.01),
+              padding: EdgeInsets.only(
+                left: screenWidth * 0.05,
+                bottom: screenHeight * 0.01,
+              ),
               child: Text(
                 'Opening & Closing Hours',
                 style: TextStyle(
@@ -1747,7 +2250,12 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                     fontWeight: FontWeight.w400,
                                     fontSize: screenWidth * 0.035,
                                   ),
-                                  fillColor: const Color.fromARGB(255, 237, 236, 236),
+                                  fillColor: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    236,
+                                    236,
+                                  ),
                                   filled: true,
                                   prefixIcon: Icon(
                                     Icons.calendar_today,
@@ -1756,11 +2264,17 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF93C5FD),
+                                      width: 1,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF93C5FD),
+                                      width: 2,
+                                    ),
                                   ),
                                   contentPadding: EdgeInsets.symmetric(
                                     vertical: screenWidth * 0.04,
@@ -1797,7 +2311,12 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                     fontWeight: FontWeight.w400,
                                     fontSize: screenWidth * 0.035,
                                   ),
-                                  fillColor: const Color.fromARGB(255, 237, 236, 236),
+                                  fillColor: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    236,
+                                    236,
+                                  ),
                                   filled: true,
                                   prefixIcon: Icon(
                                     Icons.access_time,
@@ -1806,11 +2325,17 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF93C5FD),
+                                      width: 1,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF93C5FD),
+                                      width: 2,
+                                    ),
                                   ),
                                   contentPadding: EdgeInsets.symmetric(
                                     vertical: screenWidth * 0.04,
@@ -1835,7 +2360,9 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                             onPressed: _save,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF93C5FD),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
                             ),
                             child: Text(
                               'Save',
@@ -1849,30 +2376,6 @@ class _OpeningClosingHoursFieldState extends State<OpeningClosingHoursField> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.015),
-                        if (_isSaved && _saveClickCount >= 2 && _selectedDays.isNotEmpty && _startTime != null && _endTime != null)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              vertical: screenHeight * 0.01,
-                              horizontal: screenWidth * 0.03,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF93C5FD), width: 1),
-                            ),
-                            child: Text(
-                              _getWeekendsRowText(),
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w400,
-                                fontSize: screenWidth * 0.035,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        else
-                          SizedBox(height: screenHeight * 0.02),
                       ],
                     ),
                   ),
@@ -1911,7 +2414,10 @@ class ContactInformationField extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: screenWidth * 0.05, bottom: screenHeight * 0.01),
+              padding: EdgeInsets.only(
+                left: screenWidth * 0.05,
+                bottom: screenHeight * 0.01,
+              ),
               child: Text(
                 'Contact Information',
                 style: TextStyle(
@@ -1925,7 +2431,7 @@ class ContactInformationField extends StatelessWidget {
             ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: screenWidth * 0.88,
-                maxHeight: screenHeight * 0.21,
+                maxHeight: screenHeight * 0.26,
                 minHeight: screenHeight * 0.2,
               ),
               child: Container(
@@ -1949,7 +2455,9 @@ class ContactInformationField extends StatelessWidget {
                           focusNode: mtnNumberFocus,
                           textInputAction: TextInputAction.next,
                           onFieldSubmitted: (_) {
-                            FocusScope.of(context).requestFocus(airtelNumberFocus);
+                            FocusScope.of(
+                              context,
+                            ).requestFocus(airtelNumberFocus);
                           },
                           decoration: InputDecoration(
                             labelText: 'MTN Number',
@@ -1975,11 +2483,17 @@ class ContactInformationField extends StatelessWidget {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF93C5FD),
+                                width: 1,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF93C5FD),
+                                width: 2,
+                              ),
                             ),
                             contentPadding: EdgeInsets.symmetric(
                               vertical: screenWidth * 0.04,
@@ -1995,7 +2509,7 @@ class ContactInformationField extends StatelessWidget {
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(
-                            vertical: screenHeight * 0.015,
+                            vertical: screenHeight * 0.013,
                             horizontal: screenWidth * 0.05,
                           ),
                           child: Divider(
@@ -2032,11 +2546,17 @@ class ContactInformationField extends StatelessWidget {
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 1),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF93C5FD),
+                                width: 1,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(20),
-                              borderSide: const BorderSide(color: Color(0xFF93C5FD), width: 2),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF93C5FD),
+                                width: 2,
+                              ),
                             ),
                             contentPadding: EdgeInsets.symmetric(
                               vertical: screenWidth * 0.04,

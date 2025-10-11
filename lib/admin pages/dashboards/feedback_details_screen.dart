@@ -25,27 +25,18 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   String? _profilePicUrl;
   final TextEditingController _replyController = TextEditingController();
   final FocusNode _replyFocusNode = FocusNode();
-  // Make _feedbackFuture nullable and initialize as null
   Future<DocumentSnapshot>? _feedbackFuture;
 
   @override
   void initState() {
     super.initState();
-    // Initialize _feedbackFuture with the actual feedbackId
     _feedbackFuture = FirebaseFirestore.instance
         .collection('feedback')
         .doc(widget.feedbackId)
         .get();
 
-    // Fetch profile image from Firebase Authentication
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null && user.photoURL != null) {
-      setState(() {
-        _profilePicUrl = user.photoURL;
-      });
-    }
+    _loadProfileImage();
 
-    // Ensure TextField is scrolled into view when focused
     _replyFocusNode.addListener(() {
       if (_replyFocusNode.hasFocus) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,6 +44,26 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
         });
       }
     });
+  }
+
+  Future<void> _loadProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        setState(() {
+          _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
+        });
+      } catch (e) {
+        print('Error loading profile picture: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile picture: $e')),
+        );
+      }
+    }
   }
 
   void _navigateToEditProfile() async {
@@ -79,8 +90,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
     }
   }
 
-  void _showCustomSnackBar(String message, Color backgroundColor,
-      {required Duration duration}) {
+  void _showCustomSnackBar(
+    String message,
+    Color backgroundColor, {
+    required Duration duration,
+  }) {
     final overlay = Overlay.of(context);
     late OverlayEntry overlayEntry;
     final controller = AnimationController(
@@ -162,8 +176,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
 
   Future<void> _sendReply() async {
     if (_replyController.text.trim().isEmpty) {
-      _showCustomSnackBar('Please enter a reply', Colors.red,
-          duration: const Duration(seconds: 2));
+      _showCustomSnackBar(
+        'Please enter a reply',
+        Colors.red,
+        duration: const Duration(seconds: 2),
+      );
       return;
     }
 
@@ -173,8 +190,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           .doc(widget.feedbackId)
           .get();
       if (!feedbackDoc.exists) {
-        _showCustomSnackBar('Feedback not found', Colors.red,
-            duration: const Duration(seconds: 2));
+        _showCustomSnackBar(
+          'Feedback not found',
+          Colors.red,
+          duration: const Duration(seconds: 2),
+        );
         return;
       }
       final feedbackData = feedbackDoc.data()!;
@@ -186,12 +206,12 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           .collection('feedback')
           .doc(widget.feedbackId)
           .update({
-        'adminReply': _replyController.text.trim(),
-        'replyTimestamp': Timestamp.now(),
-        'read': true,
-        'status': 'In Review',
-        'userRead': false,
-      });
+            'adminReply': _replyController.text.trim(),
+            'replyTimestamp': Timestamp.now(),
+            'read': true,
+            'status': 'In Review',
+            'userRead': false,
+          });
 
       final userQuery = await FirebaseFirestore.instance
           .collection('users')
@@ -199,8 +219,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           .limit(1)
           .get();
       if (userQuery.docs.isEmpty) {
-        _showCustomSnackBar('User not found', Colors.red,
-            duration: const Duration(seconds: 2));
+        _showCustomSnackBar(
+          'User not found',
+          Colors.red,
+          duration: const Duration(seconds: 2),
+        );
         return;
       }
       final userUid = userQuery.docs.first.id;
@@ -210,28 +233,31 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           .doc(userUid)
           .collection('user_notifications')
           .add({
-        'feedbackId': widget.feedbackId,
-        'adminReply': _replyController.text.trim(),
-        'issueTitle': issueTitle,
-        'buildingName': buildingName,
-        'timestamp': Timestamp.now(),
-        'userRead': false,
-      });
+            'feedbackId': widget.feedbackId,
+            'adminReply': _replyController.text.trim(),
+            'issueTitle': issueTitle,
+            'buildingName': buildingName,
+            'timestamp': Timestamp.now(),
+            'userRead': false,
+          });
 
       try {
         await FirebaseFunctions.instance
             .httpsCallable('sendFeedbackReplyNotification')
             .call({
-          'userEmail': userEmail,
-          'title': 'New Feedback Reply',
-          'body': 'You have a new reply to your feedback: ${issueTitle}',
-        });
+              'userEmail': userEmail,
+              'title': 'New Feedback Reply',
+              'body': 'You have a new reply to your feedback: ${issueTitle}',
+            });
       } catch (e) {
         print('Error sending FCM notification: $e');
       }
 
-      _showCustomSnackBar('Reply sent successfully', Colors.green,
-          duration: const Duration(seconds: 3));
+      _showCustomSnackBar(
+        'Reply sent successfully',
+        Colors.green,
+        duration: const Duration(seconds: 3),
+      );
       _replyController.clear();
       _replyFocusNode.unfocus();
       // Refresh the Future to update the UI after sending reply
@@ -242,8 +268,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
             .get();
       });
     } catch (e) {
-      _showCustomSnackBar('Error sending reply: $e', Colors.red,
-          duration: const Duration(seconds: 2));
+      _showCustomSnackBar(
+        'Error sending reply: $e',
+        Colors.red,
+        duration: const Duration(seconds: 2),
+      );
     }
   }
 
@@ -272,12 +301,18 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
             .collection('feedback')
             .doc(widget.feedbackId)
             .delete();
-        _showCustomSnackBar('Feedback deleted', Colors.green,
-            duration: const Duration(seconds: 3));
+        _showCustomSnackBar(
+          'Feedback deleted',
+          Colors.green,
+          duration: const Duration(seconds: 3),
+        );
         Navigator.pop(context);
       } catch (e) {
-        _showCustomSnackBar('Error deleting feedback: $e', Colors.red,
-            duration: const Duration(seconds: 2));
+        _showCustomSnackBar(
+          'Error deleting feedback: $e',
+          Colors.red,
+          duration: const Duration(seconds: 2),
+        );
       }
     }
   }
@@ -287,12 +322,12 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
       await FirebaseFirestore.instance
           .collection('feedback')
           .doc(widget.feedbackId)
-          .update({
-        'read': true,
-        'status': 'Read',
-      });
-      _showCustomSnackBar('Feedback marked as read', Colors.black87,
-          duration: const Duration(seconds: 2));
+          .update({'read': true, 'status': 'Read'});
+      _showCustomSnackBar(
+        'Feedback marked as read',
+        Colors.black87,
+        duration: const Duration(seconds: 2),
+      );
       setState(() {
         _isMoreMenuVisible = false;
         _feedbackFuture = FirebaseFirestore.instance
@@ -301,8 +336,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
             .get();
       });
     } catch (e) {
-      _showCustomSnackBar('Error marking as read: $e', Colors.red,
-          duration: const Duration(seconds: 2));
+      _showCustomSnackBar(
+        'Error marking as read: $e',
+        Colors.red,
+        duration: const Duration(seconds: 2),
+      );
     }
   }
 
@@ -350,8 +388,13 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     width: screenWidth,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(16),
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
@@ -362,7 +405,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(16),
+                      ),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
@@ -406,7 +451,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                   height: screenHeight * 0.05,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(30),
-                                    border: Border.all(color: Colors.black, width: 1),
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisAlignment:
@@ -426,24 +474,38 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                               width: 1,
                                             ),
                                           ),
-                                          child: (_profilePicUrl != null &&
+                                          child:
+                                              (_profilePicUrl != null &&
                                                   _profilePicUrl!.isNotEmpty)
                                               ? ClipOval(
                                                   child: Image.network(
                                                     _profilePicUrl!,
                                                     fit: BoxFit.cover,
-                                                    width: screenWidth * 0.1,
-                                                    height: screenWidth * 0.1,
-                                                    loadingBuilder: (context, child, loadingProgress) {
-                                                      if (loadingProgress == null) return child;
-                                                      return const CircularProgressIndicator();
-                                                    },
-                                                    errorBuilder: (context, error, stackTrace) =>
-                                                        Icon(
-                                                      Icons.person,
-                                                      color: Colors.black,
-                                                      size: screenWidth * 0.04,
-                                                    ),
+                                                    width: screenWidth * 0.09,
+                                                    height: screenWidth * 0.09,
+                                                    loadingBuilder:
+                                                        (
+                                                          context,
+                                                          child,
+                                                          loadingProgress,
+                                                        ) {
+                                                          if (loadingProgress ==
+                                                              null)
+                                                            return child;
+                                                          return const CircularProgressIndicator();
+                                                        },
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) => Icon(
+                                                          Icons.person,
+                                                          color: Colors.black,
+                                                          size:
+                                                              screenWidth *
+                                                              0.04,
+                                                        ),
                                                   ),
                                                 )
                                               : Icon(
@@ -481,7 +543,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                 // Dropdown container
                 if (_isDropdownVisible)
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + screenHeight * 0.09,
+                    top:
+                        MediaQuery.of(context).padding.top +
+                        screenHeight * 0.09,
                     right: screenWidth * 0.04,
                     child: Container(
                       width: screenWidth * 0.25,
@@ -510,7 +574,8 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 vertical: screenHeight * 0.01,
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Profile',
@@ -577,7 +642,8 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       ),
                                     );
                                   }
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
                                     return Container(
                                       width: screenWidth * 0.2125,
                                       height: screenHeight * 0.03,
@@ -611,7 +677,8 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       ),
                                     );
                                   }
-                                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                                  if (!snapshot.hasData ||
+                                      !snapshot.data!.exists) {
                                     return Container(
                                       width: screenWidth * 0.2125,
                                       height: screenHeight * 0.03,
@@ -633,8 +700,11 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                     );
                                   }
 
-                                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                                  final status = data['status'] as String? ?? 'In Review';
+                                  final data =
+                                      snapshot.data!.data()
+                                          as Map<String, dynamic>;
+                                  final status =
+                                      data['status'] as String? ?? 'In Review';
 
                                   return Container(
                                     width: screenWidth * 0.2125,
@@ -727,42 +797,61 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                     child: SingleChildScrollView(
                       padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewInsets.bottom + screenHeight * 0.1,
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.1,
                       ),
                       child: FutureBuilder<DocumentSnapshot>(
                         future: _feedbackFuture,
                         builder: (context, snapshot) {
                           // Handle null _feedbackFuture
                           if (_feedbackFuture == null) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
                           }
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           if (snapshot.hasError) {
-                            return Center(child: Text('Error: ${snapshot.error}'));
+                            return Center(
+                              child: Text('Error: ${snapshot.error}'),
+                            );
                           }
                           if (!snapshot.hasData || !snapshot.data!.exists) {
-                            return const Center(child: Text('Feedback not found'));
+                            return const Center(
+                              child: Text('Feedback not found'),
+                            );
                           }
 
-                          final data = snapshot.data!.data() as Map<String, dynamic>;
+                          final data =
+                              snapshot.data!.data() as Map<String, dynamic>;
                           final feedbackId = widget.feedbackId;
-                          final userEmail = data['userEmail'] as String? ?? 'Unknown';
-                          final userName = data['userName'] as String? ?? 'Unknown';
+                          final userEmail =
+                              data['userEmail'] as String? ?? 'Unknown';
+                          final userName =
+                              data['userName'] as String? ?? 'Unknown';
                           final timestamp = data['timestamp'] as Timestamp?;
-                          final feedbackText = data['feedbackText'] as String? ?? 'No description';
+                          final feedbackText =
+                              data['feedbackText'] as String? ??
+                              'No description';
                           final formattedDate = timestamp != null
                               ? '${timestamp.toDate().toLocal().toString().split('.')[0]}'
                               : 'N/A';
-                          final adminReply = data['adminReply'] as String? ?? '';
+                          final adminReply =
+                              data['adminReply'] as String? ?? '';
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -784,7 +873,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.5575,
                                       height: screenHeight * 0.05,
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Center(
@@ -803,7 +895,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -825,7 +919,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.5575,
                                       height: screenHeight * 0.05,
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Center(
@@ -844,7 +941,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -866,7 +965,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.5575,
                                       height: screenHeight * 0.05,
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Center(
@@ -885,7 +987,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -907,7 +1011,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.5575,
                                       height: screenHeight * 0.05,
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Center(
@@ -926,7 +1033,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -948,11 +1057,16 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.5575,
                                       height: screenHeight * 0.15875,
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: const Color(0xFFD59A00),
+                                          width: 1,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: SingleChildScrollView(
-                                        padding: EdgeInsets.all(screenWidth * 0.02),
+                                        padding: EdgeInsets.all(
+                                          screenWidth * 0.02,
+                                        ),
                                         child: Text(
                                           feedbackText,
                                           style: TextStyle(
@@ -968,13 +1082,12 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.015),
-                              Divider(
-                                color: Colors.grey,
-                                thickness: 1,
-                              ),
+                              Divider(color: Colors.grey, thickness: 1),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Text(
                                   'Admin Section',
                                   style: TextStyle(
@@ -989,10 +1102,14 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               StatefulBuilder(
                                 builder: (context, setTextFieldState) {
                                   return Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.04,
+                                    ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(
                                           width: screenWidth * 0.25,
@@ -1016,11 +1133,17 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                             width: screenWidth * 0.5575,
                                             height: screenHeight * 0.15875,
                                             decoration: BoxDecoration(
-                                              border: Border.all(color: const Color(0xFFD59A00), width: 1),
-                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: const Color(0xFFD59A00),
+                                                width: 1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
                                             ),
                                             child: SingleChildScrollView(
-                                              padding: EdgeInsets.all(screenWidth * 0.02),
+                                              padding: EdgeInsets.all(
+                                                screenWidth * 0.02,
+                                              ),
                                               child: TextField(
                                                 controller: _replyController,
                                                 focusNode: _replyFocusNode,
@@ -1033,12 +1156,19 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                                 ),
                                                 decoration: InputDecoration(
                                                   border: InputBorder.none,
-                                                  hintText: adminReply.isEmpty ? 'Enter reply here...' : '',
-                                                  hintStyle: const TextStyle(color: Colors.grey),
-                                                  contentPadding: EdgeInsets.symmetric(
-                                                    horizontal: screenWidth * 0.02,
-                                                    vertical: screenHeight * 0.01,
+                                                  hintText: adminReply.isEmpty
+                                                      ? 'Enter reply here...'
+                                                      : '',
+                                                  hintStyle: const TextStyle(
+                                                    color: Colors.grey,
                                                   ),
+                                                  contentPadding:
+                                                      EdgeInsets.symmetric(
+                                                        horizontal:
+                                                            screenWidth * 0.02,
+                                                        vertical:
+                                                            screenHeight * 0.01,
+                                                      ),
                                                 ),
                                                 textAlign: TextAlign.start,
                                               ),
@@ -1052,7 +1182,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               ),
                               SizedBox(height: screenHeight * 0.015),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                ),
                                 child: Align(
                                   alignment: Alignment.centerRight,
                                   child: GestureDetector(
@@ -1062,7 +1194,12 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       width: screenWidth * 0.3625,
                                       height: screenHeight * 0.05625,
                                       decoration: BoxDecoration(
-                                        color: const Color.fromARGB(255, 26, 47, 241),
+                                        color: const Color.fromARGB(
+                                          255,
+                                          26,
+                                          47,
+                                          241,
+                                        ),
                                         borderRadius: BorderRadius.circular(30),
                                       ),
                                       child: Center(
@@ -1083,10 +1220,13 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               if (adminReply.isNotEmpty) ...[
                                 SizedBox(height: screenHeight * 0.015),
                                 Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.04,
+                                  ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       SizedBox(
                                         width: screenWidth * 0.25,
@@ -1103,13 +1243,21 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                       SizedBox(width: screenWidth * 0.01),
                                       Container(
                                         width: screenWidth * 0.5575,
-                                        height: screenHeight * 0.15875,
+                                        height: screenHeight * 0.158,
                                         decoration: BoxDecoration(
-                                          border: Border.all(color: const Color(0xFFD59A00), width: 1),
-                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: const Color(0xFFD59A00),
+                                            width: 1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                         ),
+
                                         child: SingleChildScrollView(
-                                          padding: EdgeInsets.all(screenWidth * 0.02),
+                                          padding: EdgeInsets.all(
+                                            screenWidth * 0.02,
+                                          ),
                                           child: Text(
                                             adminReply,
                                             style: TextStyle(
@@ -1182,7 +1330,8 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                     width: 1,
                                   ),
                                 ),
-                                child: (_profilePicUrl != null &&
+                                child:
+                                    (_profilePicUrl != null &&
                                         _profilePicUrl!.isNotEmpty)
                                     ? ClipOval(
                                         child: Image.network(
@@ -1190,15 +1339,23 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                           fit: BoxFit.cover,
                                           width: screenWidth * 0.15,
                                           height: screenWidth * 0.15,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return const CircularProgressIndicator();
-                                          },
-                                          errorBuilder: (context, error, stackTrace) => Icon(
-                                            Icons.person,
-                                            color: Colors.black,
-                                            size: screenWidth * 0.08,
-                                          ),
+                                          loadingBuilder:
+                                              (
+                                                context,
+                                                child,
+                                                loadingProgress,
+                                              ) {
+                                                if (loadingProgress == null)
+                                                  return child;
+                                                return const CircularProgressIndicator();
+                                              },
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  Icon(
+                                                    Icons.person,
+                                                    color: Colors.black,
+                                                    size: screenWidth * 0.08,
+                                                  ),
                                         ),
                                       )
                                     : Icon(
@@ -1280,7 +1437,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/FeedbackListScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/FeedbackListScreen',
+                              );
                               setState(() {
                                 _isMenuVisible = false;
                               });
@@ -1316,11 +1476,15 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                             onTap: () async {
                               final result = await Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                                MaterialPageRoute(
+                                  builder: (context) => EditProfileScreen(),
+                                ),
                               );
-                              if (result != null && result is Map<String, dynamic>) {
+                              if (result != null &&
+                                  result is Map<String, dynamic>) {
                                 setState(() {
-                                  _profilePicUrl = result['imageUrl'] as String?;
+                                  _profilePicUrl =
+                                      result['imageUrl'] as String?;
                                   _isMenuVisible = false;
                                 });
                               }
@@ -1354,7 +1518,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/SendNotificationsScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/SendNotificationsScreen',
+                              );
                               setState(() {
                                 _isMenuVisible = false;
                               });
@@ -1388,7 +1555,10 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/LocationManagementScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/LocationManagementScreen',
+                              );
                               setState(() {
                                 _isMenuVisible = false;
                               });
@@ -1447,84 +1617,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                     ),
                   ),
                 ),
-                if (_isMoreMenuVisible)
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + screenHeight * 0.18,
-                    right: screenWidth * 0.06,
-                    child: Container(
-                      width: screenWidth * 0.3527,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            onTap: _deleteFeedback,
-                            behavior: HitTestBehavior.opaque,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.02,
-                                vertical: screenHeight * 0.005,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Delete',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.035,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Divider(
-                            color: Colors.grey,
-                            thickness: 1,
-                            height: screenHeight * 0.005,
-                          ),
-                          GestureDetector(
-                            onTap: _markAsRead,
-                            behavior: HitTestBehavior.opaque,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.02,
-                                vertical: screenHeight * 0.005,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Mark as read',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: screenWidth * 0.035,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                // ...existing code...
               ],
             ),
           ),
@@ -1534,13 +1627,19 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
   }
 
   Widget _buildMenuItem(
-      BuildContext context, IconData icon, String text, String? route) {
+    BuildContext context,
+    IconData icon,
+    String text,
+    String? route,
+  ) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Padding(
       padding: EdgeInsets.only(
-          left: screenWidth * 0.03, top: screenHeight * 0.02),
+        left: screenWidth * 0.03,
+        top: screenHeight * 0.02,
+      ),
       child: GestureDetector(
         onTap: route != null
             ? () {
