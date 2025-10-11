@@ -176,7 +176,7 @@ class MyApp extends StatelessWidget {
       ),
       navigatorKey: navigatorKey, // Add navigatorKey for notification navigation
       home: const SplashScreen(),
-      initialRoute: '/HomeScreen',
+      initialRoute: '/LocationSelectScreen',
       routes: {
         '/SplashScreen': (context) => const SplashScreen(),
         '/OnboardingScreen1': (context) => const OnboardingScreen1(),
