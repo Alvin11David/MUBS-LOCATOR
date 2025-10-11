@@ -7,6 +7,7 @@ import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../map screens/navigation_screen.dart';
 
 class LocationSelectScreen extends StatefulWidget {
   const LocationSelectScreen({super.key});
@@ -25,6 +26,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
   List<Building> fetchedBuildings = [];
   bool _isLoadingBuildings = true;
   bool _isLoadingLocation = true;
+  bool _isCheckingPermissions = false;
   LatLng? _currentLocation;
   Building? _selectedFromLocation;
   Building? _selectedToLocation;
@@ -180,6 +182,175 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
 
   void _navigateToHomeScreen() {
     Navigator.pushReplacementNamed(context, '/HomeScreen');
+  }
+
+  bool _canNavigate() {
+    // Check if "from" location is set (either current location or selected building)
+    final hasFromLocation = (_currentLocation != null && _fromController.text == "Your Current Location") ||
+        _selectedFromLocation != null;
+    
+    // Check if "to" location is selected
+    final hasToLocation = _selectedToLocation != null;
+    
+    return hasFromLocation && hasToLocation;
+  }
+
+  Future<void> _handleStartNavigation() async {
+    if (!_canNavigate()) return;
+
+    setState(() {
+      _isCheckingPermissions = true;
+    });
+
+    try {
+      // Check location permission
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+        _showErrorSnackBar('Location services are disabled. Please enable them.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isCheckingPermissions = false;
+          });
+          _showPermissionDialog();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+        _showPermissionDialog();
+        return;
+      }
+
+      // Get current location if using "Your Current Location"
+      LatLng? startLocation;
+      if (_fromController.text == "Your Current Location" && _currentLocation != null) {
+        startLocation = _currentLocation;
+      } else if (_selectedFromLocation != null) {
+        startLocation = LatLng(
+          _selectedFromLocation!.location.latitude!,
+          _selectedFromLocation!.location.longitude!,
+        );
+      }
+
+      if (startLocation == null) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+        _showErrorSnackBar('Unable to determine starting location');
+        return;
+      }
+
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+
+      // Navigate to NavigationScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NavigationScreen(
+            destination: LatLng(
+              _selectedToLocation!.location.latitude!,
+              _selectedToLocation!.location.longitude!,
+            ),
+            destinationName: _selectedToLocation!.name,
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+      _showErrorSnackBar('Error starting navigation: $e');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.location_off, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Text('Location Permission'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Location permission is required for navigation.',
+              style: TextStyle(fontSize: 14, fontFamily: 'Poppins'),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please enable location permission in your device settings.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins')),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3E5891),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -605,6 +776,82 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
               ],
             ),
           ),
+          // Floating Navigation Button
+          if (_canNavigate())
+            Positioned(
+              bottom: screenHeight * 0.12,
+              left: screenWidth * 0.05,
+              right: screenWidth * 0.05,
+              child: AnimatedOpacity(
+                opacity: _canNavigate() ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: GestureDetector(
+                  onTap: _isCheckingPermissions ? null : _handleStartNavigation,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.018,
+                      horizontal: screenWidth * 0.05,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3E5891), Color(0xFF5A7BB8)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3E5891).withOpacity(0.4),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isCheckingPermissions) ...[
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: screenWidth * 0.03),
+                          Text(
+                            'Checking permissions...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(16),
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ] else ...[
+                          Icon(
+                            Icons.navigation,
+                            color: Colors.white,
+                            size: screenWidth * 0.06,
+                          ),
+                          SizedBox(width: screenWidth * 0.03),
+                          Text(
+                            'Start Navigation',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(16),
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: Padding(
