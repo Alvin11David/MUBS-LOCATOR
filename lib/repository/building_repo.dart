@@ -20,26 +20,56 @@ class BuildingRepository {
     print(
       "Number of buildings fetched: ${snapshot.size}😁😁😁😁😁😁😁😁😁😁😁😁😁😁😁",
     );
-    return snapshot.docs
-        .map(
-          (doc) => Building.fromFirestore(
-            doc.data() as Map<String, dynamic>,
-            doc.id,
-          ),
-        )
-        .toList();
+
+    final List<Building> buildings = [];
+
+    for (final doc in snapshot.docs) {
+      final raw = doc.data();
+      if (raw == null) {
+        print('Skipping doc ${doc.id}: data is null');
+        continue;
+      }
+
+      final Map<String, dynamic> data = Map<String, dynamic>.from(raw as Map);
+
+      // Normalize Firestore GeoPoint to a map with latitude/longitude
+      final loc = data['location'];
+      if (loc == null) {
+        print('Skipping doc ${doc.id}: missing location field');
+        continue;
+      }
+      if (loc is GeoPoint) {
+        data['location'] = {
+          'latitude': loc.latitude,
+          'longitude': loc.longitude,
+        };
+      } else if (loc is Map) {
+        // Ensure keys exist
+        if (loc['latitude'] == null || loc['longitude'] == null) {
+          print('Skipping doc ${doc.id}: invalid location map');
+          continue;
+        }
+      } else {
+        print(
+          'Skipping doc ${doc.id}: unsupported location type ${loc.runtimeType}',
+        );
+        continue;
+      }
+
+      try {
+        buildings.add(Building.fromFirestore(data, doc.id));
+      } catch (e, st) {
+        print('Failed to parse building ${doc.id}: $e\n$st');
+        // skip malformed doc
+      }
+    }
+
+    return buildings;
   }
 
   Future<Map<String, dynamic>> getAllBuildingsWithCount() async {
     final snapshot = await _collection.get();
-    final buildings = snapshot.docs
-        .map(
-          (doc) => Building.fromFirestore(
-            doc.data() as Map<String, dynamic>,
-            doc.id,
-          ),
-        )
-        .toList();
+    final buildings = await getAllBuildings(); // reuse normalization logic
     final count = snapshot.size;
     print("Number of buildings fetched: $count");
     return {'count': count, 'buildings': buildings};
@@ -49,7 +79,23 @@ class BuildingRepository {
   Future<Building?> getBuildingById(String id) async {
     final doc = await _collection.doc(id).get();
     if (!doc.exists) return null;
-    return Building.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+
+    final raw = doc.data();
+    if (raw == null) return null;
+
+    final Map<String, dynamic> data = Map<String, dynamic>.from(raw as Map);
+
+    final loc = data['location'];
+    if (loc is GeoPoint) {
+      data['location'] = {'latitude': loc.latitude, 'longitude': loc.longitude};
+    }
+
+    try {
+      return Building.fromFirestore(data, doc.id);
+    } catch (e) {
+      print('Failed to parse building ${doc.id}: $e');
+      return null;
+    }
   }
 
   // Update
