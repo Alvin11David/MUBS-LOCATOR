@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:mubs_locator/main.dart';
 import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
@@ -25,7 +26,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LatLng _mubsMaingate = const LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsMaingate = const LatLng(
+    0.32626314488423924,
+    32.616607995731286,
+  );
   final LatLng _mubsCentre = LatLng(0.3282482847196531, 32.61798173177951);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
@@ -65,7 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfileImage();
   }
 
-  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+  void _showCustomSnackBar(
+    BuildContext context,
+    String message, {
+    bool isSuccess = false,
+  }) {
     print('Showing SnackBar: $message');
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
@@ -82,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
               width: screenWidth * 0.08,
               height: screenWidth * 0.08,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(width: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -132,7 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
           final fullName = userData['fullName'] as String?;
           if (mounted) {
             setState(() {
-              _userFullName = fullName != null && fullName.isNotEmpty ? fullName : 'User';
+              _userFullName = fullName != null && fullName.isNotEmpty
+                  ? fullName
+                  : 'User';
             });
           }
         } else {
@@ -244,14 +255,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return buildings.map((element) {
       return Marker(
         markerId: MarkerId(element.id),
-        position: LatLng(
-          element.location.latitude,
-          element.location.longitude,
-        ),
+        position: LatLng(element.location.latitude, element.location.longitude),
         infoWindow: InfoWindow(
           title: element.name,
           snippet: element.description,
         ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        onTap: () {
+          // Use Get.context if context is not available, or pass context as needed
+          _showBuildingBottomSheet(
+            Get.context ?? navigatorKey.currentContext!,
+            element,
+          );
+        },
       );
     }).toList();
   }
@@ -277,7 +293,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> createTheBuildings() async {
     try {
-      List<Building> buildings = mubsBuildings; // Ensure mubsBuildings is defined
+      List<Building> buildings =
+          mubsBuildings; // Ensure mubsBuildings is defined
       BuildingRepository buildingRepository = BuildingRepository();
       for (var item in buildings) {
         await buildingRepository.addBuilding(item);
@@ -388,40 +405,82 @@ class _HomeScreenState extends State<HomeScreen> {
       enableDrag: true,
       useSafeArea: true,
       builder: (BuildContext context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: _BuildingBottomSheetContent(
-                building: building,
-                scrollController: scrollController,
-                onDirectionsTap: () {
-                  _clearSearchBar();
-                  _navigateToBuilding(building);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context).pop(),
+          child: Stack(
+            children: [
+              DraggableScrollableSheet(
+                initialChildSize: 0.6,
+                minChildSize: 0.3,
+                maxChildSize: 0.95,
+                expand: false,
+                builder: (context, scrollController) {
+                  return Container(
+                    padding: EdgeInsets.only(bottom: 0),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        _BuildingBottomSheetContent(
+                          building: building,
+                          scrollController: scrollController,
+                          onDirectionsTap: () {
+                            _clearSearchBar();
+                            _navigateToBuilding(building);
+                          },
+                          onFeedbackSubmit:
+                              (
+                                String issueType,
+                                String issueTitle,
+                                String description,
+                              ) {
+                                _submitFeedback(
+                                  building,
+                                  issueType,
+                                  issueTitle,
+                                  description,
+                                );
+                              },
+                        ),
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.close,
+                                size: 24,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 },
-                onFeedbackSubmit: (String issueType, String issueTitle, String description) {
-                  _submitFeedback(building, issueType, issueTitle, description);
-                },
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );
@@ -646,21 +705,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(
-            Icons.menu,
-            size: textScaler.scale(24),
-          ),
+          icon: Icon(Icons.menu, size: textScaler.scale(24)),
           onPressed: _toggleMenu,
         ),
         actions: [
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseAuth.instance.currentUser != null
                 ? FirebaseFirestore.instance
-                    .collection('feedback')
-                    .where('userEmail', isEqualTo: FirebaseAuth.instance.currentUser!.email)
-                    .where('adminReply', isNotEqualTo: '')
-                    .where('userRead', isEqualTo: false)
-                    .snapshots()
+                      .collection('feedback')
+                      .where(
+                        'userEmail',
+                        isEqualTo: FirebaseAuth.instance.currentUser!.email,
+                      )
+                      .where('adminReply', isNotEqualTo: '')
+                      .where('userRead', isEqualTo: false)
+                      .snapshots()
                 : Stream.empty(),
             builder: (context, snapshot) {
               int unreadCount = 0;
@@ -814,19 +873,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                           final otherNameScore =
                               (building.otherNames != null &&
-                                      building.otherNames!.isNotEmpty)
-                                  ? building.otherNames!
-                                      .map(
-                                        (name) => StringSimilarity.compareTwoStrings(
-                                          name.toLowerCase(),
-                                          pattern.toLowerCase(),
-                                        ),
-                                      )
-                                      .fold<double>(
-                                        0,
-                                        (prev, curr) => curr > prev ? curr : prev,
-                                      )
-                                  : 0;
+                                  building.otherNames!.isNotEmpty)
+                              ? building.otherNames!
+                                    .map(
+                                      (name) =>
+                                          StringSimilarity.compareTwoStrings(
+                                            name.toLowerCase(),
+                                            pattern.toLowerCase(),
+                                          ),
+                                    )
+                                    .fold<double>(
+                                      0,
+                                      (prev, curr) => curr > prev ? curr : prev,
+                                    )
+                              : 0;
                           final descriptionScore =
                               StringSimilarity.compareTwoStrings(
                                 building.description.toLowerCase(),
@@ -1034,7 +1094,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/HomeScreen'),
                           child: Row(
                             children: [
                               Icon(
@@ -1094,7 +1155,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/NotificationsScreen',
+                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -1123,7 +1187,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/LocationSelectScreen',
+                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -1225,84 +1292,15 @@ class _BuildingBottomSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_BuildingBottomSheetContent> createState() => _BuildingBottomSheetContentState();
+  State<_BuildingBottomSheetContent> createState() =>
+      _BuildingBottomSheetContentState();
 }
 
-class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent> {
-  int _selectedTabIndex = 0;
-  final TextEditingController _issueTitleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  String _selectedIssueType = 'General';
+class _BuildingBottomSheetContentState
+    extends State<_BuildingBottomSheetContent> {
+  // Remove tab index and feedback related fields
   bool _isCheckingPermissions = false;
   final NavigationService _navigationService = Get.find<NavigationService>();
-  final List<String> _issueTypes = [
-    'General',
-    'Location Incorrect',
-    'Missing Information',
-    'Accessibility Issue',
-    'Facility Issue',
-    'Other',
-  ];
-
-  @override
-  void dispose() {
-    _issueTitleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
-  }
-
-  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
-    print('Showing SnackBar: $message');
-    final screenWidth = MediaQuery.of(context).size.width;
-    final snackBar = SnackBar(
-      content: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSuccess ? Colors.green : Colors.red,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          children: [
-            Image.asset(
-              'assets/logo/logo.png',
-              width: screenWidth * 0.08,
-              height: screenWidth * 0.08,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      behavior: SnackBarBehavior.floating,
-      margin: EdgeInsets.only(
-        top: 10,
-        left: 10,
-        right: 10,
-        bottom: MediaQuery.of(context).size.height - 100,
-      ),
-      duration: const Duration(seconds: 2),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      onVisible: () {
-        print('SnackBar is visible: $message');
-      },
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
-      print('SnackBar closed: $message, reason: $reason');
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1345,54 +1343,89 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
               ),
             ),
             SizedBox(height: screenHeight * 0.02),
+            // Row with Details and Get Directions
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                _buildTabButton('Details', 0),
-                _buildTabButton('Feedback', 1),
+                SizedBox(width: screenWidth * 0.01), // Add left spacing
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.05,
+                    vertical: screenHeight * 0.01,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3E5891), // Changed color
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Details',
+                    style: TextStyle(
+                      fontSize: textScaler.scale(16),
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+                SizedBox(width: screenWidth * 0.2), // Space between buttons
+                GestureDetector(
+                  onTap: _isCheckingPermissions ? null : _handleStartNavigation,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                      vertical: screenHeight * 0.01,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF93C5FD),
+                        width: 2,
+                      ),
+                    ),
+                    child: _isCheckingPermissions
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF93C5FD),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Checking...',
+                                style: TextStyle(
+                                  color: Color(0xFF93C5FD),
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'Get Directions',
+                            style: TextStyle(
+                              color: Color(0xFF93C5FD),
+                              fontSize: textScaler.scale(14),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                  ),
+                ),
               ],
             ),
             SizedBox(height: screenHeight * 0.02),
-            if (_selectedTabIndex == 0) ...[
-              _buildDetailsTab(),
-            ] else ...[
-              _buildFeedbackTab(),
-            ],
+            // Only show details tab content
+            _buildDetailsTab(),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String text, int index) {
-    final textScaler = MediaQuery.textScalerOf(context);
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = index;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: MediaQuery.of(context).size.width * 0.05,
-          vertical: MediaQuery.of(context).size.height * 0.01,
-        ),
-        decoration: BoxDecoration(
-          color: _selectedTabIndex == index
-              ? Theme.of(context).primaryColor.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: textScaler.scale(16),
-            fontWeight: FontWeight.w500,
-            color: _selectedTabIndex == index
-                ? Theme.of(context).primaryColor
-                : Colors.black,
-            fontFamily: 'Poppins',
-          ),
         ),
       ),
     );
@@ -1404,66 +1437,13 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Location',
-              style: TextStyle(
-                fontSize: textScaler.scale(16),
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            GestureDetector(
-              onTap: _isCheckingPermissions ? null : _handleStartNavigation,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.04,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: _isCheckingPermissions
-                      ? Colors.grey[300]
-                      : Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: _isCheckingPermissions
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                          SizedBox(width: screenWidth * 0.02),
-                          Text(
-                            'Checking...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: textScaler.scale(14),
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        'Get Directions',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: textScaler.scale(14),
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-              ),
-            ),
-          ],
+        Text(
+          'Location',
+          style: TextStyle(
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
         ),
         SizedBox(height: MediaQuery.of(context).size.height * 0.01),
         Text(
@@ -1505,7 +1485,11 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline, size: textScaler.scale(14), color: Colors.grey[600]),
+            Icon(
+              Icons.info_outline,
+              size: textScaler.scale(14),
+              color: Colors.grey[600],
+            ),
             SizedBox(width: screenWidth * 0.01),
             Text(
               'Location permission required',
@@ -1521,144 +1505,13 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
     );
   }
 
-  Widget _buildFeedbackTab() {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final textScaler = MediaQuery.textScalerOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Submit Feedback',
-          style: TextStyle(
-            fontSize: textScaler.scale(16),
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        SizedBox(height: screenHeight * 0.01),
-        DropdownButtonFormField<String>(
-          value: _selectedIssueType,
-          decoration: InputDecoration(
-            labelText: 'Issue Type',
-            labelStyle: TextStyle(
-              fontSize: textScaler.scale(14),
-              fontFamily: 'Poppins',
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          items: _issueTypes.map((String type) {
-            return DropdownMenuItem<String>(
-              value: type,
-              child: Text(
-                type,
-                style: TextStyle(
-                  fontSize: textScaler.scale(14),
-                  fontFamily: 'Poppins',
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: (String? newValue) {
-            setState(() {
-              _selectedIssueType = newValue!;
-            });
-          },
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        TextField(
-          controller: _issueTitleController,
-          decoration: InputDecoration(
-            labelText: 'Issue Title',
-            labelStyle: TextStyle(
-              fontSize: textScaler.scale(14),
-              fontFamily: 'Poppins',
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontFamily: 'Poppins',
-          ),
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        TextField(
-          controller: _descriptionController,
-          maxLines: 4,
-          decoration: InputDecoration(
-            labelText: 'Description',
-            labelStyle: TextStyle(
-              fontSize: textScaler.scale(14),
-              fontFamily: 'Poppins',
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontFamily: 'Poppins',
-          ),
-        ),
-        SizedBox(height: screenHeight * 0.02),
-        Align(
-          alignment: Alignment.centerRight,
-          child: GestureDetector(
-            onTap: () {
-              if (_issueTitleController.text.trim().isEmpty ||
-                  _descriptionController.text.trim().isEmpty) {
-                _showCustomSnackBar(context, 'Please fill in all fields');
-                return;
-              }
-              widget.onFeedbackSubmit(
-                _selectedIssueType,
-                _issueTitleController.text.trim(),
-                _descriptionController.text.trim(),
-              );
-              _issueTitleController.clear();
-              _descriptionController.clear();
-              setState(() {
-                _selectedIssueType = 'General';
-              });
-              _showCustomSnackBar(context, 'Feedback submitted successfully', isSuccess: true);
-            },
-            child: Container(
-              width: screenWidth * 0.3,
-              padding: EdgeInsets.symmetric(
-                vertical: screenHeight * 0.015,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Center(
-                child: Text(
-                  'Submit',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: textScaler.scale(14),
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Future<void> _handleStartNavigation() async {
     setState(() {
       _isCheckingPermissions = true;
     });
     try {
-      final hasPermission = await _navigationService.checkAndRequestLocationPermission();
+      final hasPermission = await _navigationService
+          .checkAndRequestLocationPermission();
       if (!hasPermission) {
         setState(() {
           _isCheckingPermissions = false;
@@ -1760,7 +1613,11 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
                   Expanded(
                     child: Text(
                       'Please enable location permission in your device settings.',
-                      style: TextStyle(fontSize: 12, color: Colors.blue[700], fontFamily: 'Poppins'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                        fontFamily: 'Poppins',
+                      ),
                     ),
                   ),
                 ],
@@ -1771,7 +1628,10 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins')),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1782,7 +1642,10 @@ class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Try Again', style: TextStyle(fontFamily: 'Poppins')),
+            child: const Text(
+              'Try Again',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
           ),
         ],
       ),
