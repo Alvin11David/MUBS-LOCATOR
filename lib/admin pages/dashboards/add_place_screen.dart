@@ -29,6 +29,64 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     _longitudeController.text = _selectedLocation.longitude.toStringAsFixed(6);
   }
 
+  void _showTopSnackbar() {
+    final overlay = Overlay.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 40,
+        left: screenWidth * 0.05,
+        right: screenWidth * 0.05,
+        child: Material(
+          color: Colors.transparent,
+          child: AnimatedSlide(
+            offset: const Offset(0, -1),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF93C5FD),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/logo/logo.png', width: 32, height: 32),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Location added successfully',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+
+    Future.delayed(const Duration(seconds: 2), () {
+      entry.remove();
+    });
+  }
+
   Future<void> _loadProfileImage() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -193,16 +251,21 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
         'description': _descriptionController.text.trim(),
         'latitude': _selectedLocation.latitude,
         'longitude': _selectedLocation.longitude,
-        'openingHours': _openingHoursEntries, // Save all entries
+        'openingHours': _openingHoursEntries.map((entry) {
+          return {
+            'days': entry['days'],
+            'startTime': (entry['startTime'] as TimeOfDay).format(context),
+            'endTime': (entry['endTime'] as TimeOfDay).format(context),
+          };
+        }).toList(),
         'mtnNumber': _mtnNumberController.text.trim(),
         'airtelNumber': _airtelNumberController.text.trim(),
         'imageUrls': imageUrls,
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location added successfully')),
-        );
+        _showTopSnackbar();
+        await Future.delayed(const Duration(seconds: 2));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -247,7 +310,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'Enter MTN number';
     }
-    final mtnRegex = RegExp(r'^\+256(77|78|39)\d{7}$');
+    final mtnRegex = RegExp(r'^\+256(77|78|39|76)\d{7}$');
     if (!mtnRegex.hasMatch(value.trim())) {
       return 'Enter a valid MTN number (e.g., +25677XXXXXXX)';
     }
