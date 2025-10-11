@@ -96,7 +96,7 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                         // Save onboarding completed when skipped
                         await _completeOnboarding();
                         Navigator.pushReplacementNamed(
-                            context, '/AdminDashboardScreen');
+                            context, '/SignInScreen');
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(

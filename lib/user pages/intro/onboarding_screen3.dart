@@ -117,7 +117,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                     child: GestureDetector(
                       onTap: () async {
                         await _completeOnboarding();
-                        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+                        Navigator.pushReplacementNamed(context, '/SignInScreen');
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
