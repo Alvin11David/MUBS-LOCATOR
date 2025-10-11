@@ -12,6 +12,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:get/get.dart';
+import '../../services/navigation_service.dart';
+import 'navigation_screen.dart';
+import 'package:flutter/foundation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,18 +26,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final LatLng _mubsMaingate = const LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsCentre = LatLng(0.3282482847196531, 32.61798173177951);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
-
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
   final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
   List<Building> fetchedBuildings = [];
+  bool searchActive = true;
+  bool isNavigating = false;
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
-  bool _isLoggingOut = false; // Added to prevent multiple logout triggers
+  bool _isLoggingOut = false;
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -59,9 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadProfileImage();
   }
 
-  // Custom SnackBar method with debug logging
   void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
-    print('Showing SnackBar: $message'); // Debug log
+    print('Showing SnackBar: $message');
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -105,12 +110,11 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       onVisible: () {
-        print('SnackBar is visible: $message'); // Debug log
+        print('SnackBar is visible: $message');
       },
     );
-
     ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
-      print('SnackBar closed: $message, reason: $reason'); // Debug log
+      print('SnackBar closed: $message, reason: $reason');
     });
   }
 
@@ -123,22 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
             .where('email', isEqualTo: user.email)
             .limit(1)
             .get();
-
         if (querySnapshot.docs.isNotEmpty) {
           final userData = querySnapshot.docs.first.data();
           final fullName = userData['fullName'] as String?;
-          if (fullName != null && fullName.isNotEmpty) {
-            if (mounted) {
-              setState(() {
-                _userFullName = fullName;
-              });
-            }
-          } else {
-            if (mounted) {
-              setState(() {
-                _userFullName = 'User';
-              });
-            }
+          if (mounted) {
+            setState(() {
+              _userFullName = fullName != null && fullName.isNotEmpty ? fullName : 'User';
+            });
           }
         } else {
           if (mounted) {
@@ -167,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadProfileImage() async {
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('profileImagePath');
-    if (imagePath != null) {
+    if (imagePath != null && mounted) {
       setState(() {
         _profileImage = File(imagePath);
       });
@@ -184,7 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
             .where('adminReply', isNotEqualTo: '')
             .where('userRead', isEqualTo: false)
             .get();
-
         final batch = FirebaseFirestore.instance.batch();
         for (var doc in feedbackDocs.docs) {
           batch.update(doc.reference, {'userRead': true});
@@ -205,6 +199,17 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'MUBS Maingate',
           snippet: 'Makerere University Business School',
         ),
+        onTap: () {
+          _showBuildingBottomSheet(
+            context,
+            Building(
+              id: 'mubs_maingate',
+              name: 'MUBS Maingate',
+              description: 'Makerere University Business School',
+              location: _mubsMaingate,
+            ),
+          );
+        },
       ),
     );
   }
@@ -227,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
     double maxLat = _mubsBounds.map((p) => p.latitude).reduce(math.max) + 0.02;
     double minLng = _mubsBounds.map((p) => p.longitude).reduce(math.min) - 0.02;
     double maxLng = _mubsBounds.map((p) => p.longitude).reduce(math.max) + 0.02;
-
     return [
       LatLng(minLat, minLng),
       LatLng(minLat, maxLng),
@@ -236,13 +240,37 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
+  List<Marker> processBuildings(List<Building> buildings) {
+    return buildings.map((element) {
+      return Marker(
+        markerId: MarkerId(element.id),
+        position: LatLng(
+          element.location.latitude,
+          element.location.longitude,
+        ),
+        infoWindow: InfoWindow(
+          title: element.name,
+          snippet: element.description,
+        ),
+      );
+    }).toList();
+  }
+
   Future<void> fetchAllData() async {
     try {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
-      fetchedBuildings.addAll(buildings);
-    } catch (e) {
-      print("Failed to fetch buildings: $e");
+      final processedMarkers = await compute(processBuildings, buildings);
+      if (mounted) {
+        setState(() {
+          fetchedBuildings.addAll(buildings);
+          markers.addAll(processedMarkers);
+        });
+      }
+      print("✅ Successfully fetched ${buildings.length} buildings.");
+    } catch (e, stackTrace) {
+      print("❌ Failed to fetch buildings: $e");
+      print(stackTrace);
       rethrow;
     }
   }
@@ -251,7 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       List<Building> buildings = mubsBuildings; // Ensure mubsBuildings is defined
       BuildingRepository buildingRepository = BuildingRepository();
-
       for (var item in buildings) {
         await buildingRepository.addBuilding(item);
       }
@@ -261,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
-    if (_isLoggingOut) return; // Prevent multiple logout calls
+    if (_isLoggingOut) return;
     setState(() {
       _isLoggingOut = true;
     });
@@ -270,9 +297,9 @@ class _HomeScreenState extends State<HomeScreen> {
       await prefs.setBool('isLoggedIn', false);
       await FirebaseAuth.instance.signOut();
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars(); // Clear existing SnackBars
+        ScaffoldMessenger.of(context).clearSnackBars();
         _showCustomSnackBar(context, 'Logout successful', isSuccess: true);
-        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar
+        await Future.delayed(const Duration(seconds: 2));
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       }
     } catch (e) {
@@ -332,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: _isLoggingOut
-                  ? null // Disable button when logging out
+                  ? null
                   : () {
                       Navigator.of(context).pop();
                       _logout();
@@ -385,15 +412,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _BuildingBottomSheetContent(
                 building: building,
                 scrollController: scrollController,
-                onDirectionsTap: () => _navigateToBuilding(building),
-                onFeedbackSubmit:
-                    (String issueType, String issueTitle, String description) {
-                  _submitFeedback(
-                    building,
-                    issueType,
-                    issueTitle,
-                    description,
-                  );
+                onDirectionsTap: () {
+                  _clearSearchBar();
+                  _navigateToBuilding(building);
+                },
+                onFeedbackSubmit: (String issueType, String issueTitle, String description) {
+                  _submitFeedback(building, issueType, issueTitle, description);
                 },
               ),
             );
@@ -403,16 +427,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  BitmapDescriptor getRandomDefaultMarkerHue() {
+    final List<double> hues = [
+      BitmapDescriptor.hueRed,
+      BitmapDescriptor.hueOrange,
+      BitmapDescriptor.hueYellow,
+      BitmapDescriptor.hueGreen,
+      BitmapDescriptor.hueCyan,
+      BitmapDescriptor.hueAzure,
+      BitmapDescriptor.hueBlue,
+      BitmapDescriptor.hueViolet,
+      BitmapDescriptor.hueMagenta,
+      BitmapDescriptor.hueRose,
+    ];
+    final math.Random random = math.Random();
+    final int randomIndex = random.nextInt(hues.length);
+    return BitmapDescriptor.defaultMarkerWithHue(hues[randomIndex]);
+  }
+
   Future<void> _navigateToBuilding(Building building) async {
     if (mapController != null) {
       LatLng buildingLocation = LatLng(
         building.location.latitude,
         building.location.longitude,
       );
-
       markers.removeWhere((marker) => marker.markerId.value == 'destination');
-      polylines.clear();
-
       markers.add(
         Marker(
           markerId: const MarkerId('destination'),
@@ -424,11 +463,12 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
       );
-
       await _getDirections(buildingLocation);
-
-      setState(() {});
-
+      if (mounted) {
+        setState(() {
+          isNavigating = true;
+        });
+      }
       final bounds = LatLngBounds(
         southwest: LatLng(
           _mubsMaingate.latitude < buildingLocation.latitude
@@ -447,7 +487,6 @@ class _HomeScreenState extends State<HomeScreen> {
               : buildingLocation.longitude,
         ),
       );
-
       mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
     }
   }
@@ -460,7 +499,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'destination=${destination.latitude},${destination.longitude}&'
       'key=$_googleApiKey&mode=walking',
     );
-
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -468,21 +506,22 @@ class _HomeScreenState extends State<HomeScreen> {
         if (data['status'] == 'OK') {
           final points = data['routes'][0]['overview_polyline']['points'];
           List<LatLng> routeCoords = _convertToLatLng(_decodePoly(points));
-
-          setState(() {
-            polylines.clear();
-            polylines.add(
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: routeCoords,
-                color: Colors.blue,
-                width: 5,
-                startCap: Cap.roundCap,
-                endCap: Cap.roundCap,
-                jointType: JointType.round,
-              ),
-            );
-          });
+          if (mounted) {
+            setState(() {
+              polylines.clear();
+              polylines.add(
+                Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: routeCoords,
+                  color: Colors.blue,
+                  width: 5,
+                  startCap: Cap.roundCap,
+                  endCap: Cap.roundCap,
+                  jointType: JointType.round,
+                ),
+              );
+            });
+          }
         }
       }
     } catch (e) {
@@ -494,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen> {
     List<LatLng> poly = [];
     int index = 0, len = encoded.length;
     int lat = 0, lng = 0;
-
     while (index < len) {
       int b, shift = 0, result = 0;
       do {
@@ -504,7 +542,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } while (b >= 0x20);
       int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lat += dlat;
-
       shift = 0;
       result = 0;
       do {
@@ -514,7 +551,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } while (b >= 0x20);
       int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lng += dlng;
-
       poly.add(LatLng(lat / 1e5, lng / 1e5));
     }
     return poly;
@@ -561,7 +597,6 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
-
     FirebaseFirestore.instance.collection('feedback').add({
       'userEmail': FirebaseAuth.instance.currentUser?.email ?? 'anonymous',
       'userName': _userFullName,
@@ -576,12 +611,29 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _clearSearchBar() {
+    searchController.clear();
+    if (mounted) {
+      setState(() {
+        searchActive = false;
+      });
+    }
+  }
+
+  void _endNavigation() {
+    if (mounted) {
+      setState(() {
+        polylines.clear();
+        isNavigating = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -677,12 +729,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     mapController = controller;
                   },
                   initialCameraPosition: CameraPosition(
-                    target: _mubsMaingate,
-                    zoom: 18.5,
+                    target: _mubsCentre,
+                    zoom: 17,
                   ),
                   markers: markers,
                   polygons: polygons,
-                  polylines: polylines,
+                  polylines: isNavigating ? polylines : {},
                   mapType: MapType.normal,
                   zoomGesturesEnabled: true,
                   scrollGesturesEnabled: true,
@@ -730,7 +782,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     onPressed: () {
                                       textController.clear();
-                                      setState(() {});
+                                      setState(() {
+                                        searchActive = true;
+                                      });
                                     },
                                   )
                                 : null,
@@ -745,13 +799,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontFamily: 'Poppins',
                           ),
                           onChanged: (value) {
-                            setState(() {});
+                            setState(() {
+                              searchActive = true;
+                            });
                           },
                         );
                       },
                       suggestionsCallback: (pattern) async {
-                        if (pattern.isEmpty) return [];
-
+                        if (!searchActive || pattern.isEmpty) return [];
                         final matches = fetchedBuildings.map((building) {
                           final nameScore = StringSimilarity.compareTwoStrings(
                             building.name.toLowerCase(),
@@ -772,28 +827,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                         (prev, curr) => curr > prev ? curr : prev,
                                       )
                                   : 0;
-
                           final descriptionScore =
                               StringSimilarity.compareTwoStrings(
                                 building.description.toLowerCase(),
                                 pattern.toLowerCase(),
                               );
-
                           final maxScore = [
                             nameScore,
                             otherNameScore,
                             descriptionScore,
                           ].reduce((a, b) => a > b ? a : b);
-
                           return {'building': building, 'score': maxScore};
                         }).toList();
-
                         matches.sort(
                           (a, b) => (b['score'] as double).compareTo(
                             a['score'] as double,
                           ),
                         );
-
                         return matches
                             .where((m) => (m['score'] as double) > 0.1)
                             .take(10)
@@ -853,16 +903,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      emptyBuilder: (context) => Padding(
-                        padding: EdgeInsets.all(screenWidth * 0.02),
-                        child: Text(
-                          'No places found. Try another keyword.',
-                          style: TextStyle(
-                            fontSize: textScaler.scale(14),
-                            fontFamily: 'Poppins',
+                      emptyBuilder: (context) {
+                        if (!searchActive) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: EdgeInsets.all(screenWidth * 0.02),
+                          child: Text(
+                            'No places found. Try another keyword.',
+                            style: TextStyle(
+                              fontSize: textScaler.scale(14),
+                              fontFamily: 'Poppins',
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -979,8 +1034,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/HomeScreen'),
+                          onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
                           child: Row(
                             children: [
                               Icon(
@@ -1040,10 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/NotificationsScreen',
-                          ),
+                          onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
                           child: Row(
                             children: [
                               Icon(
@@ -1072,10 +1123,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/LocationSelectScreen',
-                          ),
+                          onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
                           child: Row(
                             children: [
                               Icon(
@@ -1134,6 +1182,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (isNavigating)
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: ElevatedButton(
+                onPressed: _endNavigation,
+                child: Text(
+                  'End Navigation',
+                  style: TextStyle(
+                    fontSize: textScaler.scale(16),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1160,17 +1225,16 @@ class _BuildingBottomSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_BuildingBottomSheetContent> createState() =>
-      _BuildingBottomSheetContentState();
+  State<_BuildingBottomSheetContent> createState() => _BuildingBottomSheetContentState();
 }
 
-class _BuildingBottomSheetContentState
-    extends State<_BuildingBottomSheetContent> {
+class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent> {
   int _selectedTabIndex = 0;
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
-
+  bool _isCheckingPermissions = false;
+  final NavigationService _navigationService = Get.find<NavigationService>();
   final List<String> _issueTypes = [
     'General',
     'Location Incorrect',
@@ -1187,9 +1251,8 @@ class _BuildingBottomSheetContentState
     super.dispose();
   }
 
-  // Custom SnackBar method with debug logging
   void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
-    print('Showing SnackBar: $message'); // Debug log
+    print('Showing SnackBar: $message');
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -1233,12 +1296,11 @@ class _BuildingBottomSheetContentState
       backgroundColor: Colors.transparent,
       elevation: 0,
       onVisible: () {
-        print('SnackBar is visible: $message'); // Debug log
+        print('SnackBar is visible: $message');
       },
     );
-
     ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
-      print('SnackBar closed: $message, reason: $reason'); // Debug log
+      print('SnackBar closed: $message, reason: $reason');
     });
   }
 
@@ -1247,7 +1309,6 @@ class _BuildingBottomSheetContentState
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
-
     return SingleChildScrollView(
       controller: widget.scrollController,
       child: Padding(
@@ -1340,7 +1401,6 @@ class _BuildingBottomSheetContentState
   Widget _buildDetailsTab() {
     final double screenWidth = MediaQuery.of(context).size.width;
     final textScaler = MediaQuery.textScalerOf(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1356,25 +1416,51 @@ class _BuildingBottomSheetContentState
               ),
             ),
             GestureDetector(
-              onTap: widget.onDirectionsTap,
+              onTap: _isCheckingPermissions ? null : _handleStartNavigation,
               child: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth * 0.04,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: _isCheckingPermissions
+                      ? Colors.grey[300]
+                      : Theme.of(context).primaryColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  'Get Directions',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: textScaler.scale(14),
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
+                child: _isCheckingPermissions
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Text(
+                            'Checking...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(14),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'Get Directions',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: textScaler.scale(14),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
               ),
             ),
           ],
@@ -1415,6 +1501,22 @@ class _BuildingBottomSheetContentState
             ),
           ),
         ],
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: textScaler.scale(14), color: Colors.grey[600]),
+            SizedBox(width: screenWidth * 0.01),
+            Text(
+              'Location permission required',
+              style: TextStyle(
+                fontSize: textScaler.scale(12),
+                color: Colors.grey[600],
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1423,7 +1525,6 @@ class _BuildingBottomSheetContentState
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1549,6 +1650,142 @@ class _BuildingBottomSheetContentState
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _handleStartNavigation() async {
+    setState(() {
+      _isCheckingPermissions = true;
+    });
+    try {
+      final hasPermission = await _navigationService.checkAndRequestLocationPermission();
+      if (!hasPermission) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+        if (!mounted) return;
+        _showPermissionDialog();
+        return;
+      }
+      final currentLocation = await _navigationService.getCurrentLocation();
+      if (currentLocation == null) {
+        setState(() {
+          _isCheckingPermissions = false;
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Unable to get your location. Please check your GPS settings.',
+            ),
+            backgroundColor: Colors.orange,
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+      if (!mounted) return;
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NavigationScreen(
+            destination: LatLng(
+              widget.building.location.latitude,
+              widget.building.location.longitude,
+            ),
+            destinationName: widget.building.name,
+          ),
+        ),
+      );
+      widget.onDirectionsTap();
+    } catch (e) {
+      setState(() {
+        _isCheckingPermissions = false;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error starting navigation: $e'),
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _handleStartNavigation,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.location_off, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            const Text('Location Permission'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _navigationService.errorMessage.value.isNotEmpty
+                  ? _navigationService.errorMessage.value
+                  : 'Location permission is required for navigation.',
+              style: const TextStyle(fontSize: 14, fontFamily: 'Poppins'),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please enable location permission in your device settings.',
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700], fontFamily: 'Poppins'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins')),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _handleStartNavigation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Try Again', style: TextStyle(fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
     );
   }
 }

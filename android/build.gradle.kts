@@ -12,6 +12,9 @@ allprojects {
     }
 }
 
+val mapboxToken: String = project.findProperty("MAPBOX_DOWNLOADS_TOKEN") as String
+println("Mapbox Token: $mapboxToken")
+
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 

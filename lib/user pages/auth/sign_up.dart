@@ -31,6 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     clientId: '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
     scopes: ['email'],
   );
+
   bool _isLoading = false;
 
   // Password strength state
@@ -60,35 +61,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void _checkPasswordStrength(String password) {
     int strengthScore = 0;
     List<String> hints = [];
-
     bool hasMinLength = password.length >= 6;
     if (hasMinLength) {
       strengthScore++;
     } else {
       hints.add("Password must be at least 6 characters long");
     }
-
     bool hasLowercase = password.contains(RegExp(r'[a-z]'));
     if (hasLowercase) {
       strengthScore++;
     } else {
       hints.add("Add at least one lowercase letter (a-z)");
     }
-
     bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
     if (hasUppercase) {
       strengthScore++;
     } else {
       hints.add("Add at least one uppercase letter (A-Z)");
     }
-
     bool hasNumber = password.contains(RegExp(r'[0-9]'));
     if (hasNumber) {
       strengthScore++;
     } else {
       hints.add("Consider adding a number (0-9)");
     }
-
     bool hasSpecial = password.contains(RegExp(r'[!@#\$&*~]'));
     if (hasSpecial) {
       strengthScore++;
@@ -105,7 +101,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _passwordStrengthProgress = (strengthScore / 3.0).clamp(0.0, 0.6);
         _strengthColor = Colors.red;
       }
-
       if (_passwordStrengthProgress < 1.0) {
         _passwordHints = hints;
       } else {
@@ -243,7 +238,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
     );
-
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
@@ -258,21 +252,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
       return;
     }
-
     setState(() => _isLoading = true);
     print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
-
     try {
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       print('Firebase sign up successful: ${userCredential.user?.uid}');
-
       if (userCredential.user != null) {
         await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
         print('Display name updated to: ${_fullNameController.text.trim()}');
-
         // Save user info and FCM token to Firestore
         await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'fullName': _fullNameController.text.trim(),
@@ -287,10 +277,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'updatedAt': FieldValue.serverTimestamp(),
           'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
         }, SetOptions(merge: true));
-
         print('User info and FCM token saved to Firestore');
       }
-
       if (mounted) {
         print('Navigating based on email');
         _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
@@ -340,29 +328,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _signUpWithGoogle() async {
     setState(() => _isLoading = true);
     print('Attempting Google Sign-In...');
-
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
       if (googleUser == null) {
         print('Google Sign-In cancelled by user');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
-
       print('Google user: ${googleUser.email}');
-
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-
       UserCredential userCredential = await _auth.signInWithCredential(credential);
-      
       print('Firebase sign-in successful: ${userCredential.user?.uid}');
-
       // Save user info to Firestore with all fields
       await FirebaseFirestore.instance
           .collection('users')
@@ -379,13 +359,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'updatedAt': FieldValue.serverTimestamp(),
             'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
           }, SetOptions(merge: true));
-      
       print('User info saved to Firestore');
-
       if (mounted) {
         _showCustomSnackBar(context, 'Signed up with Google successfully!', isSuccess: true);
         await Future.delayed(const Duration(seconds: 2));
-
         if (userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
@@ -637,7 +614,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               Builder(
                                 builder: (context) {
-                                  final List<String> hints = (_passwordHints != null) ? _passwordHints : <String>[];
+                                  final List<String> hints = _passwordHints;
                                   if (hints.isEmpty) return const SizedBox.shrink();
                                   return Padding(
                                     padding: EdgeInsets.symmetric(
@@ -744,8 +721,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: _isLoading 
-                                              ? Colors.grey 
+                                          color: _isLoading
+                                              ? Colors.grey
                                               : const Color(0xFFD59A00),
                                           width: 1,
                                         ),
@@ -910,18 +887,24 @@ class _ResponsiveTextField extends StatelessWidget {
         ),
         contentPadding: EdgeInsets.symmetric(
           vertical: screenWidth * 0.03,
-          horizontal: screenWidth * 0.05,
-        ),
+          horizontal: screenizează
+
+System: <xaiArtifact artifact_id="38f83f3b-6006-4f44-9947-68850a50b0f9" artifact_version_id="b7e49d09-29de-4ebe-8739-d158da004b47" title="sign_up.dart" contentType="text/x-dart">
+[Previous content truncated for brevity]
+
+      contentPadding: EdgeInsets.symmetric(
+        vertical: screenWidth * 0.03,
+        horizontal: screenWidth * 0.05,
       ),
-      style: TextStyle(
-        color: Colors.black,
-        fontFamily: 'Poppins',
-        fontWeight: FontWeight.w400,
-        fontSize: screenWidth * 0.04,
-      ),
-      cursorColor: const Color(0xFF3B82F6),
-    );
-  }
+    ),
+    style: TextStyle(
+      color: Colors.black,
+      fontFamily: 'Poppins',
+      fontWeight: FontWeight.w400,
+      fontSize: screenWidth * 0.04,
+    ),
+    cursorColor: const Color(0xFF3B82F6),
+  );
 }
 
 class _ResponsivePasswordField extends StatefulWidget {
@@ -1026,6 +1009,7 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
 class _OrDivider extends StatelessWidget {
   final double fontSize;
   final double horizontalPadding;
+
   const _OrDivider({required this.fontSize, required this.horizontalPadding});
 
   @override

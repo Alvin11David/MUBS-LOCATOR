@@ -28,6 +28,8 @@ import 'package:mubs_locator/user%20pages/other%20screens/notification_screen.da
 import 'package:mubs_locator/user%20pages/other%20screens/terms_and_privacy_screen.dart';
 import 'package:mubs_locator/user%20pages/splash/splash_screen.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/profile_screen.dart';
+import 'package:get/get.dart';
+import 'package:mubs_locator/services/navigation_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -49,14 +51,12 @@ Future<void> main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('Firebase initialized successfully');
-
     // Initialize flutter_local_notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
     await FlutterLocalNotificationsPlugin().initialize(initializationSettings);
-
     // Create Android notification channel
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'mubs_locator_notifications', // Channel ID
@@ -68,26 +68,21 @@ Future<void> main() async {
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
-
     // Set up FCM background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
     // Request notification permissions (Android 13+)
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
     }
-
     // Initialize FCM and save token
     final messaging = FirebaseMessaging.instance;
     await _saveFcmToken();
     await messaging.subscribeToTopic('all_users');
     print('Subscribed to all_users topic');
-
     // Handle token refresh
     messaging.onTokenRefresh.listen((token) {
       _saveFcmToken();
     });
-
     // Handle foreground notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Foreground message: ${message.notification?.title}');
@@ -109,7 +104,6 @@ Future<void> main() async {
         );
       }
     });
-
     // Handle notification tap (background/terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('Notification tapped: ${message.notification?.title}');
@@ -126,7 +120,6 @@ Future<void> main() async {
         navigatorKey.currentState?.pushNamed('/NotificationsScreen');
       }
     });
-
     // Handle initial message (app opened from terminated state)
     messaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
@@ -144,10 +137,10 @@ Future<void> main() async {
         }
       }
     });
-
   } catch (e) {
     print('Firebase init error: $e');
   }
+  Get.put(NavigationService());
   runApp(const MyApp());
 }
 
@@ -240,7 +233,6 @@ class MyApp extends StatelessWidget {
 // MyHomePage remains unchanged
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
 
   @override
