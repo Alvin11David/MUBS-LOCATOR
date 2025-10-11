@@ -27,7 +27,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       print('Auth state changed: User ${user?.uid}, email: ${user?.email}');
     });
-    // Initialize future with initial query
     _refreshData();
   }
 
@@ -99,17 +98,14 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   void _navigateToScreen(String routeName) {
     final String? currentRoute = ModalRoute.of(context)?.settings.name;
     print('Current route: $currentRoute, Target route: $routeName');
-
     setState(() {
       _isMenuVisible = false;
       _isDropdownVisible = false;
     });
-
     if (routeName == currentRoute) {
       print('Same route, skipping navigation');
       return;
     }
-
     try {
       Navigator.pushReplacementNamed(context, routeName);
       print('Navigated to $routeName');
@@ -241,8 +237,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                             width: 1,
                                           ),
                                         ),
-                                        child:
-                                            (_profilePicUrl != null &&
+                                        child: (_profilePicUrl != null &&
                                                 _profilePicUrl!.isNotEmpty)
                                             ? ClipOval(
                                                 child: Image.network(
@@ -250,29 +245,27 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                                   fit: BoxFit.cover,
                                                   width: screenWidth * 0.09,
                                                   height: screenWidth * 0.09,
-                                                  loadingBuilder:
-                                                      (
-                                                        context,
-                                                        child,
-                                                        loadingProgress,
-                                                      ) {
-                                                        if (loadingProgress ==
-                                                            null) {
-                                                          return child;
-                                                        }
-                                                        return const CircularProgressIndicator();
-                                                      },
-                                                  errorBuilder:
-                                                      (
-                                                        context,
-                                                        error,
-                                                        stackTrace,
-                                                      ) => Icon(
-                                                        Icons.person,
-                                                        color: Colors.black,
-                                                        size:
-                                                            screenWidth * 0.04,
-                                                      ),
+                                                  loadingBuilder: (
+                                                    context,
+                                                    child,
+                                                    loadingProgress,
+                                                  ) {
+                                                    if (loadingProgress ==
+                                                        null) {
+                                                      return child;
+                                                    }
+                                                    return const CircularProgressIndicator();
+                                                  },
+                                                  errorBuilder: (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) =>
+                                                      Icon(
+                                                    Icons.person,
+                                                    color: Colors.black,
+                                                    size: screenWidth * 0.04,
+                                                  ),
                                                 ),
                                               )
                                             : Icon(
@@ -386,10 +379,11 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
               if (_isDropdownVisible)
                 Positioned(
                   top: screenHeight * 0.09,
-                  right: screenWidth * 0.04,
+                  right: screenWidth * 0.15, // Further shifted left
                   child: Container(
-                    width: screenWidth * 0.25,
+                    width: screenWidth * 0.20, // Further reduced width
                     height: screenHeight * 0.06,
+                    clipBehavior: Clip.antiAlias, // Prevent visual overflow
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
@@ -410,7 +404,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                           color: Colors.transparent,
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.03,
+                              horizontal: screenWidth * 0.02,
                               vertical: screenHeight * 0.01,
                             ),
                             child: GestureDetector(
@@ -423,7 +417,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                     'Edit Profile',
                                     style: TextStyle(
                                       color: Colors.black,
-                                      fontSize: screenWidth * 0.04,
+                                      fontSize: screenWidth * 0.03, // Smaller font size
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Poppins',
                                     ),
@@ -431,8 +425,8 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                   Image.asset(
                                     'assets/images/edit.png',
                                     color: Colors.black,
-                                    width: screenWidth * 0.04,
-                                    height: screenWidth * 0.04,
+                                    width: screenWidth * 0.035, // Smaller icon
+                                    height: screenWidth * 0.035,
                                   ),
                                 ],
                               ),
@@ -491,8 +485,7 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                   width: 1,
                                 ),
                               ),
-                              child:
-                                  (_profilePicUrl != null &&
+                              child: (_profilePicUrl != null &&
                                       _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
                                       child: Image.network(
@@ -502,18 +495,17 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                         height: screenWidth * 0.15,
                                         loadingBuilder:
                                             (context, child, loadingProgress) {
-                                              if (loadingProgress == null) {
-                                                return child;
-                                              }
-                                              return const CircularProgressIndicator();
-                                            },
+                                          if (loadingProgress == null) {
+                                            return child;
+                                          }
+                                          return const CircularProgressIndicator();
+                                        },
                                         errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Icon(
-                                                  Icons.person,
-                                                  color: Colors.black,
-                                                  size: screenWidth * 0.08,
-                                                ),
+                                            (context, error, stackTrace) => Icon(
+                                          Icons.person,
+                                          color: Colors.black,
+                                          size: screenWidth * 0.08,
+                                        ),
                                       ),
                                     )
                                   : Icon(
@@ -786,9 +778,8 @@ class _LocationTableState extends State<LocationTable> {
 
   void _refreshData() {
     setState(() {
-      _buildingsFuture = FirebaseFirestore.instance
-          .collection('buildings')
-          .get();
+      _buildingsFuture =
+          FirebaseFirestore.instance.collection('buildings').get();
       print('Refreshing buildings data');
     });
   }
@@ -825,6 +816,7 @@ class _LocationTableState extends State<LocationTable> {
                       height: widget.screenWidth * 0.1,
                     ),
                   ),
+                  SizedBox(width: widget.screenWidth * 0.04),
                   const Spacer(),
                   Padding(
                     padding: EdgeInsets.only(right: widget.screenWidth * 0.09),
@@ -846,7 +838,7 @@ class _LocationTableState extends State<LocationTable> {
                             ),
                           ),
                         ),
-                        SizedBox(width: widget.screenWidth * 0.02),
+                        SizedBox(width: widget.screenWidth * 0.04),
                         GestureDetector(
                           onTap: () {
                             widget.navigateToScreen('/AddPlaceScreen');
@@ -919,12 +911,10 @@ class _LocationTableState extends State<LocationTable> {
                         print('FutureBuilder: No buildings found');
                         return const Center(child: Text('No buildings found'));
                       }
-
                       final docs = snapshot.data!.docs;
                       print(
                         'FutureBuilder: Found ${docs.length} building documents',
                       );
-
                       return Table(
                         columnWidths: const {
                           0: FlexColumnWidth(1),
@@ -998,8 +988,7 @@ class _LocationTableState extends State<LocationTable> {
                           ...docs.map((doc) {
                             final data = doc.data() as Map<String, dynamic>;
                             final name = data['name'] as String? ?? 'Unnamed';
-                            final description =
-                                data['description'] as String? ??
+                            final description = data['description'] as String? ??
                                 'No description';
                             print(
                               'Document: ID=${doc.id}, Name=$name, Description=$description',
@@ -1049,8 +1038,8 @@ class _LocationTableState extends State<LocationTable> {
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   EditPlaceScreen(
-                                                    buildingId: doc.id,
-                                                  ),
+                                                buildingId: doc.id,
+                                              ),
                                             ),
                                           );
                                         },
@@ -1059,9 +1048,8 @@ class _LocationTableState extends State<LocationTable> {
                                           height: widget.screenWidth * 0.08,
                                           decoration: BoxDecoration(
                                             color: Colors.green,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Row(
                                             mainAxisAlignment:
@@ -1097,23 +1085,22 @@ class _LocationTableState extends State<LocationTable> {
                                           final confirm = await showDialog<bool>(
                                             context: context,
                                             builder: (context) => AlertDialog(
-                                              title: const Text(
-                                                'Delete Location',
-                                              ),
+                                              title:
+                                                  const Text('Delete Location'),
                                               content: const Text(
                                                 'Are you sure you want to delete this location?',
                                               ),
                                               actions: [
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop(false),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
                                                   child: const Text('Cancel'),
                                                 ),
                                                 TextButton(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop(true),
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
                                                   child: const Text(
                                                     'Delete',
                                                     style: TextStyle(
@@ -1130,27 +1117,22 @@ class _LocationTableState extends State<LocationTable> {
                                                   .collection('buildings')
                                                   .doc(doc.id)
                                                   .delete();
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 const SnackBar(
-                                                  content: Text(
-                                                    'Location deleted',
-                                                  ),
+                                                  content:
+                                                      Text('Location deleted'),
                                                 ),
                                               );
                                               _refreshData();
                                             } catch (e) {
                                               print(
-                                                'Error deleting location: $e',
-                                              );
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
+                                                  'Error deleting location: $e');
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    'Error deleting location: $e',
-                                                  ),
+                                                      'Error deleting location: $e'),
                                                 ),
                                               );
                                             }
@@ -1161,9 +1143,8 @@ class _LocationTableState extends State<LocationTable> {
                                           height: widget.screenWidth * 0.08,
                                           decoration: BoxDecoration(
                                             color: Colors.red,
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Row(
                                             mainAxisAlignment:

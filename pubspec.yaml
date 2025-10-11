@@ -1,6 +1,6 @@
 name: mubs_locator
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -20,45 +20,61 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   # Firebase Initialization
-  firebase_core: 
+  firebase_core:
   # Firebase Authentication
   firebase_auth: ^6.1.0
-  # IOS firestore
+  # Cloud Firestore
   cloud_firestore:
+  # String similarity for search suggestions
   string_similarity: ^2.1.1
+  # Typeahead for autocomplete search
   flutter_typeahead: ^5.2.0
-  share_plus: 
-  http: 
-  # Request app permission
+  # Share functionality
+  share_plus:
+  # HTTP requests
+  http:
+  # Request app permissions (e.g., location, notifications)
   permission_handler:
-  # Wave
+  # Google Sign-In functionality
+  google_sign_in: ^6.2.1
+  # Wave animation library
   wave:
-  # Image Select
+  # Image picker for profile pictures
   image_picker:
-  # url launcher
+  # URL launcher for external links
   url_launcher:
-  # shared preferences
+  # Shared preferences for local storage
   shared_preferences:
-  # Date format
+  # Geolocator for location services
+  geolocator:
+  # Google Directions API for routing
+  google_directions_api:
+  # GetX for state management and navigation
+  get:
+  # Dio for advanced HTTP requests
+  dio:
+  # Polyline points for Google Maps routes
+  flutter_polyline_points:
+  # Date formatting
   intl:
-  # Clound functions
+  # Cloud Functions integration
   cloud_functions:
-  # Firebase storage
+  # Firebase Storage for file uploads
   firebase_storage:
+  # Local notifications
   flutter_local_notifications:
-  # Firebase Message
-  firebase_messaging: 
+  # Firebase Cloud Messaging for push notifications
+  firebase_messaging:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: 
-  
+  flutter_launcher_icons:
+
 flutter:
   uses-material-design: true
-
-  # Add C4st60 f6nts here
+  # Add custom fonts here
   fonts:
     - family: Abril Fatface
       fonts:
@@ -76,11 +92,10 @@ flutter:
         - asset: assets/fonts/EpundaSlab-Bold.ttf
           weight: 800
     - family: Reem Kufi
-      fonts: 
+      fonts:
         - asset: assets/fonts/ReemKufi-Bold.ttf
           weight: 700
 
-  
   assets:
     - assets/logo/
     - assets/vectors/
@@ -88,8 +103,8 @@ flutter:
     - assets/data/
     - assets/icons/
 
-# App Icon
-flutter_launcher_icons: 
+# App Icon Configuration
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/app_icon.png"

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,6 +15,17 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  
+  // Focus nodes for field navigation
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _passwordFocus = FocusNode();
+  
+  // Google Sign-In
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206',
+    scopes: ['email'],
+  );
+  
   bool isButtonEnabled = false;
   bool _isLoading = false;
   bool _isForgotPasswordTapped = false;
@@ -168,6 +180,59 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User canceled the sign-in
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      
+      // Save login state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+      if (mounted) {
+        final email = userCredential.user?.email?.toLowerCase();
+        if (email == 'adminuser@gmail.com') {
+          print('Admin user detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Google sign in failed';
+      if (e.code == 'account-exists-with-different-credential') {
+        message = 'An account already exists with the same email.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credential. Please try again.';
+      }
+      _showCustomSnackBar(context, message);
+    } catch (e) {
+      _showCustomSnackBar(context, 'Error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _showCustomSnackBar(BuildContext context, String message) {
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
@@ -220,6 +285,8 @@ class _SignInScreenState extends State<SignInScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -332,12 +399,24 @@ class _SignInScreenState extends State<SignInScreen> {
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-                                child: EmailField(controller: _emailController),
+                                child: EmailField(
+                                  controller: _emailController,
+                                  focusNode: _emailFocus,
+                                  nextFocusNode: _passwordFocus,
+                                ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-                                child: PasswordField(controller: _passwordController),
+                                child: PasswordField(
+                                  controller: _passwordController,
+                                  focusNode: _passwordFocus,
+                                  onFieldSubmitted: (_) {
+                                    if (isButtonEnabled && !_isLoading) {
+                                      _signIn();
+                                    }
+                                  },
+                                ),
                               ),
                               SizedBox(height: screenHeight * 0.01),
                               Padding(
@@ -436,13 +515,16 @@ class _SignInScreenState extends State<SignInScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: () {
-                                      // Add Google sign-in logic here
-                                    },
+                                    onTap: _isLoading ? null : _signInWithGoogle,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(color: const Color(0xFFD59A00), width: 1),
+                                        border: Border.all(
+                                          color: _isLoading 
+                                              ? Colors.grey 
+                                              : const Color(0xFFD59A00), 
+                                          width: 1,
+                                        ),
                                         gradient: const LinearGradient(
                                           colors: [
                                             Color.fromARGB(255, 255, 255, 255),
@@ -540,7 +622,15 @@ class _SignInScreenState extends State<SignInScreen> {
 
 class EmailField extends StatelessWidget {
   final TextEditingController controller;
-  const EmailField({super.key, required this.controller});
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
+  
+  const EmailField({
+    super.key,
+    required this.controller,
+    this.focusNode,
+    this.nextFocusNode,
+  });
 
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) return 'Enter your email address';
@@ -556,8 +646,15 @@ class EmailField extends StatelessWidget {
         double screenWidth = constraints.maxWidth;
         return TextFormField(
           controller: controller,
+          focusNode: focusNode,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
           validator: _validateEmail,
+          onFieldSubmitted: (_) {
+            if (nextFocusNode != null) {
+              FocusScope.of(context).requestFocus(nextFocusNode);
+            }
+          },
           decoration: InputDecoration(
             labelText: 'Email',
             labelStyle: TextStyle(
@@ -607,7 +704,15 @@ class EmailField extends StatelessWidget {
 
 class PasswordField extends StatefulWidget {
   final TextEditingController controller;
-  const PasswordField({super.key, required this.controller});
+  final FocusNode? focusNode;
+  final Function(String)? onFieldSubmitted;
+  
+  const PasswordField({
+    super.key,
+    required this.controller,
+    this.focusNode,
+    this.onFieldSubmitted,
+  });
 
   @override
   State<PasswordField> createState() => _PasswordFieldState();
@@ -623,8 +728,11 @@ class _PasswordFieldState extends State<PasswordField> {
         double screenWidth = constraints.maxWidth;
         return TextFormField(
           controller: widget.controller,
+          focusNode: widget.focusNode,
           obscureText: _isObscured,
+          textInputAction: TextInputAction.done,
           validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
+          onFieldSubmitted: widget.onFieldSubmitted,
           decoration: InputDecoration(
             labelText: 'Password',
             labelStyle: TextStyle(

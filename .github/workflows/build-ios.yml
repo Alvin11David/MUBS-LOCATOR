@@ -1,1 +1,70 @@
 
+name: iOS Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest #macOS-latest
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Select Xcode
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_15.0.1.app
+
+      # 3. Install certificate from GitHub Secrets
+      - name: Install signing certificate
+        run: |
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security import certificate.p12 -k ~/Library/Keychains/build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s ~/Library/Keychains/build.keychain
+          security default-keychain -s ~/Library/Keychains/build.keychain
+          security unlock-keychain -p "" ~/Library/Keychains/build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/build.keychain
+
+      # 4. Install provisioning profile from GitHub Secrets
+      - name: Install provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      # 5. Install dependencies (skip if no CocoaPods)
+      - name: Install dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+
+      # 6. Build archive
+      - name: Build iOS archive
+        run: |
+          xcodebuild \
+            -workspace ios/YourApp.xcworkspace \
+            -scheme YourApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $PWD/build/YourApp.xcarchive archive \
+            DEVELOPMENT_TEAM=$APPLE_TEAM_ID \
+            PRODUCT_BUNDLE_IDENTIFIER=$APPLE_BUNDLE_ID
+
+      # 7. Export IPA
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/YourApp.xcarchive \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportPath $PWD/build
+
+      # 8. Upload artifact (IPA file)
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/*.ipa

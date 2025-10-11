@@ -56,62 +56,59 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
   }
 
   Future<void> _sendNotification() async {
-  if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please select a category and enter a message.')),
-    );
-    return;
-  }
-
-  setState(() => _isSending = true);
-
-  try {
-    // Ensure user is signed in and refresh token
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be signed in to send notifications.')),
+        const SnackBar(content: Text('Please select a category and enter a message.')),
       );
-      setState(() => _isSending = false);
       return;
     }
-    // Force refresh the ID token to include admin claim
-    await user.getIdToken(true);
-    print('Token refreshed for user: ${user.uid}');
 
-    // Debug: Print custom claims to verify admin status
-    final idTokenResult = await user.getIdTokenResult();
-    print('Custom claims: ${idTokenResult.claims}');
+    setState(() => _isSending = true);
 
-    final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
-    final result = await callable.call({
-      'title': 'MUBS Locator: $_selectedCategory',
-      'body': _messageController.text.trim(),
-      'category': _selectedCategory,
-    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be signed in to send notifications.')),
+        );
+        setState(() => _isSending = false);
+        return;
+      }
+      await user.getIdToken(true);
+      print('Token refreshed for user: ${user.uid}');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result.data['message'])),
-    );
+      final idTokenResult = await user.getIdTokenResult();
+      print('Custom claims: ${idTokenResult.claims}');
 
-    _messageController.clear();
-    setState(() => _selectedCategory = null);
-  } on FirebaseFunctionsException catch (e) {
-    String errorMessage = 'Error sending notification: ${e.message}';
-    if (e.code == 'permission-denied') {
-      errorMessage = 'Admin access required to send notifications.';
+      final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
+      final result = await callable.call({
+        'title': 'MUBS Locator: $_selectedCategory',
+        'body': _messageController.text.trim(),
+        'category': _selectedCategory,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.data['message'])),
+      );
+
+      _messageController.clear();
+      setState(() => _selectedCategory = null);
+    } on FirebaseFunctionsException catch (e) {
+      String errorMessage = 'Error sending notification: ${e.message}';
+      if (e.code == 'permission-denied') {
+        errorMessage = 'Admin access required to send notifications.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unexpected error: $e')),
+      );
+    } finally {
+      setState(() => _isSending = false);
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMessage)),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unexpected error: $e')),
-    );
-  } finally {
-    setState(() => _isSending = false);
   }
-}
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
@@ -171,7 +168,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Root GestureDetector to handle taps outside interactive elements
             GestureDetector(
               onTap: () {
                 if (!FocusScope.of(context).hasFocus) {
@@ -185,7 +181,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
               behavior: HitTestBehavior.translucent,
               child: Stack(
                 children: [
-                  // Top glassy rectangle
                   Positioned(
                     top: 0,
                     left: 0,
@@ -320,7 +315,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                       ),
                     ),
                   ),
-                  // Dropdown menu
                   if (_isDropdownVisible)
                     Positioned(
                       top: screenHeight * 0.09,
@@ -352,13 +346,24 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                                   vertical: screenHeight * 0.01,
                                 ),
                                 child: GestureDetector(
-                                  onTap: () => _navigateToScreen('/ProfileScreen'),
+                                  onTap: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                                    );
+                                    if (result != null && result is Map<String, dynamic>) {
+                                      setState(() {
+                                        _profilePicUrl = result['imageUrl'] as String?;
+                                        _isDropdownVisible = false;
+                                      });
+                                    }
+                                  },
                                   behavior: HitTestBehavior.opaque,
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Profile',
+                                        'Edit Profile',
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: screenWidth * 0.04,
@@ -381,7 +386,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                         ),
                       ),
                     ),
-                  // Text and chevron icons below glassy rectangle
                   Positioned(
                     top: screenHeight * 0.1,
                     left: screenWidth * 0.04,
@@ -438,7 +442,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                       ],
                     ),
                   ),
-                  // Main white container
                   Positioned(
                     top: screenHeight * 0.23,
                     left: screenWidth * 0.04,
@@ -472,7 +475,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                               ),
                             ),
                             SizedBox(height: screenHeight * 0.02),
-                            // Category Dropdown
                             Text(
                               'Category',
                               style: TextStyle(
@@ -525,7 +527,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                               ),
                             ),
                             SizedBox(height: screenHeight * 0.03),
-                            // Message Field
                             Text(
                               'Message',
                               style: TextStyle(
@@ -564,7 +565,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                               ),
                             ),
                             SizedBox(height: screenHeight * 0.05),
-                            // Send Button
                             Center(
                               child: GestureDetector(
                                 onTap: _isSending ? null : _sendNotification,
@@ -598,322 +598,321 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                       ),
                     ),
                   ),
-                  // Sidebar menu
                   AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-                top: MediaQuery.of(context).padding.top,
-                child: Container(
-                  width: screenWidth * 0.6,
-                  height: screenHeight * 0.8,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: Offset(2, 0),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        children: [
-                          Image.asset(
-                            'assets/images/sidebar.png',
-                            width: screenWidth * 0.6,
-                            height: screenHeight * 0.16,
-                            fit: BoxFit.cover,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+                    top: MediaQuery.of(context).padding.top,
+                    child: Container(
+                      width: screenWidth * 0.6,
+                      height: screenHeight * 0.8,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                            offset: Offset(2, 0),
                           ),
-                          Positioned(
-                            left: screenWidth * 0.0,
-                            top: screenHeight * 0.03,
-                            child: Container(
-                              width: screenWidth * 0.15,
-                              height: screenWidth * 0.15,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1,
-                                ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              Image.asset(
+                                'assets/images/sidebar.png',
+                                width: screenWidth * 0.6,
+                                height: screenHeight * 0.16,
+                                fit: BoxFit.cover,
                               ),
-                              child: (_profilePicUrl != null &&
-                                      _profilePicUrl!.isNotEmpty)
-                                  ? ClipOval(
-                                      child: Image.network(
-                                        _profilePicUrl!,
-                                        fit: BoxFit.cover,
-                                        width: screenWidth * 0.15,
-                                        height: screenWidth * 0.15,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return const CircularProgressIndicator();
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Icon(
+                              Positioned(
+                                left: screenWidth * 0.0,
+                                top: screenHeight * 0.03,
+                                child: Container(
+                                  width: screenWidth * 0.15,
+                                  height: screenWidth * 0.15,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: (_profilePicUrl != null &&
+                                          _profilePicUrl!.isNotEmpty)
+                                      ? ClipOval(
+                                          child: Image.network(
+                                            _profilePicUrl!,
+                                            fit: BoxFit.cover,
+                                            width: screenWidth * 0.15,
+                                            height: screenWidth * 0.15,
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return const CircularProgressIndicator();
+                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Icon(
+                                              Icons.person,
+                                              color: Colors.black,
+                                              size: screenWidth * 0.08,
+                                            ),
+                                          ),
+                                        )
+                                      : Icon(
                                           Icons.person,
                                           color: Colors.black,
                                           size: screenWidth * 0.08,
                                         ),
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.person,
-                                      color: Colors.black,
-                                      size: screenWidth * 0.08,
-                                    ),
-                            ),
+                                ),
+                              ),
+                              Positioned(
+                                left: screenWidth * 0.19,
+                                top: screenHeight * 0.05,
+                                child: Text(
+                                  'MUBS Locator',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.05,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: screenWidth * 0.19,
+                                top: screenHeight * 0.09,
+                                child: Text(
+                                  fullName,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: screenWidth * 0.035,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          Positioned(
-                            left: screenWidth * 0.19,
-                            top: screenHeight * 0.05,
-                            child: Text(
-                              'MUBS Locator',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: screenWidth * 0.05,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/AdminDashboardScreen',
+                                );
+                                setState(() {
+                                  _isMenuVisible = false;
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.dashboard,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Dashboard',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          Positioned(
-                            left: screenWidth * 0.19,
-                            top: screenHeight * 0.09,
-                            child: Text(
-                              fullName,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: screenWidth * 0.035,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Urbanist',
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/FeedbackListScreen');
+                                setState(() {
+                                  _isMenuVisible = false;
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.chat,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Feedback & Reports',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                                );
+                                if (result != null && result is Map<String, dynamic>) {
+                                  setState(() {
+                                    _profilePicUrl = result['imageUrl'] as String?;
+                                    _isMenuVisible = false;
+                                  });
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.settings,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Profile Settings',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/SendNotificationsScreen');
+                                setState(() {
+                                  _isMenuVisible = false;
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.notifications,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Push Notifications',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/LocationManagementScreen');
+                                setState(() {
+                                  _isMenuVisible = false;
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Locations',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: _logout,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.exit_to_app,
+                                    color: Colors.black,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/AdminDashboardScreen',
-                            );
-                            setState(() {
-                              _isMenuVisible = false;
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.dashboard,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Dashboard',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/FeedbackListScreen');
-                            setState(() {
-                              _isMenuVisible = false;
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.chat,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Feedback & Reports',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const EditProfileScreen()),
-                            );
-                            if (result != null && result is Map<String, dynamic>) {
-                              setState(() {
-                                _profilePicUrl = result['imageUrl'] as String?;
-                                _isMenuVisible = false;
-                              });
-                            }
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.settings,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Profile Settings',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/SendNotificationsScreen');
-                            setState(() {
-                              _isMenuVisible = false;
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.notifications,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Push Notifications',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/LocationManagementScreen');
-                            setState(() {
-                              _isMenuVisible = false;
-                            });
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_on,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Locations',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: _logout,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.exit_to_app,
-                                color: Colors.black,
-                                size: screenWidth * 0.06,
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Logout',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: screenWidth * 0.04,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
                 ],
               ),
             ),
