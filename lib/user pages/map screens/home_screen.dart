@@ -17,6 +17,7 @@ import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
 import 'navigation_screen.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mubs_locator/components/bottom_navbar.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isMenuVisible = false;
   File? _profileImage;
   bool _isLoggingOut = false;
+  bool _isBottomNavVisible = false;
+  String? _profilePicUrl; // Add this to your _HomeScreenState
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -62,11 +65,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    updateLastActiveTimestamp();
     fetchAllData();
     _initializeMarkers();
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
+  }
+
+  Future<void> updateLastActiveTimestamp() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'lastActiveTimestamp': Timestamp.now()},
+      );
+    }
   }
 
   void _showCustomSnackBar(
@@ -139,17 +152,20 @@ class _HomeScreenState extends State<HomeScreen> {
         if (querySnapshot.docs.isNotEmpty) {
           final userData = querySnapshot.docs.first.data();
           final fullName = userData['fullName'] as String?;
+          final profilePicUrl = userData['profilePicUrl'] as String?;
           if (mounted) {
             setState(() {
               _userFullName = fullName != null && fullName.isNotEmpty
                   ? fullName
                   : 'User';
+              _profilePicUrl = profilePicUrl;
             });
           }
         } else {
           if (mounted) {
             setState(() {
               _userFullName = 'User';
+              _profilePicUrl = null;
             });
           }
         }
@@ -157,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             _userFullName = 'User';
+            _profilePicUrl = null;
           });
         }
       }
@@ -165,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _userFullName = 'User';
+          _profilePicUrl = null;
         });
       }
     }
@@ -693,6 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -1043,18 +1062,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               child: ClipOval(
-                                child: _profileImage != null
-                                    ? Image.file(
-                                        _profileImage!,
+                                child:
+                                    _profilePicUrl != null &&
+                                        _profilePicUrl!.isNotEmpty
+                                    ? Image.network(
+                                        _profilePicUrl!,
                                         width: screenWidth * 0.14,
                                         height: screenWidth * 0.14,
                                         fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.person,
+                                                  color: Colors.black
+                                                      .withOpacity(0.8),
+                                                  size: screenWidth * 0.07,
+                                                ),
                                       )
-                                    : Icon(
-                                        Icons.person,
-                                        color: Colors.black.withOpacity(0.8),
-                                        size: screenWidth * 0.07,
-                                      ),
+                                    : (_profileImage != null
+                                          ? Image.file(
+                                              _profileImage!,
+                                              width: screenWidth * 0.14,
+                                              height: screenWidth * 0.14,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              color: Colors.black.withOpacity(
+                                                0.8,
+                                              ),
+                                              size: screenWidth * 0.07,
+                                            )),
                               ),
                             ),
                           ),
@@ -1266,6 +1304,65 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+          // Rectangle handle to show navbar
+          if (!_isBottomNavVisible)
+            Positioned(
+              bottom: screenHeight * 0.03,
+              right: screenWidth * 0.04,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isBottomNavVisible = true;
+                  });
+                },
+                child: Container(
+                  width: screenWidth * 0.13,
+                  height: screenHeight * 0.025,
+                  decoration: BoxDecoration(
+                    color: Colors.blue[300],
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: textScaler.scale(18),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Animated BottomNavBar
+          AnimatedPositioned(
+            duration: Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            left: 0,
+            right: 0,
+            bottom: _isBottomNavVisible ? 0 : -screenHeight * 0.12,
+            child: GestureDetector(
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity != null &&
+                    details.primaryVelocity! > 0) {
+                  // Swipe down to hide navbar
+                  setState(() {
+                    _isBottomNavVisible = false;
+                  });
+                }
+              },
+              child: BottomNavBar(
+                initialIndex: 0, // or your preferred index
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -48,8 +48,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _loadUserCount() async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance.collection('users').get();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
       setState(() {
         _userCount = querySnapshot.docs.length;
       });
@@ -62,7 +63,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('feedback')
-          .where('adminReply', isNull: true)
+          .where('read', isEqualTo: false)
           .get();
       setState(() {
         _pendingFeedbackCount = querySnapshot.docs.length;
@@ -74,7 +75,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _loadActiveUserCount() async {
     try {
-      final fiveMinutesAgo = Timestamp.fromDate(DateTime.now().subtract(const Duration(minutes: 5)));
+      final fiveMinutesAgo = Timestamp.fromDate(
+        DateTime.now().subtract(const Duration(minutes: 5)),
+      );
       final querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('lastActiveTimestamp', isGreaterThanOrEqualTo: fiveMinutesAgo)
@@ -235,7 +238,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                               width: 1,
                                             ),
                                           ),
-                                          child: (_profilePicUrl != null &&
+                                          child:
+                                              (_profilePicUrl != null &&
                                                   _profilePicUrl!.isNotEmpty)
                                               ? ClipOval(
                                                   child: Image.network(
@@ -243,16 +247,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                                     fit: BoxFit.cover,
                                                     width: screenWidth * 0.1,
                                                     height: screenWidth * 0.1,
-                                                    loadingBuilder: (context, child, loadingProgress) {
-                                                      if (loadingProgress == null) return child;
-                                                      return const CircularProgressIndicator();
-                                                    },
-                                                    errorBuilder: (context, error, stackTrace) =>
-                                                        Icon(
-                                                      Icons.person,
-                                                      color: Colors.black,
-                                                      size: screenWidth * 0.04,
-                                                    ),
+                                                    loadingBuilder:
+                                                        (
+                                                          context,
+                                                          child,
+                                                          loadingProgress,
+                                                        ) {
+                                                          if (loadingProgress ==
+                                                              null)
+                                                            return child;
+                                                          return const CircularProgressIndicator();
+                                                        },
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) => Icon(
+                                                          Icons.person,
+                                                          color: Colors.black,
+                                                          size:
+                                                              screenWidth *
+                                                              0.04,
+                                                        ),
                                                   ),
                                                 )
                                               : Icon(
@@ -341,7 +358,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             child: GestureDetector(
                               onTap: _navigateToEditProfile,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Edit Profile',
@@ -663,7 +681,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           left: screenWidth * 0.04,
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/LocationManagementScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/LocationManagementScreen',
+                              );
                             },
                             child: Container(
                               width: screenWidth * 0.92,
@@ -802,7 +823,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           left: screenWidth * 0.04,
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/FeedbackListScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/FeedbackListScreen',
+                              );
                             },
                             child: Container(
                               width: screenWidth * 0.92,
@@ -824,11 +848,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         height: screenWidth * 0.7,
                                         fit: BoxFit.contain,
                                         errorBuilder:
-                                            (context, error, stackTrace) => Icon(
-                                              Icons.error,
-                                              color: Colors.red,
-                                              size: screenWidth * 0.2,
-                                            ),
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.error,
+                                                  color: Colors.red,
+                                                  size: screenWidth * 0.2,
+                                                ),
                                       ),
                                     ),
                                   ),
@@ -940,7 +965,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           left: screenWidth * 0.04,
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/SendNotificationsScreen');
+                              Navigator.pushNamed(
+                                context,
+                                '/SendNotificationsScreen',
+                              );
                             },
                             child: Container(
                               width: screenWidth * 0.92,
@@ -962,11 +990,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         height: screenWidth * 0.7,
                                         fit: BoxFit.contain,
                                         errorBuilder:
-                                            (context, error, stackTrace) => Icon(
-                                              Icons.error,
-                                              color: Colors.red,
-                                              size: screenWidth * 0.2,
-                                            ),
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.error,
+                                                  color: Colors.red,
+                                                  size: screenWidth * 0.2,
+                                                ),
                                       ),
                                     ),
                                   ),
@@ -1098,7 +1127,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   width: 1,
                                 ),
                               ),
-                              child: (_profilePicUrl != null &&
+                              child:
+                                  (_profilePicUrl != null &&
                                       _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
                                       child: Image.network(
@@ -1106,17 +1136,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return const CircularProgressIndicator();
-                                        },
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return const CircularProgressIndicator();
+                                            },
                                         errorBuilder:
                                             (context, error, stackTrace) =>
                                                 Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.08,
-                                        ),
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.08,
+                                                ),
                                       ),
                                     )
                                   : Icon(
@@ -1234,9 +1266,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           onTap: () async {
                             final result = await Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => const EditProfileScreen(),
+                              ),
                             );
-                            if (result != null && result is Map<String, dynamic>) {
+                            if (result != null &&
+                                result is Map<String, dynamic>) {
                               setState(() {
                                 _profilePicUrl = result['imageUrl'] as String?;
                                 _isMenuVisible = false;
@@ -1272,7 +1307,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/SendNotificationsScreen');
+                            Navigator.pushNamed(
+                              context,
+                              '/SendNotificationsScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });
@@ -1306,7 +1344,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/LocationManagementScreen');
+                            Navigator.pushNamed(
+                              context,
+                              '/LocationManagementScreen',
+                            );
                             setState(() {
                               _isMenuVisible = false;
                             });

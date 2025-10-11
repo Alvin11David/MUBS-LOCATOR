@@ -14,7 +14,8 @@ class FeedbackScreen extends StatefulWidget {
   State<FeedbackScreen> createState() => _FeedbackScreenState();
 }
 
-class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProviderStateMixin {
+class _FeedbackScreenState extends State<FeedbackScreen>
+    with SingleTickerProviderStateMixin {
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
@@ -56,10 +57,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
     if (user != null && user.email != null) {
       String? fcmToken = await _firebaseMessaging.getToken();
       if (fcmToken != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({'fcmToken': fcmToken, 'email': user.email}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fcmToken': fcmToken,
+          'email': user.email,
+        }, SetOptions(merge: true));
       }
     }
   }
@@ -288,15 +289,29 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.email != null) {
+        // Add feedback document
         await FirebaseFirestore.instance.collection('feedback').add({
           'userEmail': user.email,
-          'userName': _userFullName,
-          'rating': _selectedRating,
           'feedbackText': _feedbackController.text.trim(),
+          'rating': _selectedRating,
+          'read': false,
+          'status': 'Pending',
           'timestamp': FieldValue.serverTimestamp(),
         });
+
+        // Add notification for admin
+        await FirebaseFirestore.instance.collection('admin_notifications').add({
+          'title': 'New Feedback Received',
+          'message': '${user.email} submitted new feedback.',
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+
         if (mounted) {
-          _showCustomSnackBar('Thank you! Your feedback has been sent successfully.', Colors.green);
+          _showCustomSnackBar(
+            'Thank you! Your feedback has been sent successfully.',
+            Colors.green,
+          );
           setState(() {
             _feedbackController.clear();
             _selectedRating = 0;
@@ -396,17 +411,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                 '${_getGreeting()}, $_userFullName',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(screenWidth * 0.045),
+                                  fontSize: textScaler.scale(
+                                    screenWidth * 0.045,
+                                  ),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
                               ),
                               const Spacer(),
                               Padding(
-                                padding: EdgeInsets.only(right: screenWidth * 0.04),
+                                padding: EdgeInsets.only(
+                                  right: screenWidth * 0.04,
+                                ),
                                 child: GestureDetector(
                                   onTap: () {
-                                    Navigator.pushNamed(context, '/NotificationsScreen');
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/NotificationsScreen',
+                                    );
                                   },
                                   child: Stack(
                                     children: [
@@ -442,7 +464,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                                 '$_unreadNotifications',
                                                 style: TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: textScaler.scale(screenWidth * 0.025),
+                                                  fontSize: textScaler.scale(
+                                                    screenWidth * 0.025,
+                                                  ),
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -520,11 +544,20 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                 ),
               ),
               Positioned(
-                top: screenHeight * 0.09 + 75 + textScaler.scale(screenWidth * 0.05) + 8 + textScaler.scale(screenWidth * 0.04) + 16,
+                top:
+                    screenHeight * 0.09 +
+                    75 +
+                    textScaler.scale(screenWidth * 0.05) +
+                    8 +
+                    textScaler.scale(screenWidth * 0.04) +
+                    16,
                 left: 4,
                 right: 4,
                 child: Container(
-                  height: screenHeight * 0.73 - textScaler.scale(screenWidth * 0.04) - 16,
+                  height:
+                      screenHeight * 0.73 -
+                      textScaler.scale(screenWidth * 0.04) -
+                      16,
                   width: screenWidth - 8,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
@@ -560,7 +593,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                 'How would you rate your experience?',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(screenWidth * 0.045),
+                                  fontSize: textScaler.scale(
+                                    screenWidth * 0.045,
+                                  ),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
@@ -573,7 +608,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                   return GestureDetector(
                                     onTap: () => _selectRating(starIndex),
                                     child: Padding(
-                                      padding: EdgeInsets.only(right: screenWidth * 0.02),
+                                      padding: EdgeInsets.only(
+                                        right: screenWidth * 0.02,
+                                      ),
                                       child: Icon(
                                         starIndex <= _selectedRating
                                             ? Icons.star
@@ -581,7 +618,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                         color: starIndex <= _selectedRating
                                             ? Colors.amber
                                             : Colors.grey,
-                                        size: textScaler.scale(screenWidth * 0.07),
+                                        size: textScaler.scale(
+                                          screenWidth * 0.07,
+                                        ),
                                       ),
                                     ),
                                   );
@@ -592,7 +631,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                 'Please type below what you want us to improve',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(screenWidth * 0.045),
+                                  fontSize: textScaler.scale(
+                                    screenWidth * 0.045,
+                                  ),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
@@ -602,10 +643,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                 controller: _feedbackController,
                                 maxLines: 5,
                                 decoration: InputDecoration(
-                                  hintText: 'Tell us what you liked or what we can improve…',
+                                  hintText:
+                                      'Tell us what you liked or what we can improve…',
                                   hintStyle: TextStyle(
                                     color: Colors.black54,
-                                    fontSize: textScaler.scale(screenWidth * 0.035),
+                                    fontSize: textScaler.scale(
+                                      screenWidth * 0.035,
+                                    ),
                                     fontFamily: 'Poppins',
                                   ),
                                   border: OutlineInputBorder(
@@ -634,7 +678,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                 ),
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(screenWidth * 0.035),
+                                  fontSize: textScaler.scale(
+                                    screenWidth * 0.035,
+                                  ),
                                   fontFamily: 'Poppins',
                                 ),
                               ),
@@ -642,7 +688,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: ElevatedButton(
-                                  onPressed: _isFormValid() ? _submitFeedback : null,
+                                  onPressed: _isFormValid()
+                                      ? _submitFeedback
+                                      : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _isFormValid()
                                         ? const Color(0xFF93C5FD)
@@ -659,8 +707,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                   child: Text(
                                     'Submit',
                                     style: TextStyle(
-                                      color: _isFormValid() ? Colors.white : Colors.white.withOpacity(0.7),
-                                      fontSize: textScaler.scale(screenWidth * 0.04),
+                                      color: _isFormValid()
+                                          ? Colors.white
+                                          : Colors.white.withOpacity(0.7),
+                                      fontSize: textScaler.scale(
+                                        screenWidth * 0.04,
+                                      ),
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'Poppins',
                                     ),
@@ -743,7 +795,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                                           )
                                         : Icon(
                                             Icons.person,
-                                            color: Colors.black.withOpacity(0.8),
+                                            color: Colors.black.withOpacity(
+                                              0.8,
+                                            ),
                                             size: screenWidth * 0.07,
                                           ),
                                   ),
@@ -785,7 +839,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/HomeScreen'),
                               child: Row(
                                 children: [
                                   Icon(
@@ -814,7 +869,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/ProfileScreen'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/ProfileScreen',
+                              ),
                               child: Row(
                                 children: [
                                   Icon(
@@ -843,7 +901,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/NotificationsScreen',
+                              ),
                               child: Row(
                                 children: [
                                   Icon(
@@ -872,7 +933,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> with SingleTickerProvid
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/LocationSelectScreen',
+                              ),
                               child: Row(
                                 children: [
                                   Icon(

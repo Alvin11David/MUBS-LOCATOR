@@ -15,17 +15,17 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+
   // Focus nodes for field navigation
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
-  
+
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: '1:700901312627:web:c2dfd9dcd0d03865050206',
     scopes: ['email'],
   );
-  
+
   bool isButtonEnabled = false;
   bool _isLoading = false;
   bool _isForgotPasswordTapped = false;
@@ -36,6 +36,7 @@ class _SignInScreenState extends State<SignInScreen> {
     _emailController.addListener(_updateButtonState);
     _passwordController.addListener(_updateButtonState);
     _checkLoginState();
+    _loadLastCredentials();
   }
 
   void _updateButtonState() {
@@ -85,107 +86,110 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signIn() async {
-  setState(() => _isLoading = true);
-  try {
-    final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text.trim();
+    setState(() => _isLoading = true);
+    try {
+      final email = _emailController.text.trim().toLowerCase();
+      final password = _passwordController.text.trim();
 
-    // Query Firestore to get the stored password
-    final userQuery = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
+      // Query Firestore to get the stored password
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
 
-    if (userQuery.docs.isEmpty) {
-      throw Exception('No user found for that email.');
-    }
-
-    final userDoc = userQuery.docs.first;
-    final storedPassword = userDoc.data()['password'] as String?;
-
-    if (storedPassword == null) {
-      throw Exception('No password found for this user.');
-    }
-
-    if (storedPassword != password) {
-      throw Exception('Incorrect password.');
-    }
-
-    // Password matches in Firestore, proceed with Firebase Authentication
-    final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    // Update lastActiveTimestamp in Firestore
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userCredential.user!.uid)
-        .update({
-          'lastActiveTimestamp': Timestamp.now(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }).catchError((e) async {
-          // If document doesn't exist (edge case), create it
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .set({
-                'uid': userCredential.user!.uid,
-                'email': email,
-                'displayName': userCredential.user!.displayName ?? 'User',
-                'lastActiveTimestamp': Timestamp.now(),
-                'createdAt': FieldValue.serverTimestamp(),
-                'updatedAt': FieldValue.serverTimestamp(),
-                'phone': '',
-                'location': '',
-                'profilePicUrl': null,
-                'isAdmin': email == 'adminuser@gmail.com',
-                'fcmToken': await FirebaseMessaging.instance.getToken(),
-              }, SetOptions(merge: true));
-        });
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-
-    // Save FCM token and email after sign-in
-    await _saveFcmToken();
-
-    if (mounted) {
-      if (email == 'adminuser@gmail.com') {
-        print('Admin email detected, navigating to AdminDashboardScreen');
-        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
-      } else {
-        print('Regular user, navigating to HomeScreen');
-        Navigator.pushReplacementNamed(context, '/HomeScreen');
+      if (userQuery.docs.isEmpty) {
+        throw Exception('No user found for that email.');
       }
+
+      final userDoc = userQuery.docs.first;
+      final storedPassword = userDoc.data()['password'] as String?;
+
+      if (storedPassword == null) {
+        throw Exception('No password found for this user.');
+      }
+
+      if (storedPassword != password) {
+        throw Exception('Incorrect password.');
+      }
+
+      // Password matches in Firestore, proceed with Firebase Authentication
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      // Update lastActiveTimestamp in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .update({
+            'lastActiveTimestamp': Timestamp.now(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          .catchError((e) async {
+            // If document doesn't exist (edge case), create it
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .set({
+                  'uid': userCredential.user!.uid,
+                  'email': email,
+                  'displayName': userCredential.user!.displayName ?? 'User',
+                  'lastActiveTimestamp': Timestamp.now(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'updatedAt': FieldValue.serverTimestamp(),
+                  'phone': '',
+                  'location': '',
+                  'profilePicUrl': null,
+                  'isAdmin': email == 'adminuser@gmail.com',
+                  'fcmToken': await FirebaseMessaging.instance.getToken(),
+                }, SetOptions(merge: true));
+          });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+      // Save last email and password
+      await prefs.setString('lastEmail', email);
+      await prefs.setString('lastPassword', password);
+
+      // Save FCM token and email after sign-in
+      await _saveFcmToken();
+
+      if (mounted) {
+        if (email == 'adminuser@gmail.com') {
+          print('Admin email detected, navigating to AdminDashboardScreen');
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          print('Regular user, navigating to HomeScreen');
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Sign in failed';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credentials. Please check your email and password.';
+      }
+      print('FirebaseAuthException: ${e.code}, ${e.message}');
+      _showCustomSnackBar(context, message);
+    } catch (e, stackTrace) {
+      print('Error during sign-in: $e');
+      print('Stack trace: $stackTrace');
+      _showCustomSnackBar(context, 'Error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  } on FirebaseAuthException catch (e) {
-    String message = 'Sign in failed';
-    if (e.code == 'user-not-found') {
-      message = 'No user found for that email.';
-    } else if (e.code == 'wrong-password') {
-      message = 'Wrong password provided.';
-    } else if (e.code == 'invalid-credential') {
-      message = 'Invalid credentials. Please check your email and password.';
-    }
-    print('FirebaseAuthException: ${e.code}, ${e.message}');
-    _showCustomSnackBar(context, message);
-  } catch (e, stackTrace) {
-    print('Error during sign-in: $e');
-    print('Stack trace: $stackTrace');
-    _showCustomSnackBar(context, 'Error: $e');
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         // User canceled the sign-in
         if (mounted) setState(() => _isLoading = false);
@@ -193,7 +197,8 @@ class _SignInScreenState extends State<SignInScreen> {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -202,8 +207,10 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       // Sign in to Firebase with the Google credential
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
+
       // Save login state
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
@@ -249,7 +256,8 @@ class _SignInScreenState extends State<SignInScreen> {
               width: screenWidth * 0.08,
               height: screenWidth * 0.08,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(width: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -279,6 +287,16 @@ class _SignInScreenState extends State<SignInScreen> {
     );
 
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  Future<void> _loadLastCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastEmail = prefs.getString('lastEmail') ?? '';
+    final lastPassword = prefs.getString('lastPassword') ?? '';
+    setState(() {
+      _emailController.text = lastEmail;
+      _passwordController.text = lastPassword;
+    });
   }
 
   @override
@@ -315,7 +333,8 @@ class _SignInScreenState extends State<SignInScreen> {
                     width: screenWidth * 0.2,
                     height: screenHeight * 0.1,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox(),
                   ),
                 ),
                 Positioned(
@@ -398,7 +417,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: EmailField(
                                   controller: _emailController,
                                   focusNode: _emailFocus,
@@ -407,7 +428,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: PasswordField(
                                   controller: _passwordController,
                                   focusNode: _passwordFocus,
@@ -420,7 +443,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.01),
                               Padding(
-                                padding: EdgeInsets.only(right: screenWidth * 0.06),
+                                padding: EdgeInsets.only(
+                                  right: screenWidth * 0.06,
+                                ),
                                 child: Align(
                                   alignment: Alignment.centerRight,
                                   child: GestureDetector(
@@ -433,7 +458,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                       setState(() {
                                         _isForgotPasswordTapped = false;
                                       });
-                                      Navigator.pushNamed(context, '/ForgotPasswordScreen');
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/ForgotPasswordScreen',
+                                      );
                                     },
                                     onTapCancel: () {
                                       setState(() {
@@ -459,28 +487,42 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: isButtonEnabled && !_isLoading ? _signIn : null,
+                                    onTap: isButtonEnabled && !_isLoading
+                                        ? _signIn
+                                        : null,
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: isButtonEnabled ? const Color(0xFF3B82F6) : Colors.grey,
+                                          color: isButtonEnabled
+                                              ? const Color(0xFF3B82F6)
+                                              : Colors.grey,
                                           width: 1,
                                         ),
                                         gradient: isButtonEnabled
                                             ? const LinearGradient(
-                                                colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
+                                                colors: [
+                                                  Color(0xFFE0E7FF),
+                                                  Color(0xFF93C5FD),
+                                                ],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               )
                                             : const LinearGradient(
-                                                colors: [Color(0xFFE5E7EB), Color(0xFFD1D5DB)],
+                                                colors: [
+                                                  Color(0xFFE5E7EB),
+                                                  Color(0xFFD1D5DB),
+                                                ],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
@@ -488,14 +530,19 @@ class _SignInScreenState extends State<SignInScreen> {
                                       alignment: Alignment.center,
                                       child: _isLoading
                                           ? const CircularProgressIndicator(
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.black,
+                                                  ),
                                             )
                                           : Text(
                                               "Sign In",
                                               style: TextStyle(
                                                 fontSize: screenWidth * 0.05,
                                                 fontWeight: FontWeight.bold,
-                                                color: isButtonEnabled ? Colors.black : Colors.grey,
+                                                color: isButtonEnabled
+                                                    ? Colors.black
+                                                    : Colors.grey,
                                                 fontFamily: 'Epunda Slab',
                                               ),
                                             ),
@@ -505,24 +552,30 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.08,
+                                ),
                                 child: const OrDivider(),
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.08,
+                                ),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: _isLoading ? null : _signInWithGoogle,
+                                    onTap: _isLoading
+                                        ? null
+                                        : _signInWithGoogle,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: _isLoading 
-                                              ? Colors.grey 
-                                              : const Color(0xFFD59A00), 
+                                          color: _isLoading
+                                              ? Colors.grey
+                                              : const Color(0xFFD59A00),
                                           width: 1,
                                         ),
                                         gradient: const LinearGradient(
@@ -535,7 +588,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
+                                            color: Colors.black.withOpacity(
+                                              0.2,
+                                            ),
                                             spreadRadius: 2,
                                             blurRadius: 5,
                                             offset: const Offset(0, 3),
@@ -544,14 +599,17 @@ class _SignInScreenState extends State<SignInScreen> {
                                       ),
                                       alignment: Alignment.center,
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Image.asset(
                                             'assets/logo/googleicon.png',
                                             width: screenWidth * 0.08,
                                             height: screenHeight * 0.03,
                                             fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const SizedBox(),
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
@@ -587,7 +645,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.pushNamed(context, '/SignUpScreen');
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/SignUpScreen',
+                                          );
                                         },
                                         child: Text(
                                           "Sign Up",
@@ -624,7 +685,7 @@ class EmailField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
   final FocusNode? nextFocusNode;
-  
+
   const EmailField({
     super.key,
     required this.controller,
@@ -633,9 +694,11 @@ class EmailField extends StatelessWidget {
   });
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Enter your email address';
+    if (value == null || value.trim().isEmpty)
+      return 'Enter your email address';
     final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
-    if (!emailRegex.hasMatch(value.trim())) return 'Please enter a Gmail address (e.g., username@gmail.com)';
+    if (!emailRegex.hasMatch(value.trim()))
+      return 'Please enter a Gmail address (e.g., username@gmail.com)';
     return null;
   }
 
@@ -674,7 +737,10 @@ class EmailField extends StatelessWidget {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: const Icon(Icons.mail, color: Color.fromARGB(255, 69, 141, 224)),
+              child: const Icon(
+                Icons.mail,
+                color: Color.fromARGB(255, 69, 141, 224),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
@@ -706,7 +772,7 @@ class PasswordField extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
   final Function(String)? onFieldSubmitted;
-  
+
   const PasswordField({
     super.key,
     required this.controller,
@@ -731,7 +797,8 @@ class _PasswordFieldState extends State<PasswordField> {
           focusNode: widget.focusNode,
           obscureText: _isObscured,
           textInputAction: TextInputAction.done,
-          validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Enter your password' : null,
           onFieldSubmitted: widget.onFieldSubmitted,
           decoration: InputDecoration(
             labelText: 'Password',
@@ -752,7 +819,10 @@ class _PasswordFieldState extends State<PasswordField> {
             filled: true,
             prefixIcon: Padding(
               padding: EdgeInsets.only(left: screenWidth * 0.02),
-              child: const Icon(Icons.lock, color: Color.fromARGB(255, 73, 122, 220)),
+              child: const Icon(
+                Icons.lock,
+                color: Color.fromARGB(255, 73, 122, 220),
+              ),
             ),
             suffixIcon: IconButton(
               icon: Icon(
