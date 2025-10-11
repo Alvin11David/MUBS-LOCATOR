@@ -1367,7 +1367,7 @@ class _BuildingBottomSheetContentState
                     ),
                   ),
                 ),
-                SizedBox(width: screenWidth * 0.2), // Space between buttons
+                SizedBox(width: screenWidth * 0.22), // Space between buttons
                 GestureDetector(
                   onTap: _isCheckingPermissions ? null : _handleStartNavigation,
                   child: Container(
@@ -1423,8 +1423,220 @@ class _BuildingBottomSheetContentState
               ],
             ),
             SizedBox(height: screenHeight * 0.02),
+            // Divider and Image Section text
+            Divider(
+              thickness: 1.5,
+              color: Colors.grey[300],
+              indent: screenWidth * 0.01,
+              endIndent: screenWidth * 0.01,
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              'Image Section',
+              style: TextStyle(
+                fontSize: MediaQuery.textScalerOf(context).scale(16),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            // Images section
+            SizedBox(
+              width: screenWidth - 2 * screenWidth * 0.07,
+              child: FutureBuilder<List<String>>(
+                future: _fetchBuildingImages(widget.building.id),
+                builder: (context, snapshot) {
+                  final double imageSectionWidth =
+                      screenWidth - 2 * screenWidth * 0.05;
+                  final double leftImageWidth = imageSectionWidth * 0.45;
+                  final double rightImageWidth = imageSectionWidth * 0.45;
+                  final double smallImageHeight =
+                      (leftImageWidth - screenHeight * 0.01) / 2;
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  final images = snapshot.data ?? ['', '', ''];
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left image
+                      Container(
+                        width: leftImageWidth,
+                        height: leftImageWidth,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.grey[200],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: images[0].isNotEmpty
+                            ? Image.network(
+                                images[0],
+                                fit: BoxFit.cover,
+                                width: leftImageWidth,
+                                height: leftImageWidth,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Center(child: Text('No Image')),
+                              )
+                            : Center(
+                                child: Text(
+                                  'No Image',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      SizedBox(width: imageSectionWidth * 0.05),
+                      // Right column with 2 images
+                      Column(
+                        children: [
+                          Container(
+                            width: rightImageWidth,
+                            height: smallImageHeight,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.grey[200],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: images[1].isNotEmpty
+                                ? Image.network(
+                                    images[1],
+                                    fit: BoxFit.cover,
+                                    width: rightImageWidth,
+                                    height: smallImageHeight,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Center(child: Text('No Image')),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      'No Image',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Container(
+                            width: rightImageWidth,
+                            height: smallImageHeight,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.grey[200],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: images[2].isNotEmpty
+                                ? Image.network(
+                                    images[2],
+                                    fit: BoxFit.cover,
+                                    width: rightImageWidth,
+                                    height: smallImageHeight,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Center(child: Text('No Image')),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      'No Image',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            // Divider and Details Section text
+            Divider(
+              thickness: 1.5,
+              color: Colors.grey[300],
+              indent: screenWidth * 0.01,
+              endIndent: screenWidth * 0.01,
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              'Details Section',
+              style: TextStyle(
+                fontSize: MediaQuery.textScalerOf(context).scale(16),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
             // Only show details tab content
-            _buildDetailsTab(),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('buildings')
+                  .doc(widget.building.id)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Center(
+                    child: Text(
+                      'No details available.',
+                      style: TextStyle(
+                        fontSize: MediaQuery.textScalerOf(context).scale(14),
+                        fontFamily: 'Poppins',
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  );
+                }
+                final data =
+                    snapshot.data!.data() as Map<String, dynamic>? ?? {};
+                return Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    vertical: screenHeight * 0.015,
+                    horizontal: screenWidth * 0.03,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _detailRow('Name', data['name']),
+                      _detailRow('Description', data['description']),
+                      _detailRow(
+                        'Latitude',
+                        data['location']?['latitude']?.toString(),
+                      ),
+                      _detailRow(
+                        'Longitude',
+                        data['location']?['longitude']?.toString(),
+                      ),
+                      _detailRow('Opening Hours', data['openingHours']),
+                      _detailRow('MTN Number', data['mtnNumber']),
+                      _detailRow('Airtel Number', data['airtelNumber']),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -1645,6 +1857,58 @@ class _BuildingBottomSheetContentState
             child: const Text(
               'Try Again',
               style: TextStyle(fontFamily: 'Poppins'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<List<String>> _fetchBuildingImages(String buildingId) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('buildings')
+        .doc(buildingId)
+        .get();
+    if (doc.exists && doc.data() != null && doc.data()!['images'] != null) {
+      final images = List<String>.from(doc.data()!['images']);
+      // Ensure exactly 3 images (pad with empty strings if needed)
+      while (images.length < 3) {
+        images.add('');
+      }
+      return images.take(3).toList();
+    }
+    return ['', '', ''];
+  }
+
+  Widget _detailRow(String label, String? value) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins',
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: Text(
+              value ?? 'N/A',
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                fontFamily: 'Poppins',
+                color: Colors.black54,
+              ),
+              textAlign: TextAlign.end,
             ),
           ),
         ],
