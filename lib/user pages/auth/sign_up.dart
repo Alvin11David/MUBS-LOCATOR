@@ -16,7 +16,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   // Focus nodes for field navigation
   final FocusNode _fullNameFocus = FocusNode();
@@ -28,7 +29,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Add your OAuth Web Client ID from Firebase Console
-    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
+    clientId:
+        '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
     scopes: ['email'],
   );
 
@@ -143,13 +145,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .set({
-              'fcmToken': token,
-              'email': email.toLowerCase(),
-            }, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'fcmToken': token,
+          'email': email.toLowerCase(),
+        }, SetOptions(merge: true));
         print('FCM token saved: $token');
       }
     } catch (e) {
@@ -185,7 +184,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       print('Validation failed: Password too short');
       return 'Password must be at least 6 characters';
     }
-    if (_confirmPasswordController.text.trim() != _passwordController.text.trim()) {
+    if (_confirmPasswordController.text.trim() !=
+        _passwordController.text.trim()) {
       print('Validation failed: Passwords do not match');
       return 'Passwords do not match';
     }
@@ -194,7 +194,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // Custom SnackBar method
-  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+  void _showCustomSnackBar(
+    BuildContext context,
+    String message, {
+    bool isSuccess = false,
+  }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -210,7 +214,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               width: screenWidth * 0.08,
               height: screenWidth * 0.08,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(width: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -253,37 +258,58 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
     setState(() => _isLoading = true);
-    print('Attempting Firebase sign up for email: ${_emailController.text.trim()}');
+    print(
+      'Attempting Firebase sign up for email: ${_emailController.text.trim()}',
+    );
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
       print('Firebase sign up successful: ${userCredential.user?.uid}');
       if (userCredential.user != null) {
-        await userCredential.user!.updateDisplayName(_fullNameController.text.trim());
+        await userCredential.user!.updateDisplayName(
+          _fullNameController.text.trim(),
+        );
         print('Display name updated to: ${_fullNameController.text.trim()}');
         // Save user info and FCM token to Firestore
-        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-          'fullName': _fullNameController.text.trim(),
-          'email': _emailController.text.trim().toLowerCase(),
-          'password': _passwordController.text.trim(), // Added password field
-          'phone': '', // Initialize as empty, editable in EditProfileScreen
-          'location': '', // Initialize as empty, editable in EditProfileScreen
-          'profilePicUrl': null, // Initialize as null for default person icon
-          'authProvider': 'email',
-          'isAdmin': _emailController.text.trim().toLowerCase() == 'adminuser@gmail.com',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
-        }, SetOptions(merge: true));
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'fullName': _fullNameController.text.trim(),
+              'email': _emailController.text.trim().toLowerCase(),
+              'password': _passwordController.text
+                  .trim(), // Added password field
+              'phone': '', // Initialize as empty, editable in EditProfileScreen
+              'location':
+                  '', // Initialize as empty, editable in EditProfileScreen
+              'profilePicUrl':
+                  null, // Initialize as null for default person icon
+              'authProvider': 'email',
+              'isAdmin':
+                  _emailController.text.trim().toLowerCase() ==
+                  'adminuser@gmail.com',
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+              'fcmToken': await FirebaseMessaging.instance
+                  .getToken(), // Save FCM token
+            }, SetOptions(merge: true));
         print('User info and FCM token saved to Firestore');
       }
       if (mounted) {
         print('Navigating based on email');
-        _showCustomSnackBar(context, 'Account created successfully!', isSuccess: true);
-        await Future.delayed(const Duration(seconds: 2)); // Wait for SnackBar to dismiss
-        if (_emailController.text.trim().toLowerCase() == 'adminuser@gmail.com') {
+        _showCustomSnackBar(
+          context,
+          'Account created successfully!',
+          isSuccess: true,
+        );
+        await Future.delayed(
+          const Duration(seconds: 2),
+        ); // Wait for SnackBar to dismiss
+        if (_emailController.text.trim().toLowerCase() ==
+            'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
@@ -308,7 +334,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           message = 'Email/password accounts are not enabled.';
           break;
         default:
-          message = 'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
+          message =
+              'Firebase error: ${e.code} - ${e.message ?? "Unknown error"}';
       }
       if (mounted) {
         _showCustomSnackBar(context, message);
@@ -336,12 +363,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
       print('Google user: ${googleUser.email}');
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
       print('Firebase sign-in successful: ${userCredential.user?.uid}');
       // Save user info to Firestore with all fields
       await FirebaseFirestore.instance
@@ -354,16 +384,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
             'location': '',
             'profilePicUrl': userCredential.user!.photoURL,
             'authProvider': 'google',
-            'isAdmin': userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com',
+            'isAdmin':
+                userCredential.user!.email?.toLowerCase() ==
+                'adminuser@gmail.com',
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
-            'fcmToken': await FirebaseMessaging.instance.getToken(), // Save FCM token
+            'fcmToken': await FirebaseMessaging.instance
+                .getToken(), // Save FCM token
           }, SetOptions(merge: true));
       print('User info saved to Firestore');
       if (mounted) {
-        _showCustomSnackBar(context, 'Signed up with Google successfully!', isSuccess: true);
+        _showCustomSnackBar(
+          context,
+          'Signed up with Google successfully!',
+          isSuccess: true,
+        );
         await Future.delayed(const Duration(seconds: 2));
-        if (userCredential.user!.email?.toLowerCase() == 'adminuser@gmail.com') {
+        if (userCredential.user!.email?.toLowerCase() ==
+            'adminuser@gmail.com') {
           print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
@@ -376,7 +414,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       String message;
       switch (e.code) {
         case 'account-exists-with-different-credential':
-          message = 'An account already exists with a different sign-in method.';
+          message =
+              'An account already exists with a different sign-in method.';
           break;
         case 'invalid-credential':
           message = 'The credential is malformed or has expired.';
@@ -409,7 +448,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     bool hasMinLength = _passwordController.text.trim().length >= 6;
     bool hasLowercase = _passwordController.text.contains(RegExp(r'[a-z]'));
     bool hasUppercase = _passwordController.text.contains(RegExp(r'[A-Z]'));
-    return _passwordController.text.trim() == _confirmPasswordController.text.trim() &&
+    return _passwordController.text.trim() ==
+            _confirmPasswordController.text.trim() &&
         _passwordController.text.trim().isNotEmpty &&
         hasMinLength &&
         hasLowercase &&
@@ -442,7 +482,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: screenWidth * 0.2,
                     height: screenHeight * 0.1,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox(),
                   ),
                 ),
                 Positioned(
@@ -525,7 +566,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: _ResponsiveTextField(
                                   controller: _fullNameController,
                                   label: 'Full Names',
@@ -538,7 +581,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: _ResponsiveTextField(
                                   controller: _emailController,
                                   label: 'Email',
@@ -567,7 +612,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: _ResponsivePasswordField(
                                   controller: _passwordController,
                                   label: 'Password',
@@ -591,9 +638,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         height: 6,
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius: BorderRadius.circular(30),
+                                          borderRadius: BorderRadius.circular(
+                                            30,
+                                          ),
                                           border: Border.all(
-                                            color: const Color.fromARGB(255, 255, 253, 253),
+                                            color: const Color.fromARGB(
+                                              255,
+                                              255,
+                                              253,
+                                              253,
+                                            ),
                                             width: 1,
                                           ),
                                         ),
@@ -604,7 +658,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           height: 6,
                                           decoration: BoxDecoration(
                                             color: _strengthColor,
-                                            borderRadius: BorderRadius.circular(30),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -615,18 +671,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               Builder(
                                 builder: (context) {
                                   final List<String> hints = _passwordHints;
-                                  if (hints.isEmpty) return const SizedBox.shrink();
+                                  if (hints.isEmpty)
+                                    return const SizedBox.shrink();
                                   return Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: screenWidth * 0.06,
                                       vertical: screenHeight * 0.005,
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: hints
                                           .map(
                                             (hint) => Padding(
-                                              padding: const EdgeInsets.only(bottom: 2.0),
+                                              padding: const EdgeInsets.only(
+                                                bottom: 2.0,
+                                              ),
                                               child: Text(
                                                 '• $hint',
                                                 style: TextStyle(
@@ -644,7 +704,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: _ResponsivePasswordField(
                                   controller: _confirmPasswordController,
                                   label: 'Confirm Password',
@@ -655,25 +717,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.06,
+                                ),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: _isLoading || !_isSignUpEnabled() ? null : _signUp,
+                                    onTap: _isLoading || !_isSignUpEnabled()
+                                        ? null
+                                        : _signUp,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
                                         border: Border.all(
-                                          color: _isLoading || !_isSignUpEnabled()
+                                          color:
+                                              _isLoading || !_isSignUpEnabled()
                                               ? Colors.grey
                                               : const Color(0xFF3B82F6),
                                           width: 1,
                                         ),
-                                        gradient: _isLoading || !_isSignUpEnabled()
+                                        gradient:
+                                            _isLoading || !_isSignUpEnabled()
                                             ? null
                                             : const LinearGradient(
-                                                colors: [Color(0xFFE0E7FF), Color(0xFF93C5FD)],
+                                                colors: [
+                                                  Color(0xFFE0E7FF),
+                                                  Color(0xFF93C5FD),
+                                                ],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
@@ -685,7 +756,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                               height: 20,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Colors.black),
                                               ),
                                             )
                                           : Text(
@@ -693,7 +767,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                               style: TextStyle(
                                                 fontSize: screenWidth * 0.05,
                                                 fontWeight: FontWeight.bold,
-                                                color: _isSignUpEnabled() ? Colors.black : Colors.grey,
+                                                color: _isSignUpEnabled()
+                                                    ? Colors.black
+                                                    : Colors.grey,
                                                 fontFamily: 'Epunda Slab',
                                               ),
                                             ),
@@ -703,7 +779,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.08,
+                                ),
                                 child: _OrDivider(
                                   fontSize: screenWidth * 0.04,
                                   horizontalPadding: screenWidth * 0.02,
@@ -711,12 +789,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.08,
+                                ),
                                 child: SizedBox(
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: _isLoading ? null : _signUpWithGoogle,
+                                    onTap: _isLoading
+                                        ? null
+                                        : _signUpWithGoogle,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
@@ -729,7 +811,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         color: Colors.white,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.12),
+                                            color: Colors.black.withOpacity(
+                                              0.12,
+                                            ),
                                             spreadRadius: 1,
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
@@ -738,7 +822,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       ),
                                       alignment: Alignment.center,
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Image.asset(
@@ -746,7 +831,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             width: screenWidth * 0.08,
                                             height: screenHeight * 0.03,
                                             fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const SizedBox(),
                                           ),
                                           SizedBox(width: screenWidth * 0.025),
                                           Text(
@@ -782,7 +869,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.pushNamed(context, '/SignInScreen');
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/SignInScreen',
+                                          );
                                         },
                                         child: Text(
                                           "Sign In",
@@ -887,24 +977,18 @@ class _ResponsiveTextField extends StatelessWidget {
         ),
         contentPadding: EdgeInsets.symmetric(
           vertical: screenWidth * 0.03,
-          horizontal: screenizează
-
-System: <xaiArtifact artifact_id="38f83f3b-6006-4f44-9947-68850a50b0f9" artifact_version_id="b7e49d09-29de-4ebe-8739-d158da004b47" title="sign_up.dart" contentType="text/x-dart">
-[Previous content truncated for brevity]
-
-      contentPadding: EdgeInsets.symmetric(
-        vertical: screenWidth * 0.03,
-        horizontal: screenWidth * 0.05,
+          horizontal: screenWidth * 0.05,
+        ),
       ),
-    ),
-    style: TextStyle(
-      color: Colors.black,
-      fontFamily: 'Poppins',
-      fontWeight: FontWeight.w400,
-      fontSize: screenWidth * 0.04,
-    ),
-    cursorColor: const Color(0xFF3B82F6),
-  );
+      style: TextStyle(
+        color: Colors.black,
+        fontFamily: 'Poppins',
+        fontWeight: FontWeight.w400,
+        fontSize: screenWidth * 0.04,
+      ),
+      cursorColor: const Color(0xFF3B82F6),
+    );
+  }
 }
 
 class _ResponsivePasswordField extends StatefulWidget {
@@ -925,7 +1009,8 @@ class _ResponsivePasswordField extends StatefulWidget {
   });
 
   @override
-  State<_ResponsivePasswordField> createState() => _ResponsivePasswordFieldState();
+  State<_ResponsivePasswordField> createState() =>
+      _ResponsivePasswordFieldState();
 }
 
 class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
