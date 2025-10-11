@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,13 +24,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // ✅ Animation Controller for 6 seconds
+    // Animation Controller for 6 seconds
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..forward();
 
-    // ✅ Background color tween (black → white after 50%)
+    // Background color tween (black → white after 50%)
     _backgroundColorAnimation = ColorTween(
       begin: Colors.black,
       end: Colors.white,
@@ -38,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen>
       curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
     ));
 
-    // ✅ Text color tween (white → black after 50%)
+    // Text color tween (white → black after 50%)
     _textColorAnimation = ColorTween(
       begin: Colors.white,
       end: Colors.black,
@@ -47,10 +48,10 @@ class _SplashScreenState extends State<SplashScreen>
       curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
     ));
 
-    // ✅ Load onboarding & auth status
+    // Load onboarding & auth status
     _loadAppStatus();
 
-    // ✅ Navigate after animation finishes
+    // Navigate after animation finishes
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _navigateNext();
@@ -58,20 +59,30 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  // ✅ Load onboarding & login status from SharedPreferences and Firebase
+  // Load onboarding & login status from SharedPreferences and Firebase
   Future<void> _loadAppStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _onboardingComplete = prefs.getBool('onboardingComplete') ?? false;
     _currentUser = FirebaseAuth.instance.currentUser;
-    setState(() {}); // update state just in case
+    setState(() {}); // Update state just in case
   }
 
-  // ✅ Navigate based on status
-  void _navigateNext() {
+  // Navigate based on status
+  Future<void> _navigateNext() async {
     if (!_onboardingComplete) {
       Navigator.pushReplacementNamed(context, '/OnboardingScreen1');
     } else if (_currentUser != null) {
-      Navigator.pushReplacementNamed(context, '/LocationSelectScreen'); // or dashboard
+      // Check if the user is an admin by querying Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      final isAdmin = userDoc.exists && (userDoc.data()?['isAdmin'] ?? false);
+      if (isAdmin) {
+        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      } else {
+        Navigator.pushReplacementNamed(context, '/HomeScreen');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/SignInScreen');
     }
@@ -103,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   return Stack(
                     children: [
-                      // ✅ Logo and text at top (color animated)
+                      // Logo and text at top (color animated)
                       Positioned(
                         top: screenHeight * 0.02,
                         left: 0,
@@ -138,7 +149,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
 
-                      // ✅ Rotated blue shape with image + texts
+                      // Rotated blue shape with image + texts
                       Positioned(
                         right: -screenWidth * 0.55,
                         top: screenHeight * 0.3,
@@ -217,7 +228,7 @@ class _SplashScreenState extends State<SplashScreen>
                                       child: Text(
                                         'Bachelor of Leadership and\n Governance',
                                         style: TextStyle(
-                                          fontSize: screenWidth * 0.039,
+                                          fontSize: screenWidth * 0.030,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                           fontFamily: 'Abril Fatface',
@@ -259,7 +270,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
 
-                      // ✅ Bottom-left message (color animated)
+                      // Bottom-left message (color animated)
                       Positioned(
                         left: screenWidth * 0.05,
                         bottom: screenHeight * 0.12,
@@ -284,7 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
 
-                      // ✅ Progress bar
+                      // Progress bar
                       Positioned(
                         bottom: screenHeight * 0.03,
                         left: screenWidth * 0.25,

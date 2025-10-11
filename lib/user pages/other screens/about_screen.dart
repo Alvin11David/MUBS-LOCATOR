@@ -55,6 +55,55 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
+  // Custom SnackBar method
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   Future<void> _launchEmail() async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
@@ -68,9 +117,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
         await launchUrl(emailUri, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch email app')),
-          );
+          _showCustomSnackBar(context, 'Could not launch email app');
         }
       }
     }
@@ -84,18 +131,14 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
 
     if (kIsWeb) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Phone dialer not supported on web')),
-        );
+        _showCustomSnackBar(context, 'Phone dialer not supported on web');
       }
     } else {
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch phone dialer')),
-          );
+          _showCustomSnackBar(context, 'Could not launch phone dialer');
         }
       }
     }
@@ -129,7 +172,6 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     );
   }
 
-  /// ✅ Fixed WhatsApp Launcher
   Future<void> _launchWhatsApp() async {
     const String whatsappNumber = '0780439952';
     final String cleanNumber = '256${whatsappNumber.replaceAll(RegExp(r'[^0-9]'), '')}';
@@ -147,9 +189,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
     } 
     else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch WhatsApp. Make sure it is installed.')),
-        );
+        _showCustomSnackBar(context, 'Could not launch WhatsApp. Make sure it is installed.');
       }
     }
   }
@@ -171,16 +211,21 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
               Positioned(
                 top: screenHeight * 0.02,
                 left: screenWidth * 0.04,
-                child: ClipOval(
-                  child: Container(
-                    width: screenWidth * 0.15,
-                    height: screenWidth * 0.15,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      border: Border.all(color: Colors.white, width: screenWidth * 0.002),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.chevron_left, color: Colors.black, size: screenWidth * 0.08),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: ClipOval(
+                    child: Container(
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        border: Border.all(color: Colors.white, width: screenWidth * 0.002),
+                      ),
+                      child: Center(
+                        child: Icon(Icons.chevron_left, color: Colors.black, size: screenWidth * 0.08),
+                      ),
                     ),
                   ),
                 ),

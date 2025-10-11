@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -7,10 +8,13 @@ import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
 import 'package:string_similarity/string_similarity.dart';
-import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
 import 'navigation_screen.dart';
-import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,21 +25,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LatLng _mubsMaingate = LatLng(0.32626314488423924, 32.616607995731286);
+  final LatLng _mubsMaingate = const LatLng(0.32626314488423924, 32.616607995731286);
   final LatLng _mubsCentre = LatLng(0.3282482847196531, 32.61798173177951);
   GoogleMapController? mapController;
   final TextEditingController searchController = TextEditingController();
-
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
   final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
   List<Building> fetchedBuildings = [];
   bool searchActive = true;
-  bool isNavigating = false; // Add this flag
+  bool isNavigating = false;
+  String _userFullName = 'User';
+  bool _isMenuVisible = false;
+  File? _profileImage;
+  bool _isLoggingOut = false;
 
-  // Updated MUBS boundary coordinates - using your exact coordinates
-  final List<LatLng> _mubsBounds = [
+  final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
     LatLng(0.329929943362535, 32.61561864088474),
     LatLng(0.33011233054641215, 32.616401845944665),
@@ -55,19 +61,145 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchAllData();
     _initializeMarkers();
     _initializePolygons();
+    _fetchUserFullName();
+    _loadProfileImage();
+  }
+
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    print('Showing SnackBar: $message');
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      onVisible: () {
+        print('SnackBar is visible: $message');
+      },
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
+      print('SnackBar closed: $message, reason: $reason');
+    });
+  }
+
+  Future<void> _fetchUserFullName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: user.email)
+            .limit(1)
+            .get();
+        if (querySnapshot.docs.isNotEmpty) {
+          final userData = querySnapshot.docs.first.data();
+          final fullName = userData['fullName'] as String?;
+          if (mounted) {
+            setState(() {
+              _userFullName = fullName != null && fullName.isNotEmpty ? fullName : 'User';
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _userFullName = 'User';
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _userFullName = 'User';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching user full name: $e');
+      if (mounted) {
+        setState(() {
+          _userFullName = 'User';
+        });
+      }
+    }
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profileImagePath');
+    if (imagePath != null && mounted) {
+      setState(() {
+        _profileImage = File(imagePath);
+      });
+    }
+  }
+
+  Future<void> _markFeedbackAsRead() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        final feedbackDocs = await FirebaseFirestore.instance
+            .collection('feedback')
+            .where('userEmail', isEqualTo: user.email)
+            .where('adminReply', isNotEqualTo: '')
+            .where('userRead', isEqualTo: false)
+            .get();
+        final batch = FirebaseFirestore.instance.batch();
+        for (var doc in feedbackDocs.docs) {
+          batch.update(doc.reference, {'userRead': true});
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      print('Error marking feedback as read: $e');
+    }
   }
 
   void _initializeMarkers() {
     markers.add(
       Marker(
-        markerId: MarkerId('mubs_maingate'),
+        markerId: const MarkerId('mubs_maingate'),
         position: _mubsMaingate,
-        infoWindow: InfoWindow(
+        infoWindow: const InfoWindow(
           title: 'MUBS Maingate',
           snippet: 'Makerere University Business School',
         ),
         onTap: () {
-          // Show bottom sheet for Maingate (optional: create a Building object for it)
           _showBuildingBottomSheet(
             context,
             Building(
@@ -83,10 +215,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initializePolygons() {
-    // Create the main MUBS campus polygon with blue border
     polygons.add(
       Polygon(
-        polygonId: PolygonId('mubs_campus'),
+        polygonId: const PolygonId('mubs_campus'),
         points: _mubsBounds,
         strokeColor: Colors.blue,
         strokeWidth: 2,
@@ -97,13 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<LatLng> _createLargeOuterBounds() {
-    // Create a large rectangular boundary that encompasses the entire map view
-    // This ensures the blur effect covers all areas outside the campus
     double minLat = _mubsBounds.map((p) => p.latitude).reduce(math.min) - 0.02;
     double maxLat = _mubsBounds.map((p) => p.latitude).reduce(math.max) + 0.02;
     double minLng = _mubsBounds.map((p) => p.longitude).reduce(math.min) - 0.02;
     double maxLng = _mubsBounds.map((p) => p.longitude).reduce(math.max) + 0.02;
-
     return [
       LatLng(minLat, minLng),
       LatLng(minLat, maxLng),
@@ -113,54 +241,142 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Marker> processBuildings(List<Building> buildings) {
-  return buildings.map((element) {
-    return Marker(
-      markerId: MarkerId(element.id),
-      position: LatLng(
-        element.location.latitude,
-        element.location.longitude,
-      ),
-      infoWindow: InfoWindow(
-        title: element.name,
-        snippet: element.description,
-      ),
-    );
-  }).toList();
-}
+    return buildings.map((element) {
+      return Marker(
+        markerId: MarkerId(element.id),
+        position: LatLng(
+          element.location.latitude,
+          element.location.longitude,
+        ),
+        infoWindow: InfoWindow(
+          title: element.name,
+          snippet: element.description,
+        ),
+      );
+    }).toList();
+  }
 
   Future<void> fetchAllData() async {
-  try {
-    BuildingRepository buildingRepository = BuildingRepository();
-
-    final buildings = await buildingRepository.getAllBuildings();
-
-    final processedMarkers = await compute(processBuildings, buildings);
-
-    // Step 3: Update UI
-    setState(() {
-      fetchedBuildings.addAll(buildings);
-      markers.addAll(processedMarkers);
-    });
-
-    print("✅ Successfully fetched ${buildings.length} buildings.");
-  } catch (e, stackTrace) {
-    print("❌ Failed to fetch buildings: $e");
-    print(stackTrace);
+    try {
+      BuildingRepository buildingRepository = BuildingRepository();
+      final buildings = await buildingRepository.getAllBuildings();
+      final processedMarkers = await compute(processBuildings, buildings);
+      if (mounted) {
+        setState(() {
+          fetchedBuildings.addAll(buildings);
+          markers.addAll(processedMarkers);
+        });
+      }
+      print("✅ Successfully fetched ${buildings.length} buildings.");
+    } catch (e, stackTrace) {
+      print("❌ Failed to fetch buildings: $e");
+      print(stackTrace);
+      rethrow;
+    }
   }
-}
 
   Future<void> createTheBuildings() async {
     try {
-      List<Building> buildings = mubsBuildings;
+      List<Building> buildings = mubsBuildings; // Ensure mubsBuildings is defined
       BuildingRepository buildingRepository = BuildingRepository();
-
       for (var item in buildings) {
-        buildingRepository.addBuilding(item);
-        print('Added building: ${item.name} to Firestore');
+        await buildingRepository.addBuilding(item);
       }
     } catch (e) {
       print('Error creating buildings: $e');
     }
+  }
+
+  Future<void> _logout() async {
+    if (_isLoggingOut) return;
+    setState(() {
+      _isLoggingOut = true;
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showCustomSnackBar(context, 'Logout successful', isSuccess: true);
+        await Future.delayed(const Duration(seconds: 2));
+        Navigator.pushReplacementNamed(context, '/SignInScreen');
+      }
+    } catch (e) {
+      print('Error signing out: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showCustomSnackBar(context, 'Error signing out: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingOut = false;
+        });
+      }
+    }
+  }
+
+  void _toggleMenu() {
+    setState(() {
+      _isMenuVisible = !_isMenuVisible;
+    });
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Logout',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(color: Colors.black87, fontFamily: 'Poppins'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.7),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _isLoggingOut
+                  ? null
+                  : () {
+                      Navigator.of(context).pop();
+                      _logout();
+                    },
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showBuildingBottomSheet(BuildContext context, Building building) {
@@ -173,9 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
       useSafeArea: true,
       builder: (BuildContext context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.6, // Start at 60% of screen height
-          minChildSize: 0.3, // Can be dragged down to 30%
-          maxChildSize: 0.9, // Can be expanded to 90%
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
             return Container(
@@ -197,18 +413,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 building: building,
                 scrollController: scrollController,
                 onDirectionsTap: () {
-                  _clearSearchBar(); // <-- Clear search bar before navigation
+                  _clearSearchBar();
                   _navigateToBuilding(building);
                 },
-                onFeedbackSubmit:
-                    (String issueType, String issueTitle, String description) {
-                      _submitFeedback(
-                        building,
-                        issueType,
-                        issueTitle,
-                        description,
-                      );
-                    },
+                onFeedbackSubmit: (String issueType, String issueTitle, String description) {
+                  _submitFeedback(building, issueType, issueTitle, description);
+                },
               ),
             );
           },
@@ -218,7 +428,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   BitmapDescriptor getRandomDefaultMarkerHue() {
-    // 1. Define the list of all available hue constants.
     final List<double> hues = [
       BitmapDescriptor.hueRed,
       BitmapDescriptor.hueOrange,
@@ -231,18 +440,9 @@ class _HomeScreenState extends State<HomeScreen> {
       BitmapDescriptor.hueMagenta,
       BitmapDescriptor.hueRose,
     ];
-
-    // 2. Create a Random object.
-    final Random random = Random();
-
-    // 3. Select a random index from the list.
+    final math.Random random = math.Random();
     final int randomIndex = random.nextInt(hues.length);
-
-    // 4. Get the hue value at the random index.
-    final double randomHue = hues[randomIndex];
-
-    // 5. Return the corresponding BitmapDescriptor.
-    return BitmapDescriptor.defaultMarkerWithHue(randomHue);
+    return BitmapDescriptor.defaultMarkerWithHue(hues[randomIndex]);
   }
 
   Future<void> _navigateToBuilding(Building building) async {
@@ -251,14 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
         building.location.latitude,
         building.location.longitude,
       );
-
-      // Keep only the origin marker (MUBS Maingate)
-      markers.removeWhere((marker) => marker.markerId.value != 'mubs_maingate');
-
-      // Remove any previous destination marker
       markers.removeWhere((marker) => marker.markerId.value == 'destination');
-
-      // Add new marker for the building (destination)
       markers.add(
         Marker(
           markerId: const MarkerId('destination'),
@@ -270,14 +463,12 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
       );
-
-      // Get directions
       await _getDirections(buildingLocation);
-
-      // Update the map
-      setState(() {});
-
-      // Animate camera to show both markers and route
+      if (mounted) {
+        setState(() {
+          isNavigating = true;
+        });
+      }
       final bounds = LatLngBounds(
         southwest: LatLng(
           _mubsMaingate.latitude < buildingLocation.latitude
@@ -296,13 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : buildingLocation.longitude,
         ),
       );
-
-      mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          bounds,
-          100, // padding
-        ),
-      );
+      mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
     }
   }
 
@@ -314,7 +499,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'destination=${destination.latitude},${destination.longitude}&'
       'key=$_googleApiKey&mode=walking',
     );
-
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -322,21 +506,22 @@ class _HomeScreenState extends State<HomeScreen> {
         if (data['status'] == 'OK') {
           final points = data['routes'][0]['overview_polyline']['points'];
           List<LatLng> routeCoords = _convertToLatLng(_decodePoly(points));
-
-          setState(() {
-            polylines.clear();
-            polylines.add(
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: routeCoords,
-                color: Colors.blue,
-                width: 5,
-                startCap: Cap.roundCap,
-                endCap: Cap.roundCap,
-                jointType: JointType.round,
-              ),
-            );
-          });
+          if (mounted) {
+            setState(() {
+              polylines.clear();
+              polylines.add(
+                Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: routeCoords,
+                  color: Colors.blue,
+                  width: 5,
+                  startCap: Cap.roundCap,
+                  endCap: Cap.roundCap,
+                  jointType: JointType.round,
+                ),
+              );
+            });
+          }
         }
       }
     } catch (e) {
@@ -348,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen> {
     List<LatLng> poly = [];
     int index = 0, len = encoded.length;
     int lat = 0, lng = 0;
-
     while (index < len) {
       int b, shift = 0, result = 0;
       do {
@@ -358,7 +542,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } while (b >= 0x20);
       int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lat += dlat;
-
       shift = 0;
       result = 0;
       do {
@@ -368,7 +551,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } while (b >= 0x20);
       int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
       lng += dlng;
-
       poly.add(LatLng(lat / 1e5, lng / 1e5));
     }
     return poly;
@@ -415,218 +597,588 @@ class _HomeScreenState extends State<HomeScreen> {
     print('Issue Type: $issueType');
     print('Title: $issueTitle');
     print('Description: $description');
+    FirebaseFirestore.instance.collection('feedback').add({
+      'userEmail': FirebaseAuth.instance.currentUser?.email ?? 'anonymous',
+      'userName': _userFullName,
+      'buildingName': building.name,
+      'issueType': issueType,
+      'issueTitle': issueTitle,
+      'description': description,
+      'timestamp': Timestamp.now(),
+      'status': 'Submitted',
+      'read': false,
+      'userRead': false,
+    });
   }
 
   void _clearSearchBar() {
     searchController.clear();
-    setState(() {
-      searchActive = false; // Disable suggestions after navigation
-    });
+    if (mounted) {
+      setState(() {
+        searchActive = false;
+      });
+    }
   }
 
-  // Call this when navigation ends
   void _endNavigation() {
-    setState(() {
-      polylines.clear(); // Remove route polyline
-      isNavigating = false; // Reset navigation state
-    });
+    if (mounted) {
+      setState(() {
+        polylines.clear();
+        isNavigating = false;
+      });
+    }
   }
-
-  // Example: Call _endNavigation when navigation is completed or user taps "End Navigation"
-  // You might call this from your NavigationService or from a button in your UI
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final textScaler = MediaQuery.textScalerOf(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Good morning, User'),
+        title: Text(
+          'Good morning, $_userFullName',
+          style: TextStyle(
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
         centerTitle: true,
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu,
+            size: textScaler.scale(24),
+          ),
+          onPressed: _toggleMenu,
+        ),
         actions: [
-          IconButton(
-            onPressed: createTheBuildings,
-            icon: Icon(Icons.notifications_rounded),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseAuth.instance.currentUser != null
+                ? FirebaseFirestore.instance
+                    .collection('feedback')
+                    .where('userEmail', isEqualTo: FirebaseAuth.instance.currentUser!.email)
+                    .where('adminReply', isNotEqualTo: '')
+                    .where('userRead', isEqualTo: false)
+                    .snapshots()
+                : Stream.empty(),
+            builder: (context, snapshot) {
+              int unreadCount = 0;
+              if (snapshot.hasData) {
+                unreadCount = snapshot.data!.docs.length;
+              }
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      _markFeedbackAsRead();
+                      Navigator.pushNamed(context, '/NotificationsScreen');
+                    },
+                    icon: Icon(
+                      Icons.notifications_rounded,
+                      size: textScaler.scale(24),
+                    ),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: textScaler.scale(16),
+                        height: textScaler.scale(16),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$unreadCount',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(10),
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
-      drawer: Drawer(),
       body: Stack(
         children: [
-          // Google Map
-          GoogleMap(
-            onMapCreated: (GoogleMapController controller) {
-              mapController = controller;
+          GestureDetector(
+            onTapDown: (details) {
+              if (_isMenuVisible) {
+                final tapX = details.globalPosition.dx;
+                if (tapX > screenWidth * 0.6) {
+                  setState(() {
+                    _isMenuVisible = false;
+                  });
+                }
+              }
             },
-            initialCameraPosition: CameraPosition(
-              target: _mubsCentre,
-              zoom: 17, // Adjusted zoom to better show the campus
-            ),
-            markers: markers,
-            polygons: polygons,
-            polylines: isNavigating
-                ? polylines
-                : {}, // Only show polyline if navigating
-            mapType: MapType.normal,
-            zoomGesturesEnabled: true,
-            scrollGesturesEnabled: true,
-            tiltGesturesEnabled: true,
-            rotateGesturesEnabled: true,
-          ),
-
-          // Search bar positioned on top
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+            child: Stack(
+              children: [
+                GoogleMap(
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _mubsCentre,
+                    zoom: 17,
                   ),
-                ],
-              ),
-              child: TypeAheadField<Building>(
-                controller: searchController,
-                builder: (context, textController, focusNode) {
-                  return TextField(
-                    controller: textController,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      hintText: 'Search buildings, departments, etc.',
-                      hintStyle: TextStyle(color: Colors.grey[500]),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
-                      suffixIcon: textController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                textController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 15,
-                      ),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchActive = true; // Enable suggestions when typing
-                      });
-                    },
-                  );
-                },
-                suggestionsCallback: (pattern) async {
-                  if (!searchActive || pattern.isEmpty) return [];
-
-                  final matches = fetchedBuildings.map((building) {
-                    final nameScore = StringSimilarity.compareTwoStrings(
-                      building.name.toLowerCase(),
-                      pattern.toLowerCase(),
-                    );
-                    final otherNameScore =
-                        (building.otherNames != null &&
-                            building.otherNames!.isNotEmpty)
-                        ? building.otherNames!
-                              .map(
-                                (name) => StringSimilarity.compareTwoStrings(
-                                  name.toLowerCase(),
-                                  pattern.toLowerCase(),
-                                ),
-                              )
-                              .fold<double>(
-                                0,
-                                (prev, curr) => curr > prev ? curr : prev,
-                              )
-                        : 0;
-
-                    final descriptionScore = StringSimilarity.compareTwoStrings(
-                      building.description.toLowerCase(),
-                      pattern.toLowerCase(),
-                    );
-
-                    final maxScore = [
-                      nameScore,
-                      otherNameScore,
-                      descriptionScore,
-                    ].reduce((a, b) => a > b ? a : b);
-
-                    return {'building': building, 'score': maxScore};
-                  }).toList();
-
-                  matches.sort(
-                    (a, b) =>
-                        (b['score'] as double).compareTo(a['score'] as double),
-                  );
-
-                  return matches
-                      .where((m) => (m['score'] as double) > 0.1)
-                      .take(10)
-                      .map((m) => m['building'] as Building)
-                      .toList();
-                },
-                itemBuilder: (context, Building suggestion) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Theme.of(context).primaryColor,
-                          size: 20,
+                  markers: markers,
+                  polygons: polygons,
+                  polylines: isNavigating ? polylines : {},
+                  mapType: MapType.normal,
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                ),
+                Positioned(
+                  top: screenHeight * 0.02,
+                  left: screenWidth * 0.04,
+                  right: screenWidth * 0.04,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    child: TypeAheadField<Building>(
+                      controller: searchController,
+                      builder: (context, textController, focusNode) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Search buildings, departments, etc.',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: textScaler.scale(14),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey[500],
+                              size: textScaler.scale(20),
+                            ),
+                            suffixIcon: textController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.clear,
+                                      size: textScaler.scale(20),
+                                    ),
+                                    onPressed: () {
+                                      textController.clear();
+                                      setState(() {
+                                        searchActive = true;
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.05,
+                              vertical: screenHeight * 0.015,
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: textScaler.scale(14),
+                            fontFamily: 'Poppins',
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              searchActive = true;
+                            });
+                          },
+                        );
+                      },
+                      suggestionsCallback: (pattern) async {
+                        if (!searchActive || pattern.isEmpty) return [];
+                        final matches = fetchedBuildings.map((building) {
+                          final nameScore = StringSimilarity.compareTwoStrings(
+                            building.name.toLowerCase(),
+                            pattern.toLowerCase(),
+                          );
+                          final otherNameScore =
+                              (building.otherNames != null &&
+                                      building.otherNames!.isNotEmpty)
+                                  ? building.otherNames!
+                                      .map(
+                                        (name) => StringSimilarity.compareTwoStrings(
+                                          name.toLowerCase(),
+                                          pattern.toLowerCase(),
+                                        ),
+                                      )
+                                      .fold<double>(
+                                        0,
+                                        (prev, curr) => curr > prev ? curr : prev,
+                                      )
+                                  : 0;
+                          final descriptionScore =
+                              StringSimilarity.compareTwoStrings(
+                                building.description.toLowerCase(),
+                                pattern.toLowerCase(),
+                              );
+                          final maxScore = [
+                            nameScore,
+                            otherNameScore,
+                            descriptionScore,
+                          ].reduce((a, b) => a > b ? a : b);
+                          return {'building': building, 'score': maxScore};
+                        }).toList();
+                        matches.sort(
+                          (a, b) => (b['score'] as double).compareTo(
+                            a['score'] as double,
+                          ),
+                        );
+                        return matches
+                            .where((m) => (m['score'] as double) > 0.1)
+                            .take(10)
+                            .map((m) => m['building'] as Building)
+                            .toList();
+                      },
+                      itemBuilder: (context, Building suggestion) {
+                        return Container(
+                          padding: EdgeInsets.all(screenWidth * 0.03),
+                          child: Row(
                             children: [
-                              Text(
-                                suggestion.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                              Icon(
+                                Icons.location_on,
+                                color: Theme.of(context).primaryColor,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.03),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      suggestion.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: textScaler.scale(16),
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    Text(
+                                      suggestion.description,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: textScaler.scale(14),
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ],
+                          ),
+                        );
+                      },
+                      onSelected: (Building suggestion) {
+                        searchController.text = suggestion.name;
+                        _showBuildingBottomSheet(context, suggestion);
+                      },
+                      errorBuilder: (context, error) => Padding(
+                        padding: EdgeInsets.all(screenWidth * 0.02),
+                        child: Text(
+                          'Something went wrong 😢: $error',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: textScaler.scale(14),
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                      emptyBuilder: (context) {
+                        if (!searchActive) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: EdgeInsets.all(screenWidth * 0.02),
+                          child: Text(
+                            'No places found. Try another keyword.',
+                            style: TextStyle(
+                              fontSize: textScaler.scale(14),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+            top: 0,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  width: screenWidth * 0.6,
+                  height: screenHeight * 0.8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.55),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 12,
+                        offset: const Offset(2, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          Image.asset(
+                            'assets/images/sidebar.png',
+                            width: screenWidth * 0.6,
+                            height: screenHeight * 0.16,
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.03,
+                            top: screenHeight * 0.03,
+                            child: Container(
+                              width: screenWidth * 0.14,
+                              height: screenWidth * 0.14,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.7),
+                                border: Border.all(
+                                  color: Colors.white70,
+                                  width: 1,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: _profileImage != null
+                                    ? Image.file(
+                                        _profileImage!,
+                                        width: screenWidth * 0.14,
+                                        height: screenWidth * 0.14,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.black.withOpacity(0.8),
+                                        size: screenWidth * 0.07,
+                                      ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.05,
+                            child: Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: textScaler.scale(15),
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: screenWidth * 0.19,
+                            top: screenHeight * 0.085,
+                            child: Text(
+                              _userFullName,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: textScaler.scale(12),
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Urbanist',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.home,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
                               Text(
-                                suggestion.description,
+                                'Home',
                                 style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                },
-                onSelected: (Building suggestion) {
-                  debugPrint("Selected: ${suggestion.name}");
-                  searchController.text = suggestion.name;
-                  _showBuildingBottomSheet(context, suggestion);
-                },
-                errorBuilder: (context, error) => Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'Something went wrong 😢: $error',
-                    style: const TextStyle(color: Colors.red),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/ProfileScreen');
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Notifications',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Search Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            _showLogoutDialog(context);
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.exit_to_app,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Logout',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                emptyBuilder: (context) {
-                  if (!searchActive) {
-                    return SizedBox.shrink(); // Hide message if not active
-                  }
-                  return const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('No places found. Try another keyword.'),
-                  );
-                },
               ),
             ),
           ),
@@ -637,7 +1189,14 @@ class _HomeScreenState extends State<HomeScreen> {
               right: 20,
               child: ElevatedButton(
                 onPressed: _endNavigation,
-                child: Text('End Navigation'),
+                child: Text(
+                  'End Navigation',
+                  style: TextStyle(
+                    fontSize: textScaler.scale(16),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
               ),
             ),
         ],
@@ -651,8 +1210,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 }
-
-// Keep all your existing _BuildingBottomSheetContent class unchanged
 
 class _BuildingBottomSheetContent extends StatefulWidget {
   final Building building;
@@ -668,20 +1225,16 @@ class _BuildingBottomSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_BuildingBottomSheetContent> createState() =>
-      _BuildingBottomSheetContentState();
+  State<_BuildingBottomSheetContent> createState() => _BuildingBottomSheetContentState();
 }
 
-class _BuildingBottomSheetContentState
-    extends State<_BuildingBottomSheetContent> {
+class _BuildingBottomSheetContentState extends State<_BuildingBottomSheetContent> {
   int _selectedTabIndex = 0;
   final TextEditingController _issueTitleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedIssueType = 'General';
   bool _isCheckingPermissions = false;
-
   final NavigationService _navigationService = Get.find<NavigationService>();
-
   final List<String> _issueTypes = [
     'General',
     'Location Incorrect',
@@ -698,107 +1251,121 @@ class _BuildingBottomSheetContentState
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height:
-          MediaQuery.of(context).size.height *
-          0.75, // Takes up 75% of screen height
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        controller: widget.scrollController,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag indicator
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Building name
-              Text(
-                widget.building.name,
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    print('Showing SnackBar: $message');
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
                 style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Description
-              Text(
-                widget.building.description,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 16),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      onVisible: () {
+        print('SnackBar is visible: $message');
+      },
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
+      print('SnackBar closed: $message, reason: $reason');
+    });
+  }
 
-              // Tab buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 0,
-                      icon: Icons.info_outline,
-                      label: 'Details',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 1,
-                      icon: Icons.navigation,
-                      label: 'Start',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildTabButton(
-                      index: 2,
-                      icon: Icons.feedback_outlined,
-                      label: 'Feedback',
-                    ),
-                  ),
-                ],
+  @override
+  Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final textScaler = MediaQuery.textScalerOf(context);
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      child: Padding(
+        padding: EdgeInsets.all(screenWidth * 0.05),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: screenWidth * 0.1,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              const SizedBox(height: 20),
-
-              // Tab content
-              _buildTabContent(),
-
-              // Bottom padding for safe area
-              SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Text(
+              widget.building.name,
+              style: TextStyle(
+                fontSize: textScaler.scale(20),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              widget.building.description,
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                color: Colors.grey[600],
+                fontFamily: 'Poppins',
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildTabButton('Details', 0),
+                _buildTabButton('Feedback', 1),
+              ],
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            if (_selectedTabIndex == 0) ...[
+              _buildDetailsTab(),
+            ] else ...[
+              _buildFeedbackTab(),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTabButton({
-    required int index,
-    required IconData icon,
-    required String label,
-  }) {
-    final bool isSelected = _selectedTabIndex == index;
-
+  Widget _buildTabButton(String text, int index) {
+    final textScaler = MediaQuery.textScalerOf(context);
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -806,330 +1373,279 @@ class _BuildingBottomSheetContentState
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected
-                ? Theme.of(context).primaryColor
-                : Colors.grey[300]!,
-            width: 1,
-          ),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width * 0.05,
+          vertical: MediaQuery.of(context).size.height * 0.01,
         ),
-        child: Row(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 4.0),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
+        decoration: BoxDecoration(
+          color: _selectedTabIndex == index
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.w500,
+            color: _selectedTabIndex == index
+                ? Theme.of(context).primaryColor
+                : Colors.black,
+            fontFamily: 'Poppins',
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTabContent() {
-    switch (_selectedTabIndex) {
-      case 0:
-        return _buildDetailsContent();
-      case 1:
-        return _buildDirectionsContent();
-      case 2:
-        return _buildFeedbackContent();
-      default:
-        return _buildDetailsContent();
-    }
-  }
-
-  Widget _buildDetailsContent() {
+  Widget _buildDetailsTab() {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final textScaler = MediaQuery.textScalerOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Description',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          widget.building.description,
-          style: const TextStyle(fontSize: 14, height: 1.5),
-        ),
-        const SizedBox(height: 20),
-
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Location Coordinates',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Location',
+              style: TextStyle(
+                fontSize: textScaler.scale(16),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            GestureDetector(
+              onTap: _isCheckingPermissions ? null : _handleStartNavigation,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.04,
+                  vertical: 8,
                 ),
+                decoration: BoxDecoration(
+                  color: _isCheckingPermissions
+                      ? Colors.grey[300]
+                      : Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: _isCheckingPermissions
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Text(
+                            'Checking...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: textScaler.scale(14),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'Get Directions',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: textScaler.scale(14),
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Lat: ${widget.building.location.latitude.toStringAsFixed(6)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-              ),
-              Text(
-                'Long: ${widget.building.location.longitude.toStringAsFixed(6)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-              ),
-            ],
+            ),
+          ],
+        ),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+        Text(
+          'Latitude: ${widget.building.location.latitude}',
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
           ),
+        ),
+        Text(
+          'Longitude: ${widget.building.location.longitude}',
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
+          ),
+        ),
+        if (widget.building.otherNames != null &&
+            widget.building.otherNames!.isNotEmpty) ...[
+          SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+          Text(
+            'Other Names',
+            style: TextStyle(
+              fontSize: textScaler.scale(16),
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          ...widget.building.otherNames!.map(
+            (name) => Text(
+              '- $name',
+              style: TextStyle(
+                fontSize: textScaler.scale(14),
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ],
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: textScaler.scale(14), color: Colors.grey[600]),
+            SizedBox(width: screenWidth * 0.01),
+            Text(
+              'Location permission required',
+              style: TextStyle(
+                fontSize: textScaler.scale(12),
+                color: Colors.grey[600],
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildDirectionsContent() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.navigation,
-            size: 48,
-            color: Theme.of(context).primaryColor,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Get Directions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Navigate to ${widget.building.name}',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 20),
-
-          // Start Navigation Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isCheckingPermissions ? null : _handleStartNavigation,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey[300],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: _isCheckingPermissions
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Checking permissions...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.navigation, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Start Navigation',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-
-          // Permission info text
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                'Location permission required',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeedbackContent() {
+  Widget _buildFeedbackTab() {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final textScaler = MediaQuery.textScalerOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Submit Feedback',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 16),
-
-        Text(
-          'Issue Type',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
+          style: TextStyle(
+            fontSize: textScaler.scale(16),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedIssueType,
-              isExpanded: true,
-              items: _issueTypes.map((String type) {
-                return DropdownMenuItem<String>(value: type, child: Text(type));
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedIssueType = newValue;
-                  });
-                }
-              },
+        ),
+        SizedBox(height: screenHeight * 0.01),
+        DropdownButtonFormField<String>(
+          value: _selectedIssueType,
+          decoration: InputDecoration(
+            labelText: 'Issue Type',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
+          items: _issueTypes.map((String type) {
+            return DropdownMenuItem<String>(
+              value: type,
+              child: Text(
+                type,
+                style: TextStyle(
+                  fontSize: textScaler.scale(14),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedIssueType = newValue!;
+            });
+          },
         ),
-        const SizedBox(height: 16),
-
-        Text(
-          'Issue Title',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
+        SizedBox(height: screenHeight * 0.02),
         TextField(
           controller: _issueTitleController,
           decoration: InputDecoration(
-            hintText: 'Enter a brief title for the issue',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
+            labelText: 'Issue Title',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
+          ),
         ),
-        const SizedBox(height: 16),
-
-        Text(
-          'Description',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
+        SizedBox(height: screenHeight * 0.02),
         TextField(
           controller: _descriptionController,
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: 'Describe the issue in detail...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
+            labelText: 'Description',
+            labelStyle: TextStyle(
+              fontSize: textScaler.scale(14),
+              fontFamily: 'Poppins',
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
+          style: TextStyle(
+            fontSize: textScaler.scale(14),
+            fontFamily: 'Poppins',
+          ),
         ),
-        const SizedBox(height: 20),
-
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              if (_issueTitleController.text.trim().isNotEmpty &&
-                  _descriptionController.text.trim().isNotEmpty) {
-                widget.onFeedbackSubmit(
-                  _selectedIssueType,
-                  _issueTitleController.text.trim(),
-                  _descriptionController.text.trim(),
-                );
-
-                _issueTitleController.clear();
-                _descriptionController.clear();
-                setState(() {
-                  _selectedIssueType = 'General';
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Feedback submitted successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill in all required fields'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+        SizedBox(height: screenHeight * 0.02),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () {
+              if (_issueTitleController.text.trim().isEmpty ||
+                  _descriptionController.text.trim().isEmpty) {
+                _showCustomSnackBar(context, 'Please fill in all fields');
+                return;
               }
+              widget.onFeedbackSubmit(
+                _selectedIssueType,
+                _issueTitleController.text.trim(),
+                _descriptionController.text.trim(),
+              );
+              _issueTitleController.clear();
+              _descriptionController.clear();
+              setState(() {
+                _selectedIssueType = 'General';
+              });
+              _showCustomSnackBar(context, 'Feedback submitted successfully', isSuccess: true);
             },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: screenWidth * 0.3,
+              padding: EdgeInsets.symmetric(
+                vertical: screenHeight * 0.015,
               ),
-            ),
-            child: const Text(
-              'Submit Feedback',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Center(
+                child: Text(
+                  'Submit',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: textScaler.scale(14),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -1137,36 +1653,25 @@ class _BuildingBottomSheetContentState
     );
   }
 
-  // Navigation handler with permission check and error handling
   Future<void> _handleStartNavigation() async {
     setState(() {
       _isCheckingPermissions = true;
     });
-
     try {
-      // Check location permissions
-      final hasPermission = await _navigationService
-          .checkAndRequestLocationPermission();
-
+      final hasPermission = await _navigationService.checkAndRequestLocationPermission();
       if (!hasPermission) {
         setState(() {
           _isCheckingPermissions = false;
         });
-
-        // Show error message
         if (!mounted) return;
         _showPermissionDialog();
         return;
       }
-
-      // Get current location to verify GPS is working
       final currentLocation = await _navigationService.getCurrentLocation();
-
       if (currentLocation == null) {
         setState(() {
           _isCheckingPermissions = false;
         });
-
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1183,16 +1688,11 @@ class _BuildingBottomSheetContentState
         );
         return;
       }
-
       setState(() {
         _isCheckingPermissions = false;
       });
-
-      // Close the bottom sheet
       if (!mounted) return;
       Navigator.pop(context);
-
-      // Navigate to NavigationScreen
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -1205,14 +1705,11 @@ class _BuildingBottomSheetContentState
           ),
         ),
       );
-
-      // Call the original callback if needed
       widget.onDirectionsTap();
     } catch (e) {
       setState(() {
         _isCheckingPermissions = false;
       });
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1228,7 +1725,6 @@ class _BuildingBottomSheetContentState
     }
   }
 
-  // Show permission dialog with instructions
   void _showPermissionDialog() {
     showDialog(
       context: context,
@@ -1248,7 +1744,7 @@ class _BuildingBottomSheetContentState
               _navigationService.errorMessage.value.isNotEmpty
                   ? _navigationService.errorMessage.value
                   : 'Location permission is required for navigation.',
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14, fontFamily: 'Poppins'),
             ),
             const SizedBox(height: 16),
             Container(
@@ -1264,7 +1760,7 @@ class _BuildingBottomSheetContentState
                   Expanded(
                     child: Text(
                       'Please enable location permission in your device settings.',
-                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700], fontFamily: 'Poppins'),
                     ),
                   ),
                 ],
@@ -1275,7 +1771,7 @@ class _BuildingBottomSheetContentState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1286,7 +1782,7 @@ class _BuildingBottomSheetContentState
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Try Again'),
+            child: const Text('Try Again', style: TextStyle(fontFamily: 'Poppins')),
           ),
         ],
       ),

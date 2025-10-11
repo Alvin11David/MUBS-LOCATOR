@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final String email;
+
+  const ResetPasswordScreen({super.key, required this.email});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -13,11 +16,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool isButtonEnabled = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false; // NEW: Loading state for button
-
-  // Password strength state
-  double _passwordStrengthProgress = 0.0; // Progress from 0.0 to 1.0
-  Color _strengthColor = Colors.white; // Color based on strength
+  bool _isLoading = false;
+  double _passwordStrengthProgress = 0.0;
+  Color _strengthColor = Colors.white;
 
   @override
   void initState() {
@@ -37,24 +38,73 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
   }
 
-  // Password strength calculation
   void _checkPasswordStrength(String password) {
     int strengthScore = 0;
-    if (password.isNotEmpty) strengthScore++; // Any input
-    if (password.length >= 6) strengthScore++; // Length ≥ 6
-    if (password.contains(RegExp(r'[a-z]'))) strengthScore++; // Lowercase
-    if (password.contains(RegExp(r'[0-9]'))) strengthScore++; // Numbers
+    if (password.isNotEmpty) strengthScore++;
+    if (password.length >= 8) strengthScore++;
+    if (password.contains(RegExp(r'[a-z]'))) strengthScore++;
+    if (password.contains(RegExp(r'[A-Z]'))) strengthScore++;
+    if (password.contains(RegExp(r'[0-9]'))) strengthScore++;
+    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strengthScore++;
 
     setState(() {
-      _passwordStrengthProgress = strengthScore / 4.0;
-      if (strengthScore <= 1) {
-        _strengthColor = Colors.red; // Weak
-      } else if (strengthScore <= 3) {
-        _strengthColor = Colors.orange; // Medium
-      } else if (strengthScore == 4) {
-        _strengthColor = Colors.green; // Strong
+      _passwordStrengthProgress = strengthScore / 6.0;
+      if (strengthScore <= 2) {
+        _strengthColor = Colors.red;
+      } else if (strengthScore <= 4) {
+        _strengthColor = Colors.orange;
+      } else {
+        _strengthColor = Colors.green;
       }
     });
+  }
+
+  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final snackBar = SnackBar(
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSuccess ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              width: screenWidth * 0.08,
+              height: screenWidth * 0.08,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: MediaQuery.of(context).size.height - 100,
+      ),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Future<void> _handleChangePassword() async {
@@ -62,15 +112,63 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _isLoading = true;
     });
 
-    // Simulate API call / password reset process
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final email = widget.email.trim().toLowerCase();
+      final newPassword = _passwordController.text.trim();
 
-    setState(() {
-      _isLoading = false;
-    });
+      // Find user document in Firestore by email
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
 
-    if (mounted) {
-      Navigator.pushNamed(context, '/SignInScreen');
+      if (userQuery.docs.isEmpty) {
+        throw Exception('No user found with email: $email');
+      }
+
+      final userDoc = userQuery.docs.first;
+
+      // Update password in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userDoc.id)
+          .update({
+        'password': newPassword,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('Password updated in Firestore for email: $email');
+
+      // Delete OTP from Firestore
+      await FirebaseFirestore.instance
+          .collection('password_reset_otp')
+          .doc(email)
+          .delete();
+      print('OTP deleted from Firestore for email: $email');
+
+      if (mounted) {
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        _showCustomSnackBar(context, 'Password updated successfully! Please sign in.', isSuccess: true);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/SignInScreen',
+          (route) => false,
+          arguments: {'email': email},
+        );
+      }
+    } catch (e, stackTrace) {
+      print('Error updating password: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        _showCustomSnackBar(context, 'Error updating password: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -91,7 +189,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Logo
             Positioned(
               top: screenHeight * 0.05,
               left: screenWidth * 0.5 - (screenWidth * 0.2) / 2,
@@ -102,7 +199,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 fit: BoxFit.contain,
               ),
             ),
-            // Ambasize text
             Positioned(
               top: screenHeight * 0.04,
               left: screenWidth * 0.02,
@@ -116,7 +212,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
               ),
             ),
-            // Jackline text
             Positioned(
               top: screenHeight * 0.09,
               right: screenWidth * 0.02,
@@ -130,13 +225,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
               ),
             ),
-            // "Let's get you sorted" text
             Positioned(
               top: screenHeight * 0.17,
               left: screenWidth * 0.5 - (screenWidth * 0.6) / 2,
               width: screenWidth * 0.6,
               child: Text(
-                "Let's get you\nsorted!",
+                "Reset Your\nPassword",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: screenWidth * 0.08,
@@ -146,7 +240,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
               ),
             ),
-            // Bottom container
             Positioned(
               top: screenHeight * 0.31,
               left: screenWidth * 0.02,
@@ -159,28 +252,38 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // Decorative vectors
                     Positioned(
                       top: 0,
                       right: -screenWidth * 0.1,
                       child: Image.asset(
-                        'assets/vectors/zigzag.png',
+                        'assets/vectors/circular.png',
                         width: screenWidth * 0.3,
                         height: screenWidth * 0.3,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.error,
+                          color: Colors.red,
+                          size: screenWidth * 0.1,
+                        ),
                       ),
                     ),
                     Positioned(
                       bottom: 0,
                       left: -screenWidth * 0.15,
                       child: Image.asset(
-                        'assets/vectors/zigzag2.png',
+                        'assets/vectors/circular.png',
                         width: screenWidth * 0.3,
                         height: screenWidth * 0.3,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.error,
+                          color: Colors.red,
+                          size: screenWidth * 0.1,
+                        ),
                       ),
                     ),
                     SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
                         vertical: screenHeight * 0.04,
                         horizontal: screenWidth * 0.05,
@@ -211,23 +314,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               fontFamily: 'Epunda Slab',
                             ),
                           ),
-                          SizedBox(height: screenHeight * 0.02),
-                          Text(
-                            'Create a new password for your\naccount below.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.04,
-                              color: Colors.black,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
                           SizedBox(height: screenHeight * 0.04),
                           Container(
                             width: screenWidth * 0.9,
-                            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.08,
+                            ),
                             child: Column(
                               children: [
-                                // New Password field
                                 TextFormField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
@@ -238,18 +332,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.045,
                                     ),
                                     hintText: 'Enter New Password',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
-                                    prefixIcon: Icon(Icons.lock, color: Color(0xFF458DE0)),
+                                    prefixIcon: Icon(
+                                      Icons.lock,
+                                      color: Color(0xFF458DE0),
+                                    ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
                                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -263,11 +360,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(color: Color(0xFFD59A00)),
+                                      borderSide: BorderSide(
+                                        color: Color(0xFFD59A00),
+                                      ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF93C5FD),
+                                        width: 2,
+                                      ),
                                     ),
                                     contentPadding: EdgeInsets.symmetric(
                                       vertical: screenWidth * 0.04,
@@ -278,13 +380,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    fontSize: screenWidth * 0.04,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),
-                                // Password Strength Indicator
                                 Padding(
-                                  padding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: screenHeight * 0.01,
+                                  ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(30),
                                     child: Stack(
@@ -305,7 +408,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   ),
                                 ),
                                 SizedBox(height: screenHeight * 0.03),
-                                // Confirm Password field
                                 TextFormField(
                                   controller: _confirmPasswordController,
                                   obscureText: _obscureConfirmPassword,
@@ -315,18 +417,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w500,
-                                      fontSize: screenWidth * 0.045, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.045,
                                     ),
                                     hintText: 'Confirm New Password',
                                     hintStyle: TextStyle(
                                       color: Colors.black,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w400,
-                                      fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                      fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
                                     fillColor: const Color.fromARGB(255, 237, 236, 236),
-                                    prefixIcon: Icon(Icons.lock, color: Color(0xFF458DE0)),
+                                    prefixIcon: Icon(
+                                      Icons.lock,
+                                      color: Color(0xFF458DE0),
+                                    ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
                                         _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
@@ -340,11 +445,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(color: Color(0xFFD59A00)),
+                                      borderSide: BorderSide(
+                                        color: Color(0xFFD59A00),
+                                      ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      borderSide: BorderSide(color: Color(0xFF93C5FD), width: 2),
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF93C5FD),
+                                        width: 2,
+                                      ),
                                     ),
                                     contentPadding: EdgeInsets.symmetric(
                                       vertical: screenWidth * 0.04,
@@ -355,7 +465,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     color: Colors.black,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: screenWidth * 0.04, // Added: Reduced font size
+                                    fontSize: screenWidth * 0.04,
                                   ),
                                   cursorColor: const Color(0xFF3B82F6),
                                 ),
@@ -364,14 +474,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: isButtonEnabled && !_isLoading
-                                        ? _handleChangePassword
-                                        : null,
+                                    onTap: isButtonEnabled && !_isLoading ? _handleChangePassword : null,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
+                                        border: Border.all(
+                                          color: const Color(0xFF3B82F6),
+                                          width: 1,
+                                        ),
                                         gradient: LinearGradient(
-                                          colors: isButtonEnabled
+                                          colors: isButtonEnabled && !_isLoading
                                               ? [Color(0xFFE0E7FF), Color(0xFF93C5FD)]
                                               : [Colors.grey[300]!, Colors.grey[500]!],
                                           begin: Alignment.topLeft,
@@ -405,6 +517,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       style: TextStyle(
                                         fontSize: screenWidth * 0.04,
                                         fontWeight: FontWeight.bold,
+                                        fontFamily: 'Epunda Slab',
                                       ),
                                     ),
                                     GestureDetector(
@@ -417,6 +530,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                           fontSize: screenWidth * 0.04,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF93C5FD),
+                                          fontFamily: 'Epunda Slab',
                                         ),
                                       ),
                                     ),
