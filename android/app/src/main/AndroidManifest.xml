@@ -18,6 +18,12 @@
         android:label="MUBS Locator"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+            android:name="com.google.android.gms.auth.api.credentials.CredentialPicker"
+            android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.auth.api.signin"
+            android:value="true" />
         <service
             android:name="com.google.firebase.messaging.FirebaseMessagingService"
             android:exported="false">
