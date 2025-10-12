@@ -142,7 +142,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   GoogleMapController? _mapController;
   bool _isLocationSelected = false;
   List<XFile?> _images = [null, null, null, null];
-  List<Map<String, dynamic>> _openingHoursEntries = [];
+  final List<Map<String, dynamic>> _openingHoursEntries = [];
 
   static const CameraPosition _mubsCenter = CameraPosition(
     target: LatLng(0.32848299678238435, 32.61717974633408),
@@ -831,7 +831,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                             ),
                                           ),
                                         );
-                                      }).toList(),
+                                      }),
                                     ],
                                   ),
                                 ),

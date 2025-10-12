@@ -604,7 +604,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                                     final timestamp = data['timestamp'] as Timestamp?;
                                     final feedbackText = data['feedbackText'] as String? ?? 'No description';
                                     final formattedDate = timestamp != null
-                                        ? '${timestamp.toDate().toLocal().toString().split(' ')[0]}'
+                                        ? timestamp.toDate().toLocal().toString().split(' ')[0]
                                         : 'N/A';
 
                                     return TableRow(
@@ -761,7 +761,7 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                                         ),
                                       ],
                                     );
-                                  }).toList(),
+                                  }),
                                 ],
                               );
                             },

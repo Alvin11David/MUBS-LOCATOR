@@ -26,7 +26,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Add your OAuth Web Client ID from Firebase Console
-    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206.apps.googleusercontent.com',
     scopes: ['email'],
   );
   bool _isLoading = false;

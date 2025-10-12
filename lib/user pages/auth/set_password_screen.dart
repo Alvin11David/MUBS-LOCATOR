@@ -147,7 +147,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           throw Exception(
               'Stored credentials are outdated. Please sign in with your current password and try again.');
         } else {
-          throw e; // Rethrow other FirebaseAuth exceptions
+          rethrow; // Rethrow other FirebaseAuth exceptions
         }
       }
 

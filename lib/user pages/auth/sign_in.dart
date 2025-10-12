@@ -22,7 +22,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '1:700901312627:web:c2dfd9dcd0d03865050206',
     scopes: ['email'],
   );
 
@@ -185,60 +184,62 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        // User canceled the sign-in
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
-        credential,
-      );
-
-      // Save login state
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-
-      if (mounted) {
-        final email = userCredential.user?.email?.toLowerCase();
-        if (email == 'adminuser@gmail.com') {
-          print('Admin user detected, navigating to AdminDashboardScreen');
-          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
-        } else {
-          print('Regular user, navigating to HomeScreen');
-          Navigator.pushReplacementNamed(context, '/HomeScreen');
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      String message = 'Google sign in failed';
-      if (e.code == 'account-exists-with-different-credential') {
-        message = 'An account already exists with the same email.';
-      } else if (e.code == 'invalid-credential') {
-        message = 'Invalid credential. Please try again.';
-      }
-      _showCustomSnackBar(context, message);
-    } catch (e) {
-      _showCustomSnackBar(context, 'Error: $e');
-    } finally {
+  setState(() => _isLoading = true);
+  try {
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
       if (mounted) setState(() => _isLoading = false);
+      return;
     }
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+    // Save user info to Firestore (add this block)
+    final user = userCredential.user;
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'fullName': user.displayName ?? 'Google User',
+        'email': user.email ?? '',
+        'profilePicUrl': user.photoURL,
+        'authProvider': 'google',
+        'isAdmin': user.email?.toLowerCase() == 'adminuser@gmail.com',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'fcmToken': await FirebaseMessaging.instance.getToken(),
+      }, SetOptions(merge: true));
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+
+    if (mounted) {
+      final email = userCredential.user?.email?.toLowerCase();
+      if (email == 'adminuser@gmail.com') {
+        print('Admin user detected, navigating to AdminDashboardScreen');
+        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      } else {
+        print('Regular user, navigating to HomeScreen');
+        Navigator.pushReplacementNamed(context, '/HomeScreen');
+      }
+    }
+  } on FirebaseAuthException catch (e) {
+    String message = 'Google sign in failed';
+    if (e.code == 'account-exists-with-different-credential') {
+      message = 'An account already exists with the same email.';
+    } else if (e.code == 'invalid-credential') {
+      message = 'Invalid credential. Please try again.';
+    }
+    _showCustomSnackBar(context, message);
+  } catch (e) {
+    _showCustomSnackBar(context, 'Error: $e');
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   void _showCustomSnackBar(BuildContext context, String message) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -694,11 +695,13 @@ class EmailField extends StatelessWidget {
   });
 
   String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty)
+    if (value == null || value.trim().isEmpty) {
       return 'Enter your email address';
+    }
     final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
-    if (!emailRegex.hasMatch(value.trim()))
+    if (!emailRegex.hasMatch(value.trim())) {
       return 'Please enter a Gmail address (e.g., username@gmail.com)';
+    }
     return null;
   }
 

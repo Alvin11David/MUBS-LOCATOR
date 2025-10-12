@@ -811,7 +811,7 @@ class _LocationTableState extends State<LocationTable> {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(left: widget.screenWidth * 0.04),
-                    child: Container(
+                    child: SizedBox(
                       width: widget.screenWidth * 0.1,
                       height: widget.screenWidth * 0.1,
                     ),

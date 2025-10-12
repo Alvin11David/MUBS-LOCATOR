@@ -247,7 +247,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
             .call({
               'userEmail': userEmail,
               'title': 'New Feedback Reply',
-              'body': 'You have a new reply to your feedback: ${issueTitle}',
+              'body': 'You have a new reply to your feedback: $issueTitle',
             });
       } catch (e) {
         print('Error sending FCM notification: $e');
@@ -490,8 +490,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                                           loadingProgress,
                                                         ) {
                                                           if (loadingProgress ==
-                                                              null)
+                                                              null) {
                                                             return child;
+                                                          }
                                                           return const CircularProgressIndicator();
                                                         },
                                                     errorBuilder:
@@ -839,7 +840,7 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                               data['feedbackText'] as String? ??
                               'No description';
                           final formattedDate = timestamp != null
-                              ? '${timestamp.toDate().toLocal().toString().split('.')[0]}'
+                              ? timestamp.toDate().toLocal().toString().split('.')[0]
                               : 'N/A';
                           final adminReply =
                               data['adminReply'] as String? ?? '';
@@ -1345,8 +1346,9 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
                                                 child,
                                                 loadingProgress,
                                               ) {
-                                                if (loadingProgress == null)
+                                                if (loadingProgress == null) {
                                                   return child;
+                                                }
                                                 return const CircularProgressIndicator();
                                               },
                                           errorBuilder:

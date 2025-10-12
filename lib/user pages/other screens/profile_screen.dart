@@ -494,7 +494,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   await FirebaseAuth.instance.signOut();
                   if (mounted) {
                     Navigator.pushNamed(context, '/SignInScreen');
-                    _showCustomSnackBar('Logout successful', Colors.green);
                   }
                 } catch (e) {
                   if (mounted) {

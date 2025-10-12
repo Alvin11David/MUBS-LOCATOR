@@ -24,7 +24,7 @@ class UserService {
   // Upload profile picture
   Future<String?> uploadProfilePic(XFile imageFile) async {
     final user = _auth.currentUser;
-    if (user == null || imageFile == null) return null;
+    if (user == null) return null;
 
     try {
       // Create UID-specific path

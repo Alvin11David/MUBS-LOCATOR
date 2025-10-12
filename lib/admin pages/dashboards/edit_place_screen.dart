@@ -1642,8 +1642,9 @@ class _PhotosMediaFieldState extends State<PhotosMediaField> {
                                   height: double.infinity,
                                   loadingBuilder:
                                       (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return const Center(
                                           child: CircularProgressIndicator(),
                                         );

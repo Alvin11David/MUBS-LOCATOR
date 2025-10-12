@@ -254,8 +254,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                                           loadingProgress,
                                                         ) {
                                                           if (loadingProgress ==
-                                                              null)
+                                                              null) {
                                                             return child;
+                                                          }
                                                           return const CircularProgressIndicator();
                                                         },
                                                     errorBuilder:
@@ -1138,8 +1139,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         height: screenWidth * 0.15,
                                         loadingBuilder:
                                             (context, child, loadingProgress) {
-                                              if (loadingProgress == null)
+                                              if (loadingProgress == null) {
                                                 return child;
+                                              }
                                               return const CircularProgressIndicator();
                                             },
                                         errorBuilder:

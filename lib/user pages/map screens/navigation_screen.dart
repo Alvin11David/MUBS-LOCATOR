@@ -8,10 +8,10 @@ class NavigationScreen extends StatefulWidget {
   final String destinationName;
 
   const NavigationScreen({
-    Key? key,
+    super.key,
     required this.destination,
     required this.destinationName,
-  }) : super(key: key);
+  });
 
   @override
   State<NavigationScreen> createState() => _NavigationScreenState();

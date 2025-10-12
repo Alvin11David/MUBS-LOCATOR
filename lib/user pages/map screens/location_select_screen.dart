@@ -205,25 +205,21 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         ),
       );
     }
-    if (_selectedFromLocation != null &&
-        _selectedFromLocation!.location.latitude != null &&
-        _selectedFromLocation!.location.longitude != null) {
+    if (_selectedFromLocation != null) {
       markers.add(
         Marker(
           markerId: MarkerId('from_${_selectedFromLocation!.id}'),
-          position: LatLng(_selectedFromLocation!.location.latitude!, _selectedFromLocation!.location.longitude!),
+          position: LatLng(_selectedFromLocation!.location.latitude, _selectedFromLocation!.location.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(title: _selectedFromLocation!.name),
         ),
       );
     }
-    if (_selectedToLocation != null &&
-        _selectedToLocation!.location.latitude != null &&
-        _selectedToLocation!.location.longitude != null) {
+    if (_selectedToLocation != null) {
       markers.add(
         Marker(
           markerId: MarkerId('to_${_selectedToLocation!.id}'),
-          position: LatLng(_selectedToLocation!.location.latitude!, _selectedToLocation!.location.longitude!),
+          position: LatLng(_selectedToLocation!.location.latitude, _selectedToLocation!.location.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           infoWindow: InfoWindow(title: _selectedToLocation!.name),
         ),
@@ -231,7 +227,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
       if (_mapController != null) {
         _mapController!.animateCamera(
           CameraUpdate.newLatLng(
-            LatLng(_selectedToLocation!.location.latitude!, _selectedToLocation!.location.longitude!),
+            LatLng(_selectedToLocation!.location.latitude, _selectedToLocation!.location.longitude),
           ),
         );
       }
@@ -387,12 +383,11 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                 }
                 setState(() {});
                 focusNode.unfocus();
-                if (suggestion.location.latitude != null &&
-                    suggestion.location.longitude != null &&
+                if (suggestion.location.longitude != null &&
                     _mapController != null) {
                   _mapController!.animateCamera(
                     CameraUpdate.newLatLng(
-                      LatLng(suggestion.location.latitude!, suggestion.location.longitude!),
+                      LatLng(suggestion.location.latitude, suggestion.location.longitude),
                     ),
                   );
                 }
