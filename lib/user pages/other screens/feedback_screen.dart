@@ -935,18 +935,18 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                             child: GestureDetector(
                               onTap: () => Navigator.pushNamed(
                                 context,
-                                '/LocationSelectScreen',
+                                '/FeedbackScreen',
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons.location_on,
+                                    Icons.chat_rounded,
                                     color: Colors.black,
                                     size: textScaler.scale(20),
                                   ),
                                   SizedBox(width: screenWidth * 0.02),
                                   Text(
-                                    'Search Locations',
+                                    'Feedback & Reports',
                                     style: TextStyle(
                                       color: Colors.black,
                                       fontSize: textScaler.scale(14),

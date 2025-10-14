@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 import 'dart:async';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class FeedbackDetailsScreen extends StatefulWidget {

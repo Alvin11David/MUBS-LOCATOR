@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 import 'dart:ui';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class EditPlaceScreen extends StatefulWidget {
   final String buildingId; // Pass the document ID to this screen

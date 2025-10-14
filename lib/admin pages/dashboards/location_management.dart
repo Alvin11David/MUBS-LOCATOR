@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
@@ -422,12 +421,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                                       fontFamily: 'Poppins',
                                     ),
                                   ),
-                                  Image.asset(
-                                    'assets/images/edit.png',
-                                    color: Colors.black,
-                                    width: screenWidth * 0.035, // Smaller icon
-                                    height: screenWidth * 0.035,
-                                  ),
                                 ],
                               ),
                             ),
@@ -808,13 +801,26 @@ class _LocationTableState extends State<LocationTable> {
             children: [
               SizedBox(height: widget.screenHeight * 0.02),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(left: widget.screenWidth * 0.04),
+                    padding: EdgeInsets.only(left: widget.screenWidth * 0.0),
                     child: SizedBox(
-                      width: widget.screenWidth * 0.1,
+                      width: widget.screenWidth * 0.05,
                       height: widget.screenWidth * 0.1,
                     ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      'Add, edit and delete places',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: widget.screenWidth * 0.035,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 3,
+                    )
                   ),
                   SizedBox(width: widget.screenWidth * 0.04),
                   const Spacer(),

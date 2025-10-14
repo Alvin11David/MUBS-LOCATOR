@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:mubs_locator/main.dart';
 import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
@@ -15,7 +16,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
-import 'navigation_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mubs_locator/components/bottom_navbar.dart'; // Add this import
 
@@ -61,16 +61,73 @@ class _HomeScreenState extends State<HomeScreen> {
     LatLng(0.32528443338059565, 32.61775367927309),
     LatLng(0.32652895820572553, 32.61566155616781),
   ];
+  StreamSubscription<Position>? _positionStream;
 
   @override
   void initState() {
     super.initState();
     updateLastActiveTimestamp();
     fetchAllData();
-    _initializeMarkers();
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
+    _listenToLocationChanges();
+  }
+
+  Widget _detailRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: MediaQuery.textScalerOf(context).scale(15),
+              fontFamily: 'Poppins',
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value ?? 'N/A',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: MediaQuery.textScalerOf(context).scale(15),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _listenToLocationChanges() {
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10, // meters
+          ),
+        ).listen((Position position) {
+          final userMarker = Marker(
+            markerId: const MarkerId('user_location'),
+            position: LatLng(position.latitude, position.longitude),
+            infoWindow: const InfoWindow(title: 'Your Location'),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueBlue,
+            ),
+          );
+          setState(() {
+            markers.removeWhere((m) => m.markerId.value == 'user_location');
+            markers.add(userMarker);
+            mapController?.animateCamera(
+              CameraUpdate.newLatLng(
+                LatLng(position.latitude, position.longitude),
+              ),
+            );
+          });
+        });
   }
 
   Future<void> updateLastActiveTimestamp() async {
@@ -219,30 +276,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _initializeMarkers() {
-    markers.add(
-      Marker(
-        markerId: const MarkerId('mubs_maingate'),
-        position: _mubsMaingate,
-        infoWindow: const InfoWindow(
-          title: 'MUBS Maingate',
-          snippet: 'Makerere University Business School',
-        ),
-        onTap: () {
-          _showBuildingBottomSheet(
-            context,
-            Building(
-              id: 'mubs_maingate',
-              name: 'MUBS Maingate',
-              description: 'Makerere University Business School',
-              location: _mubsMaingate,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _initializePolygons() {
     polygons.add(
       Polygon(
@@ -280,14 +313,74 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         onTap: () {
-          // Use Get.context if context is not available, or pass context as needed
-          _showBuildingBottomSheet(
-            Get.context ?? navigatorKey.currentContext!,
-            element,
-          );
+          _showBuildingBottomSheet(context, buildingName: element.name);
         },
       );
     }).toList();
+  }
+
+  Future<void> _showUserLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Show dialog asking user to enable location
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Enable Location'),
+            content: const Text(
+              'Location services are disabled. Please turn on location to use this feature.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Geolocator.openLocationSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showCustomSnackBar(context, 'Location permission denied.');
+        return;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      _showCustomSnackBar(context, 'Location permission permanently denied.');
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    final userMarker = Marker(
+      markerId: const MarkerId('user_location'),
+      position: LatLng(position.latitude, position.longitude),
+      infoWindow: const InfoWindow(title: 'Your Location'),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+    );
+
+    setState(() {
+      markers.removeWhere((m) => m.markerId.value == 'user_location');
+      markers.add(userMarker);
+      mapController?.animateCamera(
+        CameraUpdate.newLatLng(LatLng(position.latitude, position.longitude)),
+      );
+    });
   }
 
   Future<void> fetchAllData() async {
@@ -414,7 +507,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showBuildingBottomSheet(BuildContext context, Building building) {
+  void _showBuildingBottomSheet(
+    BuildContext context, {
+    required String buildingName,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -423,82 +519,58 @@ class _HomeScreenState extends State<HomeScreen> {
       enableDrag: true,
       useSafeArea: true,
       builder: (BuildContext context) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => Navigator.of(context).pop(),
-          child: Stack(
-            children: [
-              DraggableScrollableSheet(
-                initialChildSize: 0.6,
-                minChildSize: 0.3,
-                maxChildSize: 0.95,
-                expand: false,
-                builder: (context, scrollController) {
-                  return Container(
-                    padding: EdgeInsets.only(bottom: 0),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 10,
-                          offset: Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        _BuildingBottomSheetContent(
-                          building: building,
-                          scrollController: scrollController,
-                          onDirectionsTap: () {
-                            _clearSearchBar();
-                            _navigateToBuilding(building);
-                          },
-                          onFeedbackSubmit:
-                              (
-                                String issueType,
-                                String issueTitle,
-                                String description,
-                              ) {
-                                _submitFeedback(
-                                  building,
-                                  issueType,
-                                  issueTitle,
-                                  description,
-                                );
-                              },
-                        ),
-                        Positioned(
-                          top: 16,
-                          right: 16,
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                shape: BoxShape.circle,
-                              ),
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.close,
-                                size: 24,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
               ),
-            ],
-          ),
+              child: Stack(
+                children: [
+                  _BuildingBottomSheetContent(
+                    buildingName: buildingName,
+                    scrollController: scrollController,
+                    onDirectionsTap: () {},
+                    onFeedbackSubmit: (a, b, c) {},
+                  ),
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(
+                          Icons.close,
+                          size: 24,
+                          color: Color.fromARGB(255, 255, 255, 255),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -884,49 +956,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                       suggestionsCallback: (pattern) async {
-                        if (!searchActive || pattern.isEmpty) return [];
-                        final matches = fetchedBuildings.map((building) {
-                          final nameScore = StringSimilarity.compareTwoStrings(
-                            building.name.toLowerCase(),
-                            pattern.toLowerCase(),
-                          );
-                          final otherNameScore =
-                              (building.otherNames != null &&
-                                  building.otherNames!.isNotEmpty)
-                              ? building.otherNames!
-                                    .map(
-                                      (name) =>
-                                          StringSimilarity.compareTwoStrings(
-                                            name.toLowerCase(),
-                                            pattern.toLowerCase(),
-                                          ),
-                                    )
-                                    .fold<double>(
-                                      0,
-                                      (prev, curr) => curr > prev ? curr : prev,
-                                    )
-                              : 0;
-                          final descriptionScore =
-                              StringSimilarity.compareTwoStrings(
-                                building.description.toLowerCase(),
-                                pattern.toLowerCase(),
-                              );
-                          final maxScore = [
-                            nameScore,
-                            otherNameScore,
-                            descriptionScore,
-                          ].reduce((a, b) => a > b ? a : b);
-                          return {'building': building, 'score': maxScore};
-                        }).toList();
-                        matches.sort(
-                          (a, b) => (b['score'] as double).compareTo(
-                            a['score'] as double,
-                          ),
-                        );
-                        return matches
-                            .where((m) => (m['score'] as double) > 0.1)
-                            .take(10)
-                            .map((m) => m['building'] as Building)
+                        if (pattern.isEmpty) return [];
+                        // Fetch all buildings (or a reasonable subset if your dataset is large)
+                        final querySnapshot = await FirebaseFirestore.instance
+                            .collection('buildings')
+                            .get();
+
+                        final buildings = querySnapshot.docs
+                            .map(
+                              (doc) => Building.fromFirestore(
+                                doc.data() as Map<String, dynamic>,
+                                doc.id,
+                              ),
+                            )
+                            .toList();
+
+                        // Filter by any part of name, case-insensitive
+                        final lowerPattern = pattern.toLowerCase();
+                        return buildings
+                            .where(
+                              (building) => building.name
+                                  .toLowerCase()
+                                  .contains(lowerPattern),
+                            )
                             .toList();
                       },
                       itemBuilder: (context, Building suggestion) {
@@ -955,7 +1007,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Text(
                                       suggestion.description,
                                       style: TextStyle(
-                                        color: Colors.grey[600],
+                                        color: const Color.fromARGB(
+                                          255,
+                                          250,
+                                          250,
+                                          250,
+                                        ),
                                         fontSize: textScaler.scale(14),
                                         fontFamily: 'Poppins',
                                       ),
@@ -969,7 +1026,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onSelected: (Building suggestion) {
                         searchController.text = suggestion.name;
-                        _showBuildingBottomSheet(context, suggestion);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) {
+                            return _BuildingBottomSheetContent(
+                              buildingName: suggestion.name,
+                              scrollController: ScrollController(),
+                              onDirectionsTap: () {
+                                // Add your navigation logic here
+                              },
+                              onFeedbackSubmit:
+                                  (issueType, issueTitle, description) {
+                                    // Add your feedback logic here
+                                  },
+                            );
+                          },
+                        );
                       },
                       errorBuilder: (context, error) => Padding(
                         padding: EdgeInsets.all(screenWidth * 0.02),
@@ -1195,18 +1269,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: GestureDetector(
                           onTap: () => Navigator.pushNamed(
                             context,
-                            '/NotificationsScreen',
+                            '/LocationSelectScreen',
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                Icons.notifications,
+                                Icons.location_on,
                                 color: Colors.black,
                                 size: textScaler.scale(20),
                               ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
-                                'Notifications',
+                                'Search Locations',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: textScaler.scale(14),
@@ -1225,20 +1299,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           top: screenHeight * 0.02,
                         ),
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/LocationSelectScreen',
-                          ),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/FeedbackScreen'),
                           child: Row(
                             children: [
                               Icon(
-                                Icons.location_on,
+                                Icons.chat_rounded,
                                 color: Colors.black,
                                 size: textScaler.scale(20),
                               ),
                               SizedBox(width: screenWidth * 0.02),
                               Text(
-                                'Search Locations',
+                                'Feedback & Reports',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: textScaler.scale(14),
@@ -1376,13 +1448,14 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _BuildingBottomSheetContent extends StatefulWidget {
-  final Building building;
+  final String buildingName;
   final ScrollController scrollController;
   final VoidCallback onDirectionsTap;
+
   final Function(String, String, String) onFeedbackSubmit;
 
   const _BuildingBottomSheetContent({
-    required this.building,
+    required this.buildingName,
     required this.scrollController,
     required this.onDirectionsTap,
     required this.onFeedbackSubmit,
@@ -1395,422 +1468,374 @@ class _BuildingBottomSheetContent extends StatefulWidget {
 
 class _BuildingBottomSheetContentState
     extends State<_BuildingBottomSheetContent> {
-  // Remove tab index and feedback related fields
   bool _isCheckingPermissions = false;
   final NavigationService _navigationService = Get.find<NavigationService>();
+  bool showDetails = true;
+  late Future<QuerySnapshot> _buildingFuture; // <-- Add this
+
+  @override
+  void initState() {
+    super.initState();
+    _buildingFuture = FirebaseFirestore.instance
+        .collection('buildings')
+        .where('name', isEqualTo: widget.buildingName)
+        .limit(1)
+        .get();
+  }
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
     final textScaler = MediaQuery.textScalerOf(context);
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.05),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: screenWidth * 0.1,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            Text(
-              widget.building.name,
-              style: TextStyle(
-                fontSize: textScaler.scale(20),
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            Text(
-              widget.building.description,
+
+    return FutureBuilder<QuerySnapshot>(
+      future: _buildingFuture, // <-- Use the cached future
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
+              'No details available.',
               style: TextStyle(
                 fontSize: textScaler.scale(14),
-                color: Colors.grey[600],
                 fontFamily: 'Poppins',
+                color: Colors.grey[600],
               ),
             ),
-            SizedBox(height: screenHeight * 0.02),
-            // Row with Details and Get Directions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+          );
+        }
+        final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+
+        return SingleChildScrollView(
+          controller: widget.scrollController,
+          child: Padding(
+            padding: EdgeInsets.all(screenWidth * 0.05),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(width: screenWidth * 0.01), // Add left spacing
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.05,
-                    vertical: screenHeight * 0.01,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3E5891), // Changed color
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Details',
-                    style: TextStyle(
-                      fontSize: textScaler.scale(16),
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
+                Center(
+                  child: Container(
+                    width: screenWidth * 0.1,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                SizedBox(width: screenWidth * 0.22), // Space between buttons
-                GestureDetector(
-                  onTap: _isCheckingPermissions ? null : _handleStartNavigation,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.05,
-                      vertical: screenHeight * 0.01,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF93C5FD),
-                        width: 2,
+                SizedBox(height: screenHeight * 0.02),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          showDetails = true;
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.10,
+                          vertical: screenHeight * 0.012,
+                        ),
+                        decoration: BoxDecoration(
+                          color: showDetails ? Colors.blue : Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.blue, width: 2),
+                        ),
+                        child: Text(
+                          'Details',
+                          style: TextStyle(
+                            color: showDetails ? Colors.white : Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: MediaQuery.textScalerOf(
+                              context,
+                            ).scale(15),
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
                       ),
                     ),
-                    child: _isCheckingPermissions
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF93C5FD),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Checking...',
+                    SizedBox(width: screenWidth * 0.03),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          showDetails = false;
+                        });
+                        _handleStartNavigation();
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.04,
+                          vertical: screenHeight * 0.012,
+                        ),
+                        decoration: BoxDecoration(
+                          color: !showDetails ? Colors.blue : Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.blue, width: 2),
+                        ),
+                        child: Text(
+                          'Get Directions',
+                          style: TextStyle(
+                            color: !showDetails ? Colors.white : Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: MediaQuery.textScalerOf(
+                              context,
+                            ).scale(15),
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth * 0.01),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        margin: EdgeInsets.only(right: 2, top: 2),
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, color: Colors.white, size: 28),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                Divider(
+                  thickness: 1.5,
+                  color: Colors.grey[300],
+                  indent: screenWidth * 0.01,
+                  endIndent: screenWidth * 0.01,
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                Text(
+                  data['name'] ?? '',
+                  style: TextStyle(
+                    fontSize: MediaQuery.textScalerOf(context).scale(16),
+                    color: const Color.fromARGB(255, 255, 255, 255),
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.01),
+                Text(
+                  data['description'] ?? '',
+                  style: TextStyle(
+                    fontSize: MediaQuery.textScalerOf(context).scale(14),
+                    color: const Color.fromARGB(255, 255, 255, 255),
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.02),
+                Divider(
+                  thickness: 1.5,
+                  color: Colors.grey[300],
+                  indent: screenWidth * 0.01,
+                  endIndent: screenWidth * 0.01,
+                ),
+                SizedBox(height: screenHeight * 0.01),
+
+                // Only show images and details if showDetails is true
+                if (showDetails) ...[
+                  Text(
+                    'Image Section',
+                    style: TextStyle(
+                      fontSize: MediaQuery.textScalerOf(context).scale(16),
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.01),
+                  Builder(
+                    builder: (context) {
+                      final imageUrls = (data['imageUrls'] as List?) ?? [];
+                      Widget buildImage(String? url, double radius) {
+                        if (url == null || url.isEmpty) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(radius),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'No Image',
                                 style: TextStyle(
-                                  color: Color(0xFF93C5FD),
-                                  fontSize: textScaler.scale(14),
-                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
                                   fontFamily: 'Poppins',
                                 ),
                               ),
-                            ],
-                          )
-                        : Text(
-                            'Get Directions',
+                            ),
+                          );
+                        }
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(radius),
+                          child: Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Colors.grey[300],
+                                  child: Center(
+                                    child: Text(
+                                      'No Image',
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ),
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // First image (large, left)
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              height: screenHeight * 0.30,
+                              child: buildImage(
+                                imageUrls.isNotEmpty ? imageUrls[0] : null,
+                                30, // Large radius for left image
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          // Second and third images (stacked, right)
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: (screenHeight * 0.22 - 3) / 1.5,
+                                  width: (screenWidth * 0.34),
+                                  margin: EdgeInsets.only(bottom: 6),
+                                  child: buildImage(
+                                    imageUrls.length > 1 ? imageUrls[1] : null,
+                                    12, // Smaller radius for column images
+                                  ),
+                                ),
+                                Container(
+                                  height: (screenHeight * 0.22 - 3) / 1.5,
+                                  width: (screenWidth * 0.34),
+                                  child: buildImage(
+                                    imageUrls.length > 2 ? imageUrls[2] : null,
+                                    12, // Smaller radius for column images
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Divider(
+                    thickness: 1.5,
+                    color: Colors.grey[300],
+                    indent: screenWidth * 0.01,
+                    endIndent: screenWidth * 0.01,
+                  ),
+                  SizedBox(height: screenHeight * 0.01),
+                  Text(
+                    'Details Section',
+                    style: TextStyle(
+                      fontSize: MediaQuery.textScalerOf(context).scale(16),
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.01),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.015,
+                      horizontal: screenWidth * 0.03,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 6),
+                        _detailRow('Name', data['name']),
+                        _detailRow('Description', data['description']),
+                        _detailRow('MTN Number', data['mtnNumber']),
+                        _detailRow('Airtel Number', data['airtelNumber']),
+                        if (data['openingHours'] != null &&
+                            data['openingHours'] is List) ...[
+                          SizedBox(height: 8),
+                          Text(
+                            'Opening Hours',
                             style: TextStyle(
-                              color: Color(0xFF93C5FD),
-                              fontSize: textScaler.scale(14),
-                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[900],
                               fontFamily: 'Poppins',
                             ),
                           ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            // Divider and Image Section text
-            Divider(
-              thickness: 1.5,
-              color: Colors.grey[300],
-              indent: screenWidth * 0.01,
-              endIndent: screenWidth * 0.01,
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            Text(
-              'Image Section',
-              style: TextStyle(
-                fontSize: MediaQuery.textScalerOf(context).scale(16),
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            // Images section
-            SizedBox(
-              width: screenWidth - 2 * screenWidth * 0.07,
-              child: FutureBuilder<List<String>>(
-                future: _fetchBuildingImages(widget.building.id),
-                builder: (context, snapshot) {
-                  final double imageSectionWidth =
-                      screenWidth - 2 * screenWidth * 0.05;
-                  final double leftImageWidth = imageSectionWidth * 0.45;
-                  final double rightImageWidth = imageSectionWidth * 0.45;
-                  final double smallImageHeight =
-                      (leftImageWidth - screenHeight * 0.01) / 2;
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  final images = snapshot.data ?? ['', '', ''];
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left image
-                      Container(
-                        width: leftImageWidth,
-                        height: leftImageWidth,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: Colors.grey[200],
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: images[0].isNotEmpty
-                            ? Image.network(
-                                images[0],
-                                fit: BoxFit.cover,
-                                width: leftImageWidth,
-                                height: leftImageWidth,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Center(child: Text('No Image')),
-                              )
-                            : Center(
-                                child: Text(
-                                  'No Image',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12,
-                                  ),
+                          ...((data['openingHours'] as List).map((entry) {
+                            final days =
+                                (entry['days'] as List?)?.join(', ') ?? '';
+                            final start = entry['startTime'] ?? '';
+                            final end = entry['endTime'] ?? '';
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                '$days: $start - $end',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.blueGrey[800],
+                                  fontFamily: 'Poppins',
                                 ),
                               ),
-                      ),
-                      SizedBox(width: imageSectionWidth * 0.05),
-                      // Right column with 2 images
-                      Column(
-                        children: [
-                          Container(
-                            width: rightImageWidth,
-                            height: smallImageHeight,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: Colors.grey[200],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: images[1].isNotEmpty
-                                ? Image.network(
-                                    images[1],
-                                    fit: BoxFit.cover,
-                                    width: rightImageWidth,
-                                    height: smallImageHeight,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Center(child: Text('No Image')),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      'No Image',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          SizedBox(height: screenHeight * 0.01),
-                          Container(
-                            width: rightImageWidth,
-                            height: smallImageHeight,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: Colors.grey[200],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: images[2].isNotEmpty
-                                ? Image.network(
-                                    images[2],
-                                    fit: BoxFit.cover,
-                                    width: rightImageWidth,
-                                    height: smallImageHeight,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Center(child: Text('No Image')),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      'No Image',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                          ),
+                            );
+                          })),
                         ],
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            // Divider and Details Section text
-            Divider(
-              thickness: 1.5,
-              color: Colors.grey[300],
-              indent: screenWidth * 0.01,
-              endIndent: screenWidth * 0.01,
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            Text(
-              'Details Section',
-              style: TextStyle(
-                fontSize: MediaQuery.textScalerOf(context).scale(16),
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: screenHeight * 0.01),
-            // Only show details tab content
-            FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('buildings')
-                  .doc(widget.building.id)
-                  .get(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || !snapshot.data!.exists) {
-                  return Center(
-                    child: Text(
-                      'No details available.',
-                      style: TextStyle(
-                        fontSize: MediaQuery.textScalerOf(context).scale(14),
-                        fontFamily: 'Poppins',
-                        color: Colors.grey[600],
-                      ),
+                      ],
                     ),
-                  );
-                }
-                final data =
-                    snapshot.data!.data() as Map<String, dynamic>? ?? {};
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    vertical: screenHeight * 0.015,
-                    horizontal: screenWidth * 0.03,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                ],
+                if (!showDetails) ...[
+                  SizedBox(height: screenHeight * 0.02),
+                  Text(
+                    'You can now navigate to this building using the button below.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _detailRow('Name', data['name']),
-                      _detailRow('Description', data['description']),
-                      _detailRow(
-                        'Latitude',
-                        data['location']?['latitude']?.toString(),
-                      ),
-                      _detailRow(
-                        'Longitude',
-                        data['location']?['longitude']?.toString(),
-                      ),
-                      _detailRow('Opening Hours', data['openingHours']),
-                      _detailRow('MTN Number', data['mtnNumber']),
-                      _detailRow('Airtel Number', data['airtelNumber']),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailsTab() {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final textScaler = MediaQuery.textScalerOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Location',
-          style: TextStyle(
-            fontSize: textScaler.scale(16),
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Poppins',
-          ),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-        Text(
-          'Latitude: ${widget.building.location.latitude}',
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontFamily: 'Poppins',
-          ),
-        ),
-        Text(
-          'Longitude: ${widget.building.location.longitude}',
-          style: TextStyle(
-            fontSize: textScaler.scale(14),
-            fontFamily: 'Poppins',
-          ),
-        ),
-        if (widget.building.otherNames != null &&
-            widget.building.otherNames!.isNotEmpty) ...[
-          SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-          Text(
-            'Other Names',
-            style: TextStyle(
-              fontSize: textScaler.scale(16),
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Poppins',
+                ],
+              ],
             ),
           ),
-          ...widget.building.otherNames!.map(
-            (name) => Text(
-              '- $name',
-              style: TextStyle(
-                fontSize: textScaler.scale(14),
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
-        ],
-        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: textScaler.scale(14),
-              color: Colors.grey[600],
-            ),
-            SizedBox(width: screenWidth * 0.01),
-            Text(
-              'Location permission required',
-              style: TextStyle(
-                fontSize: textScaler.scale(12),
-                color: Colors.grey[600],
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -1855,18 +1880,6 @@ class _BuildingBottomSheetContentState
       });
       if (!mounted) return;
       Navigator.pop(context);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NavigationScreen(
-            destination: LatLng(
-              widget.building.location.latitude,
-              widget.building.location.longitude,
-            ),
-            destinationName: widget.building.name,
-          ),
-        ),
-      );
       widget.onDirectionsTap();
     } catch (e) {
       setState(() {
@@ -1961,22 +1974,6 @@ class _BuildingBottomSheetContentState
     );
   }
 
-  Future<List<String>> _fetchBuildingImages(String buildingId) async {
-    final doc = await FirebaseFirestore.instance
-        .collection('buildings')
-        .doc(buildingId)
-        .get();
-    if (doc.exists && doc.data() != null && doc.data()!['images'] != null) {
-      final images = List<String>.from(doc.data()!['images']);
-      // Ensure exactly 3 images (pad with empty strings if needed)
-      while (images.length < 3) {
-        images.add('');
-      }
-      return images.take(3).toList();
-    }
-    return ['', '', ''];
-  }
-
   Widget _detailRow(String label, String? value) {
     final textScaler = MediaQuery.textScalerOf(context);
     return Padding(
@@ -1988,7 +1985,7 @@ class _BuildingBottomSheetContentState
             child: Text(
               label,
               style: TextStyle(
-                fontSize: textScaler.scale(14),
+                fontSize: textScaler.scale(15),
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Poppins',
                 color: Colors.black87,
@@ -2001,8 +1998,9 @@ class _BuildingBottomSheetContentState
             child: Text(
               value ?? 'N/A',
               style: TextStyle(
-                fontSize: textScaler.scale(14),
+                fontSize: textScaler.scale(13),
                 fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
                 color: Colors.black54,
               ),
               textAlign: TextAlign.end,

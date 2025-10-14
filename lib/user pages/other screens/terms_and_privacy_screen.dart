@@ -1,5 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:url_launcher/url_launcher.dart';
 
 class TermsAndPrivacyScreen extends StatefulWidget {
   const TermsAndPrivacyScreen({super.key});
@@ -9,6 +11,21 @@ class TermsAndPrivacyScreen extends StatefulWidget {
 }
 
 class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
+  // Function to launch email client with preloaded email address
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open email client')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -255,7 +272,7 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                           ),
                           SizedBox(height: screenHeight * 0.01),
                           Text(
-                            'Use of Google Maps, Firebase, or other tools\nLinks to their own terms (optional)',
+                            'Use of Maps, Firebase, or other tools',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,
@@ -296,7 +313,12 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                                   text: 'alvin69david@gmail.com',
                                   style: TextStyle(
                                     color: Color.fromARGB(255, 20, 111, 36),
+                                    decoration: TextDecoration.underline,
                                   ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      _launchEmail('alvin69david@gmail.com');
+                                    },
                                 ),
                               ],
                             ),

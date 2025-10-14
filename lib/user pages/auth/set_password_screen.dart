@@ -287,7 +287,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       top: 0,
                       right: -screenWidth * 0.1,
                       child: Image.asset(
-                        'assets/vectors/circular.png',
+                        'assets/vectors/zigzag.png',
                         width: screenWidth * 0.3,
                         height: screenWidth * 0.3,
                         fit: BoxFit.contain,
@@ -302,7 +302,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       bottom: 0,
                       left: -screenWidth * 0.15,
                       child: Image.asset(
-                        'assets/vectors/circular.png',
+                        'assets/vectors/zigzag2.png',
                         width: screenWidth * 0.3,
                         height: screenWidth * 0.3,
                         fit: BoxFit.contain,
