@@ -14,7 +14,8 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
   String _userFullName = 'User';
   String? _profilePicUrl;
   bool _isMenuVisible = false;
@@ -100,13 +101,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
         print('Notification permissions not granted');
         if (mounted) {
-          _showCustomSnackBar('Please enable notifications for updates', Colors.orange);
+          _showCustomSnackBar(
+            'Please enable notifications for updates',
+            Colors.orange,
+          );
         }
       }
     } catch (e) {
       print('Error requesting notification permissions: $e');
       if (mounted) {
-        _showCustomSnackBar('Error requesting notification permissions: $e', Colors.red);
+        _showCustomSnackBar(
+          'Error requesting notification permissions: $e',
+          Colors.red,
+        );
       }
     }
   }
@@ -482,11 +489,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseAuth.instance.currentUser != null
                       ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(FirebaseAuth.instance.currentUser!.uid)
-                          .collection('user_notifications')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots()
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser!.uid)
+                            .collection('user_notifications')
+                            .orderBy('timestamp', descending: true)
+                            .snapshots()
                       : Stream.empty(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -494,10 +501,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                     }
                     if (snapshot.hasError) {
                       String errorMessage = 'Error loading notifications';
-                      if (snapshot.error.toString().contains('permission-denied')) {
-                        errorMessage = 'Permission denied. Please sign in again.';
-                      } else if (snapshot.error.toString().contains('network')) {
-                        errorMessage = 'Network error. Please check your connection.';
+                      if (snapshot.error.toString().contains(
+                        'permission-denied',
+                      )) {
+                        errorMessage =
+                            'Permission denied. Please sign in again.';
+                      } else if (snapshot.error.toString().contains(
+                        'network',
+                      )) {
+                        errorMessage =
+                            'Network error. Please check your connection.';
                       }
                       return Center(
                         child: Text(
@@ -549,25 +562,34 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
 
                     return ListView.builder(
                       padding: EdgeInsets.symmetric(
-                          vertical: screenHeight * 0.02,
-                          horizontal: screenWidth * 0.02
-                          ), // Removed horizontal padding
+                        vertical: screenHeight * 0.02,
+                        horizontal: screenWidth * 0.02,
+                      ), // Removed horizontal padding
                       itemCount: notifications.length,
                       itemBuilder: (context, index) {
                         final doc = notifications[index];
                         final data = doc.data() as Map<String, dynamic>;
-                        final adminReply = data['adminReply'] as String? ?? 'No reply';
-                        final issueTitle = data['issueTitle'] as String? ?? 'No title';
-                        final timestamp = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
-                        final formattedTime = DateFormat('MMM d, yyyy h:mm a').format(timestamp);
+                        final adminReply =
+                            data['adminReply'] as String? ?? 'No reply';
+                        final issueTitle =
+                            data['issueTitle'] as String? ?? 'No title';
+                        final timestamp =
+                            (data['timestamp'] as Timestamp?)?.toDate() ??
+                            DateTime.now();
+                        final formattedTime = DateFormat(
+                          'MMM d, yyyy h:mm a',
+                        ).format(timestamp);
                         final notificationId = doc.id;
 
                         return Dismissible(
                           key: Key(notificationId),
-                          direction: DismissDirection.startToEnd, // Swipe left to delete
+                          direction: DismissDirection
+                              .startToEnd, // Swipe left to delete
                           background: Container(
                             alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.only(left: 4), // Match notification padding
+                            padding: const EdgeInsets.only(
+                              left: 4,
+                            ), // Match notification padding
                             color: Colors.red,
                             child: const Icon(
                               Icons.delete,
@@ -579,15 +601,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Delete Notification'),
-                                content: const Text('Are you sure you want to delete this notification?'),
+                                content: const Text(
+                                  'Are you sure you want to delete this notification?',
+                                ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.of(context).pop(false),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
                                     child: const Text('Cancel'),
                                   ),
                                   TextButton(
-                                    onPressed: () => Navigator.of(context).pop(true),
-                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -597,8 +626,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                             _deleteNotification(notificationId);
                           },
                           child: Container(
-                            margin: EdgeInsets.only(bottom: screenHeight * 0.02),
-                            padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 16), // 4px horizontal padding
+                            margin: EdgeInsets.only(
+                              bottom: screenHeight * 0.02,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 60,
+                              vertical: 16,
+                            ), // 4px horizontal padding
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(16),
@@ -618,9 +652,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                filter: ImageFilter.blur(
+                                  sigmaX: 10,
+                                  sigmaY: 10,
+                                ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     SizedBox(height: screenHeight * 0.005),
                                     Text(
@@ -718,15 +756,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                                             width: screenWidth * 0.14,
                                             height: screenWidth * 0.14,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) => Icon(
-                                              Icons.person,
-                                              color: Colors.black.withOpacity(0.8),
-                                              size: screenWidth * 0.07,
-                                            ),
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Icon(
+                                                      Icons.person,
+                                                      color: Colors.black
+                                                          .withOpacity(0.8),
+                                                      size: screenWidth * 0.07,
+                                                    ),
                                           )
                                         : Icon(
                                             Icons.person,
-                                            color: Colors.black.withOpacity(0.8),
+                                            color: Colors.black.withOpacity(
+                                              0.8,
+                                            ),
                                             size: screenWidth * 0.07,
                                           ),
                                   ),
@@ -768,7 +811,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/HomeScreen'),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/HomeScreen'),
                               child: Row(
                                 children: [
                                   Icon(
@@ -797,7 +841,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/ProfileScreen'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/ProfileScreen',
+                              ),
                               child: Row(
                                 children: [
                                   Icon(
@@ -826,7 +873,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                               top: screenHeight * 0.02,
                             ),
                             child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/NotificationsScreen'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/NotificationsScreen',
+                              ),
                               child: Row(
                                 children: [
                                   Icon(
@@ -850,33 +900,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
                           ),
                           SizedBox(height: screenHeight * 0.02),
                           Padding(
-                            padding: EdgeInsets.only(
-                              left: screenWidth * 0.03,
-                              top: screenHeight * 0.02,
-                            ),
-                            child: GestureDetector(
-                              onTap: () => Navigator.pushNamed(context, '/LocationSelectScreen'),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    color: Colors.black,
-                                    size: textScaler.scale(20),
-                                  ),
-                                  SizedBox(width: screenWidth * 0.02),
-                                  Text(
-                                    'Search Locations',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: textScaler.scale(14),
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: 'Urbanist',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        padding: EdgeInsets.only(
+                          left: screenWidth * 0.03,
+                          top: screenHeight * 0.02,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/LocationSelectScreen',
                           ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.black,
+                                size: textScaler.scale(20),
+                              ),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                'Search Locations',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: textScaler.scale(14),
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                           SizedBox(height: screenHeight * 0.02),
                           Padding(
                             padding: EdgeInsets.only(

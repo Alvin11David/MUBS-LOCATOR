@@ -186,7 +186,7 @@ class MyApp extends StatelessWidget {
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
         '/HomeScreen': (context) => const HomeScreen(),
-        '/LocationSelectScreen': (context) => const LocationSelectScreen(),
+        '/LocationSelectScreen': (context) =>  LocationSelectScreen(onDirectionsTap: () {  },),
         '/FeedbackScreen': (context) => const FeedbackScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
         '/Terms&PrivacyScreen': (context) => const TermsAndPrivacyScreen(),

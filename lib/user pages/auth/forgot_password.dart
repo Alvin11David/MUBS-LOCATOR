@@ -218,13 +218,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     SingleChildScrollView(
                       physics: const ClampingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.04,
+                        vertical: screenHeight * 0.00,
                         horizontal: screenWidth * 0.05,
                       ),
                       child: Column(
                         children: [
                           Container(
-                            margin: EdgeInsets.only(top: screenHeight * 0.02),
+                            margin: EdgeInsets.only(top: screenHeight * 0.01),
                             width: 80,
                             height: 80,
                             decoration: const BoxDecoration(
@@ -237,7 +237,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               size: 50,
                             ),
                           ),
-                          SizedBox(height: screenHeight * 0.04),
+                          SizedBox(height: screenHeight * 0.02),
                           SizedBox(
                             width: screenWidth * 0.8,
                             child: Text(
@@ -269,7 +269,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(height: screenHeight * 0.06),
+                          SizedBox(height: screenHeight * 0.02),
                           Container(
                             width: screenWidth * 0.9,
                             padding: EdgeInsets.symmetric(

@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AddPlaceScreen extends StatefulWidget {
   const AddPlaceScreen({super.key});
@@ -18,6 +17,7 @@ class AddPlaceScreen extends StatefulWidget {
 
 class _AddPlaceScreenState extends State<AddPlaceScreen> {
   String? _profilePicUrl;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -228,6 +228,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       // Create Firestore document
       final docRef = FirebaseFirestore.instance.collection('buildings').doc();
@@ -249,8 +253,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
       await docRef.set({
         'name': _buildingNameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'latitude': _selectedLocation.latitude,
+        'location': {
+          'latitude': _selectedLocation.latitude,
         'longitude': _selectedLocation.longitude,
+        },
         'openingHours': _openingHoursEntries.map((entry) {
           return {
             'days': entry['days'],
@@ -854,7 +860,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                   horizontal: screenWidth * 0.04,
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: _saveLocation,
+                                  onPressed: _isLoading ? null : _saveLocation,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF93C5FD),
                                     shape: RoundedRectangleBorder(
@@ -869,30 +875,44 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                       0xFF93C5FD,
                                     ).withOpacity(0.5),
                                   ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(30),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF93C5FD,
-                                          ).withOpacity(0.4),
-                                          blurRadius: 10,
-                                          spreadRadius: 2,
-                                          offset: const Offset(0, 2),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                            strokeWidth: 3,
+                                          ),
+                                        )
+                                      : Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF93C5FD,
+                                                ).withOpacity(0.4),
+                                                blurRadius: 10,
+                                                spreadRadius: 2,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Text(
+                                            'Add Location',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: screenWidth * 0.045,
+                                            ),
+                                          ),
                                         ),
-                                      ],
-                                    ),
-                                    child: Text(
-                                      'Add Location',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: screenWidth * 0.045,
-                                      ),
-                                    ),
-                                  ),
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.04),
