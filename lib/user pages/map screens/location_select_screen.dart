@@ -14,7 +14,7 @@ import 'package:geolocator/geolocator.dart';
 
 class LocationSelectScreen extends StatefulWidget {
   final VoidCallback onDirectionsTap;
-  const LocationSelectScreen({Key? key, required this.onDirectionsTap}) : super(key: key);
+  const LocationSelectScreen({super.key, required this.onDirectionsTap});
 
   @override
   State<LocationSelectScreen> createState() => _LocationSelectScreenState();

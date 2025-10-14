@@ -965,7 +965,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final buildings = querySnapshot.docs
                             .map(
                               (doc) => Building.fromFirestore(
-                                doc.data() as Map<String, dynamic>,
+                                doc.data(),
                                 doc.id,
                               ),
                             )
@@ -1705,7 +1705,7 @@ class _BuildingBottomSheetContentState
                           // First image (large, left)
                           Expanded(
                             flex: 2,
-                            child: Container(
+                            child: SizedBox(
                               height: screenHeight * 0.30,
                               child: buildImage(
                                 imageUrls.isNotEmpty ? imageUrls[0] : null,
@@ -1728,7 +1728,7 @@ class _BuildingBottomSheetContentState
                                     12, // Smaller radius for column images
                                   ),
                                 ),
-                                Container(
+                                SizedBox(
                                   height: (screenHeight * 0.22 - 3) / 1.5,
                                   width: (screenWidth * 0.34),
                                   child: buildImage(

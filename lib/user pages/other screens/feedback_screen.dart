@@ -292,6 +292,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
         // Add feedback document
         await FirebaseFirestore.instance.collection('feedback').add({
           'userEmail': user.email,
+          'userName': _userFullName,
           'feedbackText': _feedbackController.text.trim(),
           'rating': _selectedRating,
           'read': false,
