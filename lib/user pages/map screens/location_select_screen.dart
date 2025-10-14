@@ -113,8 +113,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         _isCheckingPermissions = false;
       });
       if (!mounted) return;
-      Navigator.pop(context);
-      widget.onDirectionsTap();
+      onDirectionsTap();
     } catch (e) {
       setState(() {
         _isCheckingPermissions = false;
