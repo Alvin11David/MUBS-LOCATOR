@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
@@ -23,6 +24,8 @@ class _FeedbackScreenState extends State<FeedbackScreen>
   int _selectedRating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+  bool _isBottomNavVisible = false;
 
   @override
   void initState() {
@@ -412,12 +415,12 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                                 '${_getGreeting()}, $_userFullName',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(
-                                    screenWidth * 0.045,
-                                  ),
+                                  fontSize: textScaler.scale(13),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const Spacer(),
                               Padding(
@@ -728,6 +731,64 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                   ),
                 ),
               ),
+              // Rectangle handle to show navbar
+          if (!_isBottomNavVisible)
+            Positioned(
+              bottom: screenHeight * 0.03,
+              left: screenWidth * 0.04,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isBottomNavVisible = true;
+                  });
+                },
+                child: Container(
+                  width: screenWidth * 0.13,
+                  height: screenHeight * 0.025,
+                  decoration: BoxDecoration(
+                    color: Colors.blue[300],
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.menu,
+                      color: Colors.white,
+                      size: textScaler.scale(18),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Animated BottomNavBar
+          AnimatedPositioned(
+            duration: Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            left: 0,
+            right: 0,
+            bottom: _isBottomNavVisible ? 0 : -screenHeight * 0.12,
+            child: GestureDetector(
+              onVerticalDragEnd: (details) {
+                if (details.primaryVelocity != null &&
+                    details.primaryVelocity! > 0) {
+                  // Swipe down to hide navbar
+                  setState(() {
+                    _isBottomNavVisible = false;
+                  });
+                }
+              },
+              child: BottomNavBar(
+                initialIndex: 2, // or your preferred index
+              ),
+            ),
+          ),
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
