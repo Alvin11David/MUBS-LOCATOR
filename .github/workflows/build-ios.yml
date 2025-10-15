@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. Checkout repo
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -18,7 +18,11 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'  # replace with your Flutter version
+          flutter-version: '3.13.0'  # ensure Dart >= 3.8.1
+
+      # 2a. Precache Flutter iOS artifacts
+      - name: Precache Flutter iOS
+        run: flutter precache --ios
 
       # 3. Install signing certificate
       - name: Install signing certificate
@@ -49,7 +53,7 @@ jobs:
       - name: Build Flutter iOS
         run: flutter build ios --release --no-codesign
 
-      # 6. Build Xcode archive
+      # 6. Archive iOS app with Xcode
       - name: Archive iOS app
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
