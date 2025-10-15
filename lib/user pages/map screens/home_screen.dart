@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _profileImage;
   bool _isLoggingOut = false;
   bool _isBottomNavVisible = false;
-  String? _profilePicUrl; // Add this to your _HomeScreenState
+  String? _profilePicUrl;
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -62,15 +62,25 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   StreamSubscription<Position>? _positionStream;
 
+  BitmapDescriptor? smallMarkerIcon;
+
   @override
   void initState() {
     super.initState();
+    BitmapDescriptor.fromAssetImage(
+      ImageConfiguration(size: Size(40, 40)), // Small size
+      'assets/markers/small_marker.png',
+    ).then((icon) {
+      setState(() {
+        smallMarkerIcon = icon;
+      });
+    });
     updateLastActiveTimestamp();
     fetchAllData();
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
-    _listenToLocationChanges();
+    //_listenToLocationChanges();
   }
 
   Widget _detailRow(String label, String? value) {
@@ -303,7 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Marker> processBuildings(List<Building> buildings) {
     return buildings.map((element) {
-      print("📍 Adding marker for: ${element.name} at ${element.location.latitude}, ${element.location.longitude}");
+      print(
+        "📍 Adding marker for: ${element.name} at ${element.location.latitude}, ${element.location.longitude}",
+      );
       return Marker(
         markerId: MarkerId(element.id),
         position: LatLng(element.location.latitude, element.location.longitude),
@@ -311,7 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
           title: element.name,
           snippet: element.description,
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon:
+            smallMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         onTap: () {
           _showBuildingBottomSheet(context, buildingName: element.name);
         },
@@ -528,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, scrollController) {
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withOpacity(0.07),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -892,6 +906,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   tiltGesturesEnabled: true,
                   rotateGesturesEnabled: true,
                 ),
+                ...fetchedBuildings.map((building) {
+                  if (mapController == null) return SizedBox.shrink();
+                  return FutureBuilder<ScreenCoordinate>(
+                    future: mapController!.getScreenCoordinate(
+                      LatLng(
+                        building.location.latitude,
+                        building.location.longitude,
+                      ),
+                    ),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return SizedBox.shrink();
+                      final screenCoordinate = snapshot.data!;
+                      return Positioned(
+                        left: screenCoordinate.x.toDouble() + 24,
+                        top: screenCoordinate.y.toDouble() - 12,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            building.name,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
                 Positioned(
                   top: screenHeight * 0.02,
                   left: screenWidth * 0.04,
@@ -965,10 +1023,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final buildings = querySnapshot.docs
                             .map(
-                              (doc) => Building.fromFirestore(
-                                doc.data(),
-                                doc.id,
-                              ),
+                              (doc) =>
+                                  Building.fromFirestore(doc.data(), doc.id),
                             )
                             .toList();
 
@@ -1589,19 +1645,6 @@ class _BuildingBottomSheetContentState
                             fontFamily: 'Poppins',
                           ),
                         ),
-                      ),
-                    ),
-                    SizedBox(width: screenWidth * 0.01),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        margin: EdgeInsets.only(right: 2, top: 2),
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.close, color: Colors.white, size: 28),
                       ),
                     ),
                   ],
