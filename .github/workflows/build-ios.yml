@@ -14,39 +14,56 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Optional: Select Xcode version (uncomment if needed)
-      # You can check available versions on GitHub macOS runners
-      # - name: List available Xcode versions
-      #   run: ls /Applications | grep Xcode
-      #
+      # 2. Optional: Select Xcode version
+      # GitHub macOS runners usually have latest Xcode preinstalled
+      # Uncomment and set the version if needed
       # - name: Select Xcode version
       #   run: sudo xcode-select -s /Applications/Xcode_15.2.app
 
-      # 3. Install signing certificate from GitHub Secrets
+      # 3. Install signing certificate
       - name: Install signing certificate
+        env:
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          CERT_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
         run: |
-          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          # Decode base64 certificate to .p12 file
+          echo "$CERT_BASE64" | base64 --decode > certificate.p12
+
+          # Create and unlock a temporary keychain
           security create-keychain -p "" build.keychain
-          security import certificate.p12 -k ~/Library/Keychains/build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings build.keychain
+
+          # Import the certificate into the keychain
+          security import certificate.p12 \
+            -k ~/Library/Keychains/build.keychain \
+            -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+
+          # Add the keychain to search path and set as default
           security list-keychains -s ~/Library/Keychains/build.keychain
           security default-keychain -s ~/Library/Keychains/build.keychain
-          security unlock-keychain -p "" ~/Library/Keychains/build.keychain
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" ~/Library/Keychains/build.keychain
 
-      # 4. Install provisioning profile from GitHub Secrets
+      # 4. Install provisioning profile
       - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+          echo "$PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
-      # 5. Install dependencies (CocoaPods)
-      - name: Install CocoaPods dependencies
+      # 5. Install CocoaPods dependencies
+      - name: Install CocoaPods
         run: |
           cd ios
           pod install --repo-update
 
       # 6. Build iOS archive
       - name: Build iOS archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
+          PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
         run: |
           xcodebuild \
             -workspace ios/YourApp.xcworkspace \
@@ -57,7 +74,7 @@ jobs:
             DEVELOPMENT_TEAM=$APPLE_TEAM_ID \
             PRODUCT_BUNDLE_IDENTIFIER=$APPLE_BUNDLE_ID \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$APPLE_PROVISIONING_PROFILE_NAME"
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
 
       # 7. Export IPA
       - name: Export IPA
@@ -68,7 +85,7 @@ jobs:
             -exportPath $PWD/build
 
       # 8. Upload IPA artifact
-      - name: Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
