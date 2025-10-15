@@ -216,7 +216,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
           context,
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
-        _showCustomSnackBar('Logout successful', Colors.green);
+        
       }
     } catch (e) {
       if (mounted) {

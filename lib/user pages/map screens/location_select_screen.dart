@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'dart:ui';
 import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';

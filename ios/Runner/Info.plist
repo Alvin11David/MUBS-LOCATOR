@@ -49,6 +49,8 @@
     <string>This app needs access to location for navigation.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>This app needs access to location for navigation.</string>
+    <key>NSUserNotificationUsageDescription</key>
+    <string>This app needs notification access to send you updates.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>remote-notification</string>

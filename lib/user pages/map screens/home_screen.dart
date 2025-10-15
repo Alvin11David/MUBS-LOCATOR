@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
-import 'package:string_similarity/string_similarity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -304,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Marker> processBuildings(List<Building> buildings) {
     return buildings.map((element) {
+      print("📍 Adding marker for: ${element.name} at ${element.location.latitude}, ${element.location.longitude}");
       return Marker(
         markerId: MarkerId(element.id),
         position: LatLng(element.location.latitude, element.location.longitude),
@@ -387,14 +387,15 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
-      final processedMarkers = await compute(processBuildings, buildings);
+      print("✅ Fetched buildings: ${buildings.length}");
+      final processedMarkers = processBuildings(buildings);
       if (mounted) {
         setState(() {
           fetchedBuildings.addAll(buildings);
           markers.addAll(processedMarkers);
         });
       }
-      print("✅ Successfully fetched ${buildings.length} buildings.");
+      print("✅ Markers added: ${processedMarkers.length}");
     } catch (e, stackTrace) {
       print("❌ Failed to fetch buildings: $e");
       print(stackTrace);
@@ -1381,7 +1382,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!_isBottomNavVisible)
             Positioned(
               bottom: screenHeight * 0.03,
-              right: screenWidth * 0.04,
+              left: screenWidth * 0.04,
               child: GestureDetector(
                 onTap: () {
                   setState(() {
