@@ -61,12 +61,25 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     );
     final destinationName = _selectedToLocation!.name;
 
+    // If the user selected a Start building, send its coordinates as origin.
+    LatLng? origin;
+    String? originName;
+    if (_selectedFromLocation != null) {
+      origin = LatLng(
+        _selectedFromLocation!.location.latitude,
+        _selectedFromLocation!.location.longitude,
+      );
+      originName = _selectedFromLocation!.name;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NavigationScreen(
           destination: destinationLatLng,
           destinationName: destinationName,
+          origin: origin,
+          originName: originName,
         ),
       ),
     );
@@ -77,41 +90,48 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
       _isCheckingPermissions = true;
     });
     try {
-      final hasPermission = await _navigationService
-          .checkAndRequestLocationPermission();
-      if (!hasPermission) {
-        setState(() {
-          _isCheckingPermissions = false;
-        });
-        if (!mounted) return;
-        _showPermissionDialog();
-        return;
-      }
-      final currentLocation = await _navigationService.getCurrentLocation();
-      if (currentLocation == null) {
-        setState(() {
-          _isCheckingPermissions = false;
-        });
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Unable to get your location. Please check your GPS settings.',
+      // Only request device location if user DID NOT select a start building.
+      if (_selectedFromLocation == null) {
+        final hasPermission =
+            await _navigationService.checkAndRequestLocationPermission();
+        if (!hasPermission) {
+          setState(() {
+            _isCheckingPermissions = false;
+          });
+          if (!mounted) return;
+          _showPermissionDialog();
+          return;
+        }
+
+        final currentLocation = await _navigationService.getCurrentLocation();
+        if (currentLocation == null) {
+          setState(() {
+            _isCheckingPermissions = false;
+          });
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Unable to get your location. Please check your GPS settings.',
+              ),
             ),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
-        return;
+          );
+          return;
+        }
+        // update local _currentLocation only when we actually fetched it
+        setState(() {
+          _currentLocation =
+              LatLng(currentLocation.latitude, currentLocation.longitude);
+        });
       }
+
       setState(() {
         _isCheckingPermissions = false;
       });
       if (!mounted) return;
+
+      // proceed to navigate (onDirectionsTap will use selected start if present,
+      // otherwise NavigationScreen will receive null origin and use device location)
       onDirectionsTap();
     } catch (e) {
       setState(() {

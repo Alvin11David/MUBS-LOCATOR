@@ -21,7 +21,7 @@ class NavigationService extends GetxController {
   final RxString errorMessage = ''.obs;
 
   // Google Maps API key - REPLACE WITH YOUR ACTUAL KEY
-  final String _googleMapsApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
+  final String _googleMapsApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
 
   StreamSubscription<Position>? _positionStreamSubscription;
   LatLng? _destination;
@@ -29,7 +29,6 @@ class NavigationService extends GetxController {
   // Constants for navigation
   static const double _stepCompletionThreshold = 20.0; // meters
   static const double _routeDeviationThreshold = 50.0; // meters
-  static const int _locationUpdateInterval = 3000; // milliseconds
 
   @override
   void onClose() {
@@ -154,7 +153,7 @@ class NavigationService extends GetxController {
   }
 
   /// Start navigation with real-time location tracking
-  Future<void> startNavigation(LatLng destination) async {
+  Future<void> startNavigation(LatLng destination, {LatLng? origin, bool startTracking = false}) async {
     try {
       // Get current location
       final position = await getCurrentLocation();
