@@ -14,13 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Flutter
+      # 2. Set up Flutter (stable channel, version 3.13.0)
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'  # ensure Dart >= 3.8.1
+          flutter-version: '3.13.0'
+          channel: 'stable'
 
-      # 2a. Precache Flutter iOS artifacts
+      # 2a. Verify Flutter & Dart version
+      - name: Verify Flutter version
+        run: flutter --version
+
+      # 2b. Precache Flutter iOS artifacts
       - name: Precache Flutter iOS
         run: flutter precache --ios
 
