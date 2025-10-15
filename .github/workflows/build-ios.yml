@@ -1,4 +1,3 @@
-
 name: iOS Build
 
 on:
@@ -11,15 +10,19 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. Checkout repo
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Select Xcode
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_15.0.1.app
+      # 2. Optional: Select Xcode version (uncomment if needed)
+      # You can check available versions on GitHub macOS runners
+      # - name: List available Xcode versions
+      #   run: ls /Applications | grep Xcode
+      #
+      # - name: Select Xcode version
+      #   run: sudo xcode-select -s /Applications/Xcode_15.2.app
 
-      # 3. Install certificate from GitHub Secrets
+      # 3. Install signing certificate from GitHub Secrets
       - name: Install signing certificate
         run: |
           echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
@@ -36,13 +39,13 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
-      # 5. Install dependencies (skip if no CocoaPods)
-      - name: Install dependencies
+      # 5. Install dependencies (CocoaPods)
+      - name: Install CocoaPods dependencies
         run: |
           cd ios
           pod install --repo-update
 
-      # 6. Build archive
+      # 6. Build iOS archive
       - name: Build iOS archive
         run: |
           xcodebuild \
@@ -52,7 +55,9 @@ jobs:
             -configuration Release \
             -archivePath $PWD/build/YourApp.xcarchive archive \
             DEVELOPMENT_TEAM=$APPLE_TEAM_ID \
-            PRODUCT_BUNDLE_IDENTIFIER=$APPLE_BUNDLE_ID
+            PRODUCT_BUNDLE_IDENTIFIER=$APPLE_BUNDLE_ID \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$APPLE_PROVISIONING_PROFILE_NAME"
 
       # 7. Export IPA
       - name: Export IPA
@@ -62,7 +67,7 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath $PWD/build
 
-      # 8. Upload artifact (IPA file)
+      # 8. Upload IPA artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
