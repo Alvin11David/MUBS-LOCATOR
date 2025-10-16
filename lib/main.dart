@@ -66,7 +66,9 @@ Future<void> main() async {
     );
     final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
     // Set up FCM background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -151,10 +153,9 @@ Future<void> _saveFcmToken() async {
     if (user != null) {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({'fcmToken': token}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fcmToken': token,
+        }, SetOptions(merge: true));
         print('FCM Token saved: $token');
       }
     }
@@ -174,7 +175,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      navigatorKey: navigatorKey, // Add navigatorKey for notification navigation
+      navigatorKey:
+          navigatorKey, // Add navigatorKey for notification navigation
       home: const SplashScreen(),
       initialRoute: '/SplashScreen',
       routes: {
@@ -186,7 +188,16 @@ class MyApp extends StatelessWidget {
         '/SignUpScreen': (context) => const SignUpScreen(),
         '/ForgotPasswordScreen': (context) => const ForgotPasswordScreen(),
         '/HomeScreen': (context) => const HomeScreen(),
-        '/LocationSelectScreen': (context) =>  LocationSelectScreen(onDirectionsTap: () {  },),
+        '/LocationSelectScreen': (context) {
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          final String? buildingName = args?['buildingName'] as String?;
+          return LocationSelectScreen(
+            onDirectionsTap: () {},
+            initialDestinationName: buildingName,
+          );
+        },
         '/FeedbackScreen': (context) => const FeedbackScreen(),
         '/AboutScreen': (context) => const AboutScreen(),
         '/Terms&PrivacyScreen': (context) => const TermsAndPrivacyScreen(),
@@ -198,23 +209,23 @@ class MyApp extends StatelessWidget {
         '/AddPlaceScreen': (context) =>
             AdminGuard(child: const AddPlaceScreen()),
         '/EditPlaceScreen': (context) => AdminGuard(
-              child: EditPlaceScreen(
-                buildingId:
-                    (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
-              ),
-            ),
+          child: EditPlaceScreen(
+            buildingId:
+                (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+          ),
+        ),
         '/FeedbackListScreen': (context) =>
             AdminGuard(child: const FeedbackListScreen()),
         '/SendNotificationsScreen': (context) =>
             AdminGuard(child: const SendNotificationScreen()),
         '/FeedbackDetailsScreen': (context) => FeedbackDetailsScreen(
-              feedbackId:
-                  (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
-            ),
+          feedbackId:
+              (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+        ),
         '/ProfileScreen': (context) => const ProfileScreen(),
         '/ResetPasswordScreen': (context) => ResetPasswordScreen(
-              email: (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
-            ),
+          email: (ModalRoute.of(context)!.settings.arguments as String?) ?? '',
+        ),
         '/NotificationsScreen': (context) => const NotificationsScreen(),
       },
       onGenerateRoute: (settings) {

@@ -560,7 +560,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _BuildingBottomSheetContent(
                     buildingName: buildingName,
                     scrollController: scrollController,
-                    onDirectionsTap: () {},
+                    onDirectionsTap: () {
+                       Navigator.pop(context);
+                       Navigator.pushNamed(
+                         context,
+                         '/LocationSelectScreen',
+                         arguments: {'buildingName': buildingName},
+                       );
+                     },
                     onFeedbackSubmit: (a, b, c) {},
                   ),
                   Positioned(
@@ -1092,8 +1099,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               buildingName: suggestion.name,
                               scrollController: ScrollController(),
                               onDirectionsTap: () {
-                                // Add your navigation logic here
-                              },
+                                 Navigator.pop(context);
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/LocationSelectScreen',
+                                   arguments: {'buildingName': suggestion.name},
+                                  );
+                                },
                               onFeedbackSubmit:
                                   (issueType, issueTitle, description) {
                                     // Add your feedback logic here

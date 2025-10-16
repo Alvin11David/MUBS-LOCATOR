@@ -13,7 +13,8 @@ import 'package:geolocator/geolocator.dart';
 
 class LocationSelectScreen extends StatefulWidget {
   final VoidCallback onDirectionsTap;
-  const LocationSelectScreen({super.key, required this.onDirectionsTap});
+  final String? initialDestinationName;
+  const LocationSelectScreen({super.key, required this.onDirectionsTap, this.initialDestinationName});
 
   @override
   State<LocationSelectScreen> createState() => _LocationSelectScreenState();
@@ -240,6 +241,47 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
 
   Future<void> _initializeData() async {
     await Future.wait([_fetchBuildings(), _getCurrentLocation()]);
+    _applyInitialDestination();
+  }
+
+  void _applyInitialDestination() {
+    final name = widget.initialDestinationName;
+    if (name == null || name.trim().isEmpty) return;
+    if (fetchedBuildings.isEmpty) return;
+
+    Building? matched;
+
+    // try exact match first
+    for (var b in fetchedBuildings) {
+      if (b.name.toLowerCase() == name.toLowerCase()) {
+        matched = b;
+        break;
+      }
+    }
+
+    // fallback to partial match
+    if (matched == null) {
+      for (var b in fetchedBuildings) {
+        if (b.name.toLowerCase().contains(name.toLowerCase())) {
+          matched = b;
+          break;
+        }
+      }
+    }
+
+    if (matched != null) {
+      _selectedToLocation = matched;
+      _toController.text = matched.name;
+      // animate map to destination if map ready
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(
+            LatLng(matched.location.latitude, matched.location.longitude),
+          ),
+        );
+      }
+      setState(() {});
+    }
   }
 
   Future<void> _fetchBuildings() async {
