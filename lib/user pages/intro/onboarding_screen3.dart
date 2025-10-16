@@ -70,17 +70,19 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
               double screenWidth = constraints.maxWidth;
               double screenHeight = constraints.maxHeight;
 
-              final Animation<double> indicatorAnimation = Tween<double>(
-                begin: screenWidth * 0.04,
-                end: screenWidth * 0.06,
-              ).animate(
-                CurvedAnimation(
-                  parent: _indicatorController,
-                  curve: Curves.easeInOut,
-                ),
-              )..addListener(() {
-                  setState(() {});
-                });
+              final Animation<double> indicatorAnimation =
+                  Tween<double>(
+                      begin: screenWidth * 0.04,
+                      end: screenWidth * 0.06,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _indicatorController,
+                        curve: Curves.easeInOut,
+                      ),
+                    )
+                    ..addListener(() {
+                      setState(() {});
+                    });
 
               return Stack(
                 children: [
@@ -98,14 +100,29 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                           fit: BoxFit.contain,
                         ),
                         SizedBox(width: 4),
-                        Text(
-                          'MUBS Locator',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Urbanist',
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                            Text(
+                              'lee9ine.',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                color: Colors.white,
+                                fontFamily: 'Reem Kufi',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -117,7 +134,10 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                     child: GestureDetector(
                       onTap: () async {
                         await _completeOnboarding();
-                        Navigator.pushReplacementNamed(context, '/SignInScreen');
+                        Navigator.pushReplacementNamed(
+                          context,
+                          '/SignInScreen',
+                        );
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -175,30 +195,42 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                           children: [
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
-                              width: currentPage == 1 ? indicatorAnimation.value : screenWidth * 0.04,
+                              width: currentPage == 1
+                                  ? indicatorAnimation.value
+                                  : screenWidth * 0.04,
                               height: screenHeight * 0.01,
                               decoration: BoxDecoration(
-                                color: currentPage == 1 ? Colors.white : Colors.grey,
+                                color: currentPage == 1
+                                    ? Colors.white
+                                    : Colors.grey,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
-                              width: currentPage == 2 ? indicatorAnimation.value : screenWidth * 0.04,
+                              width: currentPage == 2
+                                  ? indicatorAnimation.value
+                                  : screenWidth * 0.04,
                               height: screenHeight * 0.01,
                               decoration: BoxDecoration(
-                                color: currentPage == 2 ? Colors.white : Colors.grey,
+                                color: currentPage == 2
+                                    ? Colors.white
+                                    : Colors.grey,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             SizedBox(width: screenWidth * 0.02),
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
-                              width: currentPage == 3 ? indicatorAnimation.value : screenWidth * 0.04,
+                              width: currentPage == 3
+                                  ? indicatorAnimation.value
+                                  : screenWidth * 0.04,
                               height: screenHeight * 0.01,
                               decoration: BoxDecoration(
-                                color: currentPage == 3 ? Colors.white : Colors.grey,
+                                color: currentPage == 3
+                                    ? Colors.white
+                                    : Colors.grey,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
@@ -222,7 +254,9 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const OnboardingScreen2(),
-                                settings: const RouteSettings(name: '/OnboardingScreen2'),
+                                settings: const RouteSettings(
+                                  name: '/OnboardingScreen2',
+                                ),
                               ),
                             );
                           } else if (currentPage == 1) {
@@ -230,7 +264,9 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const OnboardingScreen1(),
-                                settings: const RouteSettings(name: '/OnboardingScreen1'),
+                                settings: const RouteSettings(
+                                  name: '/OnboardingScreen1',
+                                ),
                               ),
                             );
                           }
@@ -258,7 +294,10 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                     child: GestureDetector(
                       onTap: () async {
                         await _completeOnboarding();
-                        Navigator.pushReplacementNamed(context, '/SignInScreen');
+                        Navigator.pushReplacementNamed(
+                          context,
+                          '/SignInScreen',
+                        );
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(30),
@@ -276,7 +315,9 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Padding(
-                                  padding: EdgeInsets.only(left: screenWidth * 0.3),
+                                  padding: EdgeInsets.only(
+                                    left: screenWidth * 0.3,
+                                  ),
                                   child: Text(
                                     'Start',
                                     style: TextStyle(
@@ -293,7 +334,9 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                                       children: [
                                         for (int i = 0; i < 3; i++)
                                           Padding(
-                                            padding: EdgeInsets.only(right: screenWidth * 0.01),
+                                            padding: EdgeInsets.only(
+                                              right: screenWidth * 0.01,
+                                            ),
                                             child: Transform.scale(
                                               scale: 1.5,
                                               child: Icon(
@@ -302,7 +345,15 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                                                 color: Color.lerp(
                                                   Colors.white,
                                                   Colors.orangeAccent,
-                                                  math.sin(_animationValue.value * math.pi * 2 + i * math.pi / 3) * 0.5 + 0.5,
+                                                  math.sin(
+                                                            _animationValue
+                                                                        .value *
+                                                                    math.pi *
+                                                                    2 +
+                                                                i * math.pi / 3,
+                                                          ) *
+                                                          0.5 +
+                                                      0.5,
                                                 ),
                                               ),
                                             ),

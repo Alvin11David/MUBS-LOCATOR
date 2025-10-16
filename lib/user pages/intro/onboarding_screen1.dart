@@ -75,14 +75,30 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                           fit: BoxFit.contain,
                         ),
                         SizedBox(width: 4),
-                        Text(
-                          'MUBS Locator',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Urbanist',
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                            SizedBox(height: screenHeight * 0.005),
+                            Text(
+                              'lee9ine.',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                color: Colors.white,
+                                fontFamily: 'Reem Kufi',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -96,7 +112,9 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                         // Save onboarding completed when skipped
                         await _completeOnboarding();
                         Navigator.pushReplacementNamed(
-                            context, '/SignInScreen');
+                          context,
+                          '/SignInScreen',
+                        );
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -191,31 +209,29 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                         // Complete onboarding only after last screen (we can also save here to be safe)
                         // For now, navigating to Screen2
                         Navigator.pushReplacementNamed(
-                            context, '/OnboardingScreen2');
+                          context,
+                          '/OnboardingScreen2',
+                        );
                       },
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(30),
                         child: BackdropFilter(
-                          filter:
-                              ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             width: screenWidth * 0.76,
                             height: screenWidth * 0.15,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1,
-                              ),
+                              border: Border.all(color: Colors.white, width: 1),
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Padding(
-                                  padding:
-                                      EdgeInsets.only(left: screenWidth * 0.3),
+                                  padding: EdgeInsets.only(
+                                    left: screenWidth * 0.3,
+                                  ),
                                   child: Text(
                                     'Start',
                                     style: TextStyle(
@@ -233,7 +249,8 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                                         for (int i = 0; i < 3; i++)
                                           Padding(
                                             padding: EdgeInsets.only(
-                                                right: screenWidth * 0.02),
+                                              right: screenWidth * 0.02,
+                                            ),
                                             child: Transform.scale(
                                               scale: 1.5,
                                               child: Icon(
@@ -242,10 +259,13 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
                                                 color: Color.lerp(
                                                   Colors.white,
                                                   Colors.orange,
-                                                  math.sin(_animationValue.value *
-                                                              math.pi *
-                                                              2 +
-                                                          i * math.pi / 3) *
+                                                  math.sin(
+                                                            _animationValue
+                                                                        .value *
+                                                                    math.pi *
+                                                                    2 +
+                                                                i * math.pi / 3,
+                                                          ) *
                                                           0.5 +
                                                       0.5,
                                                 ),
