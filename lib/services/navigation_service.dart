@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
@@ -98,9 +99,10 @@ class NavigationService extends GetxController {
           'destination=${destination.latitude},${destination.longitude}&'
           'mode=walking&'
           'key=$_googleMapsApiKey';
+      print('DEBUG: Directions URL: $url');
 
       final response = await http.get(Uri.parse(url));
-
+      print('DEBUG: Directions status=${response.statusCode} body=${response.body.substring(0, math.min(1000, response.body.length))}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
@@ -127,6 +129,7 @@ class NavigationService extends GetxController {
           navigationSteps.value = (leg['steps'] as List)
               .map((step) => NavigationStep.fromJson(step))
               .toList();
+          print('DEBUG: route status=${data['status']} legs=${(data['routes'] as List).length} steps=${(leg['steps'] as List).length}');
 
           if (navigationSteps.isNotEmpty) {
             currentStep.value = navigationSteps[0];
@@ -153,21 +156,46 @@ class NavigationService extends GetxController {
   }
 
   /// Start navigation with real-time location tracking
-  Future<void> startNavigation(LatLng destination, {LatLng? origin, bool startTracking = false}) async {
+  Future<void> startNavigation(LatLng destination, {LatLng? origin, bool startTracking = true}) async {
     try {
-      // Get current location
-      final position = await getCurrentLocation();
-      if (position == null) return;
+      // Use provided origin if available, otherwise get device location
+      LatLng originLatLng;
+      if (origin != null) {
+        originLatLng = origin;
+      } else {
+        final position = await getCurrentLocation();
+        if (position == null) return;
+        originLatLng = LatLng(position.latitude, position.longitude);
+      }
 
-      final origin = LatLng(position.latitude, position.longitude);
+      // debug log to confirm origin/destination used
+      // ignore: avoid_print
+      print('DEBUG startNavigation origin=$originLatLng destination=$destination startTracking=$startTracking');
 
-      // Fetch route
-      final routeFetched = await fetchRoute(origin, destination);
+      // Fetch route using the resolved origin
+      final routeFetched = await fetchRoute(originLatLng, destination);
       if (!routeFetched) return;
 
-      // Start location tracking
+      // store destination
+      _destination = destination;
+
+      // initialize navigation state
       isNavigating.value = true;
-      _startLocationTracking();
+
+      // set initial distance to next step (if steps exist)
+      if (navigationSteps.isNotEmpty && currentStep.value != null) {
+        distanceToNextStep.value = Geolocator.distanceBetween(
+          originLatLng.latitude,
+          originLatLng.longitude,
+          currentStep.value!.endLocation.latitude,
+          currentStep.value!.endLocation.longitude,
+        );
+      }
+
+      // Start live tracking only when requested
+      if (startTracking) {
+        _startLocationTracking();
+      }
     } catch (e) {
       errorMessage.value = 'Error starting navigation: $e';
     }

@@ -89,65 +89,77 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     setState(() {
       _isCheckingPermissions = true;
     });
+
     try {
-      // Only request device location if user DID NOT select a start building.
-      if (_selectedFromLocation == null) {
+      if (_selectedToLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a destination.')),
+        );
+        setState(() => _isCheckingPermissions = false);
+        return;
+      }
+
+      // Determine origin: selected building OR device location
+      LatLng? originLatLng;
+      String? originName;
+      if (_selectedFromLocation != null &&
+          _fromController.text != "Your Current Location") {
+        originLatLng = LatLng(
+          _selectedFromLocation!.location.latitude,
+          _selectedFromLocation!.location.longitude,
+        );
+        originName = _selectedFromLocation!.name;
+      } else {
+        // need device permission/location only if start not selected
         final hasPermission =
             await _navigationService.checkAndRequestLocationPermission();
         if (!hasPermission) {
-          setState(() {
-            _isCheckingPermissions = false;
-          });
+          setState(() => _isCheckingPermissions = false);
           if (!mounted) return;
           _showPermissionDialog();
           return;
         }
-
-        final currentLocation = await _navigationService.getCurrentLocation();
-        if (currentLocation == null) {
-          setState(() {
-            _isCheckingPermissions = false;
-          });
+        final pos = await _navigationService.getCurrentLocation();
+        if (pos == null) {
+          setState(() => _isCheckingPermissions = false);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'Unable to get your location. Please check your GPS settings.',
-              ),
+              content: Text('Unable to get your location.'),
             ),
           );
           return;
         }
-        // update local _currentLocation only when we actually fetched it
-        setState(() {
-          _currentLocation =
-              LatLng(currentLocation.latitude, currentLocation.longitude);
-        });
+        originLatLng = LatLng(pos.latitude, pos.longitude);
+        originName = 'Your Current Location';
       }
+      print('DEBUG: originLatLng=$originLatLng originName=$originName; destination=${_selectedToLocation?.name}');
 
-      setState(() {
-        _isCheckingPermissions = false;
-      });
-      if (!mounted) return;
+      setState(() => _isCheckingPermissions = false);
 
-      // proceed to navigate (onDirectionsTap will use selected start if present,
-      // otherwise NavigationScreen will receive null origin and use device location)
-      onDirectionsTap();
-    } catch (e) {
-      setState(() {
-        _isCheckingPermissions = false;
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error starting navigation: $e'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: Colors.white,
-            onPressed: _handleStartNavigation,
+      final destinationLatLng = LatLng(
+        _selectedToLocation!.location.latitude,
+        _selectedToLocation!.location.longitude,
+      );
+      final destinationName = _selectedToLocation!.name;
+
+      // Push NavigationScreen and pass origin so it fetches the route using correct start
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NavigationScreen(
+            destination: destinationLatLng,
+            destinationName: destinationName,
+            origin: originLatLng,
+            originName: originName,
           ),
         ),
+      );
+    } catch (e) {
+      setState(() => _isCheckingPermissions = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error starting navigation: $e')),
       );
     }
   }
