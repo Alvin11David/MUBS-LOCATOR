@@ -702,7 +702,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pushReplacementNamed(context, '/HomeScreen'),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(

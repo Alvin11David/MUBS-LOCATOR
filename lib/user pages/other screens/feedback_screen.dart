@@ -514,7 +514,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.pushReplacementNamed(context, '/HomeScreen');
                                 },
                                 child: Icon(
                                   Icons.chevron_left,

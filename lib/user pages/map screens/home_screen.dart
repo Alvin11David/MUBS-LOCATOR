@@ -949,7 +949,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   );
-                }).toList(),
+                }),
                 Positioned(
                   top: screenHeight * 0.02,
                   left: screenWidth * 0.04,

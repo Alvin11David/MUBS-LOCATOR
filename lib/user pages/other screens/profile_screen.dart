@@ -231,7 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 left: screenWidth * 0.04,
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/HomeScreen');
                   },
                   child: ClipOval(
                     child: Container(
