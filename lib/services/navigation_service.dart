@@ -227,6 +227,9 @@ class NavigationService extends GetxController {
     final currentLatLng = LatLng(position.latitude, position.longitude);
     final stepEndLocation = currentStep.value!.endLocation;
 
+    // Recompute which step the user is closest to / currently on
+    _syncCurrentStepWithPosition(currentLatLng);
+
     // Calculate distance to next step
     distanceToNextStep.value = Geolocator.distanceBetween(
       currentLatLng.latitude,
@@ -235,23 +238,76 @@ class NavigationService extends GetxController {
       stepEndLocation.longitude,
     );
 
-    // Check if step is completed
-    if (distanceToNextStep.value < _stepCompletionThreshold) {
-      _moveToNextStep();
+    // Now update distance to the (new) current step end
+    if (currentStep.value != null) {
+      final stepEndLocation = currentStep.value!.endLocation;
+      distanceToNextStep.value = Geolocator.distanceBetween(
+        currentLatLng.latitude,
+        currentLatLng.longitude,
+        stepEndLocation.latitude,
+        stepEndLocation.longitude,
+      );
+
+      // If close enough to step end, move to next step
+      if (distanceToNextStep.value < _stepCompletionThreshold) {
+        _moveToNextStep();
+      }
     }
-
-    // Check for route deviation
-    _checkRouteDeviation(currentLatLng);
-  }
-
-  /// Move to the next navigation step
-  void _moveToNextStep() {
-    if (currentStepIndex.value < navigationSteps.length - 1) {
-      currentStepIndex.value++;
-      currentStep.value = navigationSteps[currentStepIndex.value];
-    } else {
       // Navigation completed
       _completeNavigation();
+    
+  }
+  void _moveToNextStep() {
+  // Guard: nothing to do if there are no steps.
+  if (navigationSteps.isEmpty) return;
+
+  // Get current index (use -1 if not yet set).
+  final int currentIndex = currentStepIndex.value ?? -1;
+  final int nextIndex = currentIndex + 1;
+
+  // If we've reached or passed the last step, finish navigation.
+  if (nextIndex >= navigationSteps.length) {
+    currentStepIndex.value = navigationSteps.length - 1;
+    currentStep.value = navigationSteps.last;
+    _completeNavigation();
+    return;
+  }
+
+  // Advance to next step.
+  currentStepIndex.value = nextIndex;
+  currentStep.value = navigationSteps[nextIndex];
+}
+
+  /// Update currentStep/currentStepIndex by finding the closest step end to current location.
+  /// This allows the app to mark steps already covered even if user jumps ahead or started mid-route.
+  void _syncCurrentStepWithPosition(LatLng currentLatLng) {
+    if (navigationSteps.isEmpty) return;
+
+    double minDistance = double.infinity;
+    int nearestIndex = 0;
+
+    for (var i = 0; i < navigationSteps.length; i++) {
+      final step = navigationSteps[i];
+      final d = Geolocator.distanceBetween(
+        currentLatLng.latitude,
+        currentLatLng.longitude,
+        step.endLocation.latitude,
+        step.endLocation.longitude,
+      );
+      if (d < minDistance) {
+        minDistance = d;
+        nearestIndex = i;
+      }
+    }
+
+    // If nearestIndex is different from current index, update to reflect user's position
+    if (nearestIndex != currentStepIndex.value) {
+      currentStepIndex.value = nearestIndex;
+      currentStep.value = navigationSteps[nearestIndex];
+    } else if (currentStep.value == null) {
+      // ensure currentStep is set at least once
+      currentStepIndex.value = nearestIndex;
+      currentStep.value = navigationSteps[nearestIndex];
     }
   }
 
