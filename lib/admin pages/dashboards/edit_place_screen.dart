@@ -28,6 +28,9 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
   final TextEditingController _otherNamesController = TextEditingController();
   final TextEditingController _mtnNumberController = TextEditingController();
   final TextEditingController _airtelNumberController = TextEditingController();
+  // Latitude / Longitude controllers (new)
+  final TextEditingController _latitudeController = TextEditingController();
+  final TextEditingController _longitudeController = TextEditingController();
   final FocusNode _buildingNameFocus = FocusNode();
   final FocusNode _descriptionFocus = FocusNode();
   final FocusNode _locationFocus = FocusNode();
@@ -79,47 +82,50 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
   }
 
   Future<void> _fetchBuildingDetails() async {
-  try {
-    final doc = await FirebaseFirestore.instance
-        .collection('buildings')
-        .doc(widget.buildingId)
-        .get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        _buildingNameController.text = data['name'] ?? '';
-        _descriptionController.text = data['description'] ?? '';
-        _otherNamesController.text = data['otherNames'] ?? '';
-        _selectedLocation = LatLng(
-          (data['latitude'] ?? 0.32848299678238435) as double,
-          (data['longitude'] ?? 32.61717974633408) as double,
-        );
-        _isLocationSelected = true;
-        _imageUrls = List<String>.from(data['imageUrls'] ?? []);
-        _mtnNumberController.text = data['mtnNumber'] ?? '';
-        _airtelNumberController.text = data['airtelNumber'] ?? '';
-        _selectedDays = List<String>.from(data['days'] ?? []);
-        if (data['startTime'] != null) {
-          _startTime = TimeOfDay(
-            hour: data['startTime']['hour'],
-            minute: data['startTime']['minute'],
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('buildings')
+          .doc(widget.buildingId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          _buildingNameController.text = data['name'] ?? '';
+          _descriptionController.text = data['description'] ?? '';
+          _otherNamesController.text = data['otherNames'] ?? '';
+          _selectedLocation = LatLng(
+            (data['latitude'] ?? 0.32848299678238435) as double,
+            (data['longitude'] ?? 32.61717974633408) as double,
           );
-        }
-        if (data['endTime'] != null) {
-          _endTime = TimeOfDay(
-            hour: data['endTime']['hour'],
-            minute: data['endTime']['minute'],
-          );
-        }
-      });
+          // set lat/lng controllers to current values
+          _latitudeController.text = _selectedLocation.latitude.toString();
+          _longitudeController.text = _selectedLocation.longitude.toString();
+          _isLocationSelected = true;
+          _imageUrls = List<String>.from(data['imageUrls'] ?? []);
+          _mtnNumberController.text = data['mtnNumber'] ?? '';
+          _airtelNumberController.text = data['airtelNumber'] ?? '';
+          _selectedDays = List<String>.from(data['days'] ?? []);
+          if (data['startTime'] != null) {
+            _startTime = TimeOfDay(
+              hour: data['startTime']['hour'],
+              minute: data['startTime']['minute'],
+            );
+          }
+          if (data['endTime'] != null) {
+            _endTime = TimeOfDay(
+              hour: data['endTime']['hour'],
+              minute: data['endTime']['minute'],
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error fetching building details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load building details: $e')),
+      );
     }
-  } catch (e) {
-    print('Error fetching building details: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to load building details: $e')),
-    );
   }
-}
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -151,6 +157,9 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
       _selectedLocation = position;
       _isLocationSelected = true;
     });
+    // update lat/lng fields when user taps map
+    _latitudeController.text = position.latitude.toString();
+    _longitudeController.text = position.longitude.toString();
     _mapController?.animateCamera(CameraUpdate.newLatLng(_selectedLocation));
     await _updateFirestoreField({
       'latitude': _selectedLocation.latitude,
@@ -282,6 +291,8 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
     _otherNamesController.dispose();
     _mtnNumberController.dispose();
     _airtelNumberController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     _buildingNameFocus.dispose();
     _descriptionFocus.dispose();
     _locationFocus.dispose();
@@ -409,7 +420,8 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                           width: 1,
                                         ),
                                       ),
-                                      child: (_profilePicUrl != null &&
+                                      child:
+                                          (_profilePicUrl != null &&
                                               _profilePicUrl!.isNotEmpty)
                                           ? ClipOval(
                                               child: Image.network(
@@ -417,17 +429,28 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                                 fit: BoxFit.cover,
                                                 width: screenWidth * 0.09,
                                                 height: screenWidth * 0.09,
-                                                loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null) {
-                                                    return child;
-                                                  }
-                                                  return const CircularProgressIndicator();
-                                                },
-                                                errorBuilder: (context, error, stackTrace) => Icon(
-                                                  Icons.person,
-                                                  color: Colors.black,
-                                                  size: screenWidth * 0.04,
-                                                ),
+                                                loadingBuilder:
+                                                    (
+                                                      context,
+                                                      child,
+                                                      loadingProgress,
+                                                    ) {
+                                                      if (loadingProgress ==
+                                                          null) {
+                                                        return child;
+                                                      }
+                                                      return const CircularProgressIndicator();
+                                                    },
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) => Icon(
+                                                      Icons.person,
+                                                      color: Colors.black,
+                                                      size: screenWidth * 0.04,
+                                                    ),
                                               ),
                                             )
                                           : Icon(
@@ -672,6 +695,154 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                     onTap: _onTap,
                                   ),
                                 ),
+                                SizedBox(height: screenHeight * 0.015),
+                                // Latitude & Longitude editable fields
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.04,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _latitudeController,
+                                          keyboardType:
+                                              TextInputType.numberWithOptions(
+                                                signed: true,
+                                                decimal: true,
+                                              ),
+                                          decoration: InputDecoration(
+                                            labelText: 'Latitude',
+                                            hintText: 'e.g. 0.3284829',
+                                            prefixIcon: Icon(
+                                              Icons.place,
+                                              color: const Color(0xFF93C5FD),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF93C5FD),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF93C5FD),
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                          onFieldSubmitted: (value) async {
+                                            final lat = double.tryParse(value);
+                                            final lng = double.tryParse(
+                                              _longitudeController.text,
+                                            );
+                                            if (lat != null && lng != null) {
+                                              setState(() {
+                                                _selectedLocation = LatLng(
+                                                  lat,
+                                                  lng,
+                                                );
+                                                _isLocationSelected = true;
+                                              });
+                                              _mapController?.animateCamera(
+                                                CameraUpdate.newLatLng(
+                                                  _selectedLocation,
+                                                ),
+                                              );
+                                              await _updateFirestoreField({
+                                                'latitude': lat,
+                                                'longitude': lng,
+                                              });
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Enter valid coordinates',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(width: screenWidth * 0.03),
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _longitudeController,
+                                          keyboardType:
+                                              TextInputType.numberWithOptions(
+                                                signed: true,
+                                                decimal: true,
+                                              ),
+                                          decoration: InputDecoration(
+                                            labelText: 'Longitude',
+                                            hintText: 'e.g. 32.6171797',
+                                            prefixIcon: Icon(
+                                              Icons.place,
+                                              color: const Color(0xFF93C5FD),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF93C5FD),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF93C5FD),
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                          onFieldSubmitted: (value) async {
+                                            final lng = double.tryParse(value);
+                                            final lat = double.tryParse(
+                                              _latitudeController.text,
+                                            );
+                                            if (lat != null && lng != null) {
+                                              setState(() {
+                                                _selectedLocation = LatLng(
+                                                  lat,
+                                                  lng,
+                                                );
+                                                _isLocationSelected = true;
+                                              });
+                                              _mapController?.animateCamera(
+                                                CameraUpdate.newLatLng(
+                                                  _selectedLocation,
+                                                ),
+                                              );
+                                              await _updateFirestoreField({
+                                                'latitude': lat,
+                                                'longitude': lng,
+                                              });
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Enter valid coordinates',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 SizedBox(height: screenHeight * 0.02),
                                 Padding(
                                   padding: EdgeInsets.symmetric(
@@ -767,7 +938,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                           ),
                         ),
                       ),
-                      );
+                    );
                   },
                 ),
               ),
@@ -894,7 +1065,8 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                   width: 1,
                                 ),
                               ),
-                              child: (_profilePicUrl != null &&
+                              child:
+                                  (_profilePicUrl != null &&
                                       _profilePicUrl!.isNotEmpty)
                                   ? ClipOval(
                                       child: Image.network(
@@ -902,17 +1074,20 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                         fit: BoxFit.cover,
                                         width: screenWidth * 0.15,
                                         height: screenWidth * 0.15,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) {
-                                            return child;
-                                          }
-                                          return const CircularProgressIndicator();
-                                        },
-                                        errorBuilder: (context, error, stackTrace) => Icon(
-                                          Icons.person,
-                                          color: Colors.black,
-                                          size: screenWidth * 0.08,
-                                        ),
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child;
+                                              }
+                                              return const CircularProgressIndicator();
+                                            },
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Icon(
+                                                  Icons.person,
+                                                  color: Colors.black,
+                                                  size: screenWidth * 0.08,
+                                                ),
                                       ),
                                     )
                                   : Icon(
@@ -1043,8 +1218,7 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                             if (result != null &&
                                 result is Map<String, dynamic>) {
                               setState(() {
-                                _profilePicUrl =
-                                    result['imageUrl'] as String?;
+                                _profilePicUrl = result['imageUrl'] as String?;
                                 _isMenuVisible = false;
                               });
                             }
