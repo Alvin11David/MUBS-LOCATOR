@@ -561,13 +561,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     buildingName: buildingName,
                     scrollController: scrollController,
                     onDirectionsTap: () {
-                       Navigator.pop(context);
-                       Navigator.pushNamed(
-                         context,
-                         '/LocationSelectScreen',
-                         arguments: {'buildingName': buildingName},
-                       );
-                     },
+                      Navigator.pop(context);
+                      Navigator.pushNamed(
+                        context,
+                        '/LocationSelectScreen',
+                        arguments: {'buildingName': buildingName},
+                      );
+                    },
                     onFeedbackSubmit: (a, b, c) {},
                   ),
                   Positioned(
@@ -1095,21 +1095,46 @@ class _HomeScreenState extends State<HomeScreen> {
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
                           builder: (context) {
-                            return _BuildingBottomSheetContent(
-                              buildingName: suggestion.name,
-                              scrollController: ScrollController(),
-                              onDirectionsTap: () {
-                                 Navigator.pop(context);
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/LocationSelectScreen',
-                                   arguments: {'buildingName': suggestion.name},
-                                  );
-                                },
-                              onFeedbackSubmit:
-                                  (issueType, issueTitle, description) {
-                                    // Add your feedback logic here
+                            return Stack(
+                              children: [
+                                _BuildingBottomSheetContent(
+                                  buildingName: suggestion.name,
+                                  scrollController: ScrollController(),
+                                  onDirectionsTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/LocationSelectScreen',
+                                      arguments: {
+                                        'buildingName': suggestion.name,
+                                      },
+                                    );
                                   },
+                                  onFeedbackSubmit:
+                                      (issueType, issueTitle, description) {
+                                        // Add your feedback logic here
+                                      },
+                                ),
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 20,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           },
                         );
