@@ -29,7 +29,20 @@ jobs:
       - name: Precache Flutter iOS
         run: flutter precache --ios
 
-      # 5️⃣ Install Signing Certificate
+      # 5️⃣ Install CocoaPods (REQUIRED)
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      # 6️⃣ Update Pod Repo
+      - name: Update Pod Repo
+        run: pod repo update
+
+      # 7️⃣ Install iOS Pods
+      - name: Install iOS Pods
+        working-directory: ios
+        run: pod install --verbose --no-repo-update
+
+      # 8️⃣ Install Signing Certificate
       - name: Install signing certificate
         env:
           CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -46,7 +59,7 @@ jobs:
           security list-keychains -s ~/Library/Keychains/build.keychain
           security default-keychain -s ~/Library/Keychains/build.keychain
 
-      # 6️⃣ Install Provisioning Profile
+      # 9️⃣ Install Provisioning Profile
       - name: Install provisioning profile
         env:
           PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
@@ -54,11 +67,11 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
-      # 7️⃣ Flutter Build (No Code Sign)
+      # 🔟 Flutter Build (No Code Sign)
       - name: Build Flutter iOS
         run: flutter build ios --release --no-codesign
 
-      # 8️⃣ Archive with Xcode
+      # 1️⃣1️⃣ Archive with Xcode
       - name: Archive iOS app
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -76,7 +89,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
 
-      # 9️⃣ Export IPA
+      # 1️⃣2️⃣ Export IPA
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
@@ -84,7 +97,7 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath $PWD/build
 
-      # 🔟 Upload IPA as Build Artifact
+      # 1️⃣3️⃣ Upload IPA as Build Artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
