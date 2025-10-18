@@ -1,35 +1,14 @@
-# Uncomment this line to define a global platform for your project
 platform :ios, '15.0'
 
-# CocoaPods analytics
-ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-
-project 'Runner', {
-  'Debug' => :debug,
-  'Profile' => :release,
-  'Release' => :release,
-}
-
-# Prevent all pods from being integrated into a single framework
 use_frameworks!
 use_modular_headers!
 
-# CocoaPods installation
-def flutter_install_ios_plugin_pods(ios_application_path)
-  symlink_dir = File.join(ios_application_path, '.symlinks', 'plugins')
-  generated_xcode_build_settings_path = File.join(ios_application_path, 'Flutter', 'Generated.xcconfig')
-  load File.join(ios_application_path, 'Flutter', 'podhelper.rb')
-end
-
 target 'Runner' do
-  # Flutter Pod helper
-  flutter_install_ios_plugin_pods(File.dirname(File.realpath(__FILE__)))
+  # Pods for Runner
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-    # Fix for arm64 simulator builds
     target.build_configurations.each do |config|
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end
