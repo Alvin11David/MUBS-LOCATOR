@@ -1030,8 +1030,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final buildings = querySnapshot.docs
                             .map(
-                              (doc) =>
-                                  Building.fromFirestore(doc.data(), doc.id),
+                              (doc) => Building.fromFirestore(
+                                doc.data(),
+                                doc.id,
+                              ),
                             )
                             .toList();
 
