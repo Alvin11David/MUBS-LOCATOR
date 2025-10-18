@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
-    //_listenToLocationChanges();
+    _listenToLocationChanges();
   }
 
   Widget _detailRow(String label, String? value) {
