@@ -62,7 +62,7 @@ dependencies:
   # Firebase Storage for file uploads
   firebase_storage:
   # Local notifications
-  flutter_local_notifications:
+  flutter_local_notifications: ^19.5.0
   # Firebase Cloud Messaging for push notifications
   firebase_messaging:
 
