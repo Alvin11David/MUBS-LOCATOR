@@ -10,26 +10,26 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. Checkout repository
+      # 1️⃣ Checkout Repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Flutter (stable channel, version 3.13.0)
+      # 2️⃣ Set up Flutter (MATCH YOUR LOCAL VERSION)
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'
+          flutter-version: '3.32.6'
           channel: 'stable'
 
-      # 2a. Verify Flutter & Dart version
+      # 3️⃣ Verify Flutter version
       - name: Verify Flutter version
         run: flutter --version
 
-      # 2b. Precache Flutter iOS artifacts
+      # 4️⃣ Pre-cache iOS Flutter artifacts
       - name: Precache Flutter iOS
         run: flutter precache --ios
 
-      # 3. Install signing certificate
+      # 5️⃣ Install Signing Certificate
       - name: Install signing certificate
         env:
           CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -46,7 +46,7 @@ jobs:
           security list-keychains -s ~/Library/Keychains/build.keychain
           security default-keychain -s ~/Library/Keychains/build.keychain
 
-      # 4. Install provisioning profile
+      # 6️⃣ Install Provisioning Profile
       - name: Install provisioning profile
         env:
           PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
@@ -54,11 +54,11 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
 
-      # 5. Build Flutter iOS artifacts
+      # 7️⃣ Flutter Build (No Code Sign)
       - name: Build Flutter iOS
         run: flutter build ios --release --no-codesign
 
-      # 6. Archive iOS app with Xcode
+      # 8️⃣ Archive with Xcode
       - name: Archive iOS app
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -76,7 +76,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
 
-      # 7. Export IPA
+      # 9️⃣ Export IPA
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
@@ -84,7 +84,7 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath $PWD/build
 
-      # 8. Upload IPA artifact
+      # 🔟 Upload IPA as Build Artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
