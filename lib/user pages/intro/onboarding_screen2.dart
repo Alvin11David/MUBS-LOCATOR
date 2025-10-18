@@ -77,14 +77,30 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                           fit: BoxFit.contain,
                         ),
                         SizedBox(width: 4),
-                        Text(
-                          'MUBS Locator',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.04,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'Urbanist',
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'MUBS Locator',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
+                            SizedBox(height: screenHeight * 0.005),
+                            Text(
+                              'lee9ine.',
+                              textAlign: TextAlign.left,
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.04,
+                                color: Colors.white,
+                                fontFamily: 'Reem Kufi',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -96,7 +112,10 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                     child: GestureDetector(
                       onTap: () async {
                         await _completeOnboarding();
-                        Navigator.pushReplacementNamed(context, '/SignInScreen');
+                        Navigator.pushReplacementNamed(
+                          context,
+                          '/SignInScreen',
+                        );
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -192,7 +211,9 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                           context,
                           MaterialPageRoute(
                             builder: (context) => const OnboardingScreen1(),
-                            settings: const RouteSettings(name: '/OnboardingScreen1'),
+                            settings: const RouteSettings(
+                              name: '/OnboardingScreen1',
+                            ),
                           ),
                         );
                       },
@@ -228,18 +249,16 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                             height: screenWidth * 0.15,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 1,
-                              ),
+                              border: Border.all(color: Colors.white, width: 1),
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Padding(
-                                  padding:
-                                      EdgeInsets.only(left: screenWidth * 0.3),
+                                  padding: EdgeInsets.only(
+                                    left: screenWidth * 0.3,
+                                  ),
                                   child: Text(
                                     'Start',
                                     style: TextStyle(
@@ -257,7 +276,8 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                                         for (int i = 0; i < 3; i++)
                                           Padding(
                                             padding: EdgeInsets.only(
-                                                right: screenWidth * 0.02),
+                                              right: screenWidth * 0.02,
+                                            ),
                                             child: Transform.scale(
                                               scale: 1.5,
                                               child: Icon(
@@ -266,11 +286,14 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
                                                 color: Color.lerp(
                                                   Colors.white,
                                                   Colors.orange,
-                                                  math.sin(_animationValue.value *
-                                                              math.pi *
-                                                              2 +
-                                                          i * math.pi / 3) *
-                                                      0.5 +
+                                                  math.sin(
+                                                            _animationValue
+                                                                        .value *
+                                                                    math.pi *
+                                                                    2 +
+                                                                i * math.pi / 3,
+                                                          ) *
+                                                          0.5 +
                                                       0.5,
                                                 ),
                                               ),

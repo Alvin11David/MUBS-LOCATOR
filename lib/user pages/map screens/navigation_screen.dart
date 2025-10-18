@@ -6,11 +6,15 @@ import '../../services/navigation_service.dart';
 class NavigationScreen extends StatefulWidget {
   final LatLng destination;
   final String destinationName;
+  final LatLng? origin;
+  final String? originName; 
 
   const NavigationScreen({
     super.key,
     required this.destination,
     required this.destinationName,
+    this.origin,
+    this.originName
   });
 
   @override
@@ -29,8 +33,39 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _initializeNavigation() async {
-    await _navigationService.startNavigation(widget.destination);
+    print('DEBUG: NavigationScreen.init origin=${widget.origin} originName=${widget.originName}');
+    // pass origin if provided (selected start building)
+    await _navigationService.startNavigation(
+      widget.destination,
+      origin: widget.origin,
+      startTracking: widget.origin == null, // track only if using device location
+    );
+
+    // After fetching route, fit camera to route if points exist
+    if (_navigationService.routePolylinePoints.isNotEmpty && _mapController != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fitBoundsToRoute();
+      });
+    }
   }
+
+  void _fitBoundsToRoute() {
+    final points = _navigationService.routePolylinePoints;
+    if (points.isEmpty || _mapController == null) return;
+    final lats = points.map((p) => p.latitude);
+    final lngs = points.map((p) => p.longitude);
+    final south = lats.reduce((a, b) => a < b ? a : b);
+    final north = lats.reduce((a, b) => a > b ? a : b);
+    final west = lngs.reduce((a, b) => a < b ? a : b);
+    final east = lngs.reduce((a, b) => a > b ? a : b);
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(south, west),
+      northeast: LatLng(north, east),
+    );
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+  }
+
 
   @override
   void dispose() {
@@ -83,7 +118,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
         ),
         onMapCreated: (GoogleMapController controller) {
           _mapController = controller;
-          _updateCamera();
+          if (_navigationService.routePolylinePoints.isNotEmpty) {
+            _fitBoundsToRoute();
+          } else {
+            _updateCamera();
+          }
         },
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
@@ -116,6 +155,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
             ),
             infoWindow: InfoWindow(title: widget.destinationName),
           ),
+          // Optional origin marker (if provided)
+          if (widget.origin != null)
+            Marker(
+              markerId: const MarkerId('origin'),
+              position: widget.origin!,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueGreen,
+              ),
+              infoWindow: InfoWindow(title: widget.originName ?? 'Start'),
+            ),
           // Current step marker
           if (_navigationService.currentStep.value != null)
             Marker(

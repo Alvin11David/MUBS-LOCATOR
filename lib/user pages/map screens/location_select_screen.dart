@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'dart:ui';
 import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -14,7 +13,8 @@ import 'package:geolocator/geolocator.dart';
 
 class LocationSelectScreen extends StatefulWidget {
   final VoidCallback onDirectionsTap;
-  const LocationSelectScreen({Key? key, required this.onDirectionsTap}) : super(key: key);
+  final String? initialDestinationName;
+  const LocationSelectScreen({super.key, required this.onDirectionsTap, this.initialDestinationName});
 
   @override
   State<LocationSelectScreen> createState() => _LocationSelectScreenState();
@@ -62,12 +62,25 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     );
     final destinationName = _selectedToLocation!.name;
 
+    // If the user selected a Start building, send its coordinates as origin.
+    LatLng? origin;
+    String? originName;
+    if (_selectedFromLocation != null) {
+      origin = LatLng(
+        _selectedFromLocation!.location.latitude,
+        _selectedFromLocation!.location.longitude,
+      );
+      originName = _selectedFromLocation!.name;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NavigationScreen(
           destination: destinationLatLng,
           destinationName: destinationName,
+          origin: origin,
+          originName: originName,
         ),
       ),
     );
@@ -77,58 +90,77 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
     setState(() {
       _isCheckingPermissions = true;
     });
+
     try {
-      final hasPermission = await _navigationService
-          .checkAndRequestLocationPermission();
-      if (!hasPermission) {
-        setState(() {
-          _isCheckingPermissions = false;
-        });
-        if (!mounted) return;
-        _showPermissionDialog();
-        return;
-      }
-      final currentLocation = await _navigationService.getCurrentLocation();
-      if (currentLocation == null) {
-        setState(() {
-          _isCheckingPermissions = false;
-        });
-        if (!mounted) return;
+      if (_selectedToLocation == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Unable to get your location. Please check your GPS settings.',
-            ),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
+          const SnackBar(content: Text('Please select a destination.')),
         );
+        setState(() => _isCheckingPermissions = false);
         return;
       }
-      setState(() {
-        _isCheckingPermissions = false;
-      });
-      if (!mounted) return;
-      onDirectionsTap();
-    } catch (e) {
-      setState(() {
-        _isCheckingPermissions = false;
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error starting navigation: $e'),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: Colors.white,
-            onPressed: _handleStartNavigation,
+
+      // Determine origin: selected building OR device location
+      LatLng? originLatLng;
+      String? originName;
+      if (_selectedFromLocation != null &&
+          _fromController.text != "Your Current Location") {
+        originLatLng = LatLng(
+          _selectedFromLocation!.location.latitude,
+          _selectedFromLocation!.location.longitude,
+        );
+        originName = _selectedFromLocation!.name;
+      } else {
+        // need device permission/location only if start not selected
+        final hasPermission =
+            await _navigationService.checkAndRequestLocationPermission();
+        if (!hasPermission) {
+          setState(() => _isCheckingPermissions = false);
+          if (!mounted) return;
+          _showPermissionDialog();
+          return;
+        }
+        final pos = await _navigationService.getCurrentLocation();
+        if (pos == null) {
+          setState(() => _isCheckingPermissions = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to get your location.'),
+            ),
+          );
+          return;
+        }
+        originLatLng = LatLng(pos.latitude, pos.longitude);
+        originName = 'Your Current Location';
+      }
+      print('DEBUG: originLatLng=$originLatLng originName=$originName; destination=${_selectedToLocation?.name}');
+
+      setState(() => _isCheckingPermissions = false);
+
+      final destinationLatLng = LatLng(
+        _selectedToLocation!.location.latitude,
+        _selectedToLocation!.location.longitude,
+      );
+      final destinationName = _selectedToLocation!.name;
+
+      // Push NavigationScreen and pass origin so it fetches the route using correct start
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NavigationScreen(
+            destination: destinationLatLng,
+            destinationName: destinationName,
+            origin: originLatLng,
+            originName: originName,
           ),
         ),
+      );
+    } catch (e) {
+      setState(() => _isCheckingPermissions = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error starting navigation: $e')),
       );
     }
   }
@@ -209,6 +241,47 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
 
   Future<void> _initializeData() async {
     await Future.wait([_fetchBuildings(), _getCurrentLocation()]);
+    _applyInitialDestination();
+  }
+
+  void _applyInitialDestination() {
+    final name = widget.initialDestinationName;
+    if (name == null || name.trim().isEmpty) return;
+    if (fetchedBuildings.isEmpty) return;
+
+    Building? matched;
+
+    // try exact match first
+    for (var b in fetchedBuildings) {
+      if (b.name.toLowerCase() == name.toLowerCase()) {
+        matched = b;
+        break;
+      }
+    }
+
+    // fallback to partial match
+    if (matched == null) {
+      for (var b in fetchedBuildings) {
+        if (b.name.toLowerCase().contains(name.toLowerCase())) {
+          matched = b;
+          break;
+        }
+      }
+    }
+
+    if (matched != null) {
+      _selectedToLocation = matched;
+      _toController.text = matched.name;
+      // animate map to destination if map ready
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(
+            LatLng(matched.location.latitude, matched.location.longitude),
+          ),
+        );
+      }
+      setState(() {});
+    }
   }
 
   Future<void> _fetchBuildings() async {
@@ -683,7 +756,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pushReplacementNamed(context, '/HomeScreen'),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(

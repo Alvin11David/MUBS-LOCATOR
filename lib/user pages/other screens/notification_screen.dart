@@ -469,7 +469,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                       ),
                       GestureDetector(
                         onTap: () {
-                          Navigator.pop(context);
+                         Navigator.pushReplacementNamed(context, '/HomeScreen');
                         },
                         child: Icon(
                           Icons.chevron_left,

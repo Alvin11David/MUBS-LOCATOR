@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mubs_locator/components/bottom_navbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
@@ -19,10 +20,13 @@ class _FeedbackScreenState extends State<FeedbackScreen>
   String _userFullName = 'User';
   bool _isMenuVisible = false;
   File? _profileImage;
-  final int _unreadNotifications = 0;
+  int _unreadNotifications = 0; // make mutable
+
   int _selectedRating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+  bool _isBottomNavVisible = false;
 
   @override
   void initState() {
@@ -33,6 +37,27 @@ class _FeedbackScreenState extends State<FeedbackScreen>
     _feedbackController.addListener(() {
       setState(() {});
     });
+  }
+
+  // Mark all notifications as read for current user (updates Firestore and UI)
+  Future<void> _markNotificationsAsRead() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final query = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('recipientId', isEqualTo: user.uid)
+          .where('read', isEqualTo: false)
+          .get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in query.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+      if (query.docs.isNotEmpty) await batch.commit();
+      if (mounted) setState(() => _unreadNotifications = 0);
+    } catch (e) {
+      // ignore errors, keep UX stable
+    }
   }
 
   @override
@@ -62,7 +87,37 @@ class _FeedbackScreenState extends State<FeedbackScreen>
           'email': user.email,
         }, SetOptions(merge: true));
       }
+
+      // load unread notifications count from Firestore
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('recipientId', isEqualTo: user.uid)
+            .where('read', isEqualTo: false)
+            .get();
+        if (mounted) setState(() => _unreadNotifications = snap.docs.length);
+      } catch (e) {
+        // ignore read-count fetch errors
+      }
     }
+
+    // Increment local badge/count when a message arrives while app is in foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Optionally show in-app notification
+      if (message.notification != null) {
+        _showCustomSnackBar(
+          message.notification!.title ?? 'New notification',
+          Colors.black87,
+        );
+      }
+      if (mounted)
+        setState(() => _unreadNotifications = _unreadNotifications + 1);
+    });
+
+    // When the user taps the notification and app opens, you may want to mark read
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      // optionally navigate to notifications screen immediately
+    });
   }
 
   Future<void> _fetchUserFullName() async {
@@ -216,7 +271,6 @@ class _FeedbackScreenState extends State<FeedbackScreen>
           context,
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
-        _showCustomSnackBar('Logout successful', Colors.green);
       }
     } catch (e) {
       if (mounted) {
@@ -292,6 +346,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
         // Add feedback document
         await FirebaseFirestore.instance.collection('feedback').add({
           'userEmail': user.email,
+          'userName': _userFullName,
           'feedbackText': _feedbackController.text.trim(),
           'rating': _selectedRating,
           'read': false,
@@ -411,12 +466,12 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                                 '${_getGreeting()}, $_userFullName',
                                 style: TextStyle(
                                   color: Colors.black,
-                                  fontSize: textScaler.scale(
-                                    screenWidth * 0.045,
-                                  ),
+                                  fontSize: textScaler.scale(13),
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const Spacer(),
                               Padding(
@@ -424,7 +479,9 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                                   right: screenWidth * 0.04,
                                 ),
                                 child: GestureDetector(
-                                  onTap: () {
+                                  onTap: () async {
+                                    // mark as read then navigate
+                                    await _markNotificationsAsRead();
                                     Navigator.pushNamed(
                                       context,
                                       '/NotificationsScreen',
@@ -453,15 +510,23 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                                           top: -screenWidth * 0.01,
                                           right: -screenWidth * 0.01,
                                           child: Container(
-                                            width: screenWidth * 0.03,
-                                            height: screenWidth * 0.03,
-                                            decoration: const BoxDecoration(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 5,
+                                            ),
+                                            constraints: BoxConstraints(
+                                              minWidth: screenWidth * 0.03,
+                                              minHeight: screenWidth * 0.03,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color: Colors.red,
-                                              shape: BoxShape.circle,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                             child: Center(
                                               child: Text(
-                                                '$_unreadNotifications',
+                                                _unreadNotifications > 99
+                                                    ? '99+'
+                                                    : '$_unreadNotifications',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: textScaler.scale(
@@ -469,6 +534,7 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                                                   ),
                                                   fontWeight: FontWeight.bold,
                                                 ),
+                                                textAlign: TextAlign.center,
                                               ),
                                             ),
                                           ),
@@ -510,7 +576,10 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                             children: [
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.pushReplacementNamed(
+                                    context,
+                                    '/HomeScreen',
+                                  );
                                 },
                                 child: Icon(
                                   Icons.chevron_left,
@@ -724,6 +793,64 @@ class _FeedbackScreenState extends State<FeedbackScreen>
                         ),
                       ),
                     ),
+                  ),
+                ),
+              ),
+              // Rectangle handle to show navbar
+              if (!_isBottomNavVisible)
+                Positioned(
+                  bottom: screenHeight * 0.03,
+                  left: screenWidth * 0.04,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isBottomNavVisible = true;
+                      });
+                    },
+                    child: Container(
+                      width: screenWidth * 0.13,
+                      height: screenHeight * 0.025,
+                      decoration: BoxDecoration(
+                        color: Colors.blue[300],
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.menu,
+                          color: Colors.white,
+                          size: textScaler.scale(18),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Animated BottomNavBar
+              AnimatedPositioned(
+                duration: Duration(milliseconds: 350),
+                curve: Curves.easeInOut,
+                left: 0,
+                right: 0,
+                bottom: _isBottomNavVisible ? 0 : -screenHeight * 0.12,
+                child: GestureDetector(
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity != null &&
+                        details.primaryVelocity! > 0) {
+                      // Swipe down to hide navbar
+                      setState(() {
+                        _isBottomNavVisible = false;
+                      });
+                    }
+                  },
+                  child: BottomNavBar(
+                    initialIndex: 2, // or your preferred index
                   ),
                 ),
               ),

@@ -249,13 +249,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
         }
       }
 
-      // Save to Firestore
-      await docRef.set({
+      // Build data map and only include contact fields when provided
+      final String mtn = _mtnNumberController.text.trim();
+      final String airtel = _airtelNumberController.text.trim();
+
+      final Map<String, dynamic> data = {
         'name': _buildingNameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'location': {
           'latitude': _selectedLocation.latitude,
-        'longitude': _selectedLocation.longitude,
+          'longitude': _selectedLocation.longitude,
         },
         'openingHours': _openingHoursEntries.map((entry) {
           return {
@@ -264,10 +267,18 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
             'endTime': (entry['endTime'] as TimeOfDay).format(context),
           };
         }).toList(),
-        'mtnNumber': _mtnNumberController.text.trim(),
-        'airtelNumber': _airtelNumberController.text.trim(),
         'imageUrls': imageUrls,
-      });
+      };
+
+      if (mtn.isNotEmpty) {
+        data['mtnNumber'] = mtn;
+      }
+      if (airtel.isNotEmpty) {
+        data['airtelNumber'] = airtel;
+      }
+
+      // Save to Firestore
+      await docRef.set(data);
 
       if (mounted) {
         _showTopSnackbar();
@@ -278,6 +289,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error saving location: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -313,8 +330,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   }
 
   String? _validateMtnNumber(String? value) {
+    // make contact optional: empty allowed
     if (value == null || value.trim().isEmpty) {
-      return 'Enter MTN number';
+      return null;
     }
     final mtnRegex = RegExp(r'^\+256(77|78|39|76)\d{7}$');
     if (!mtnRegex.hasMatch(value.trim())) {
@@ -325,9 +343,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
 
   String? _validateAirtelNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Enter Airtel number';
+      return null;
     }
-    final airtelRegex = RegExp(r'^\+256(70|75)\d{7}$');
+    final airtelRegex = RegExp(r'^\+256(70|75|74)\d{7}$');
     if (!airtelRegex.hasMatch(value.trim())) {
       return 'Enter a valid Airtel number (e.g., +25670XXXXXXX)';
     }

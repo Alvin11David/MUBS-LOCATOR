@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'package:mubs_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:mubs_locator/repository/building_repo.dart';
-import 'package:string_similarity/string_similarity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _profileImage;
   bool _isLoggingOut = false;
   bool _isBottomNavVisible = false;
-  String? _profilePicUrl; // Add this to your _HomeScreenState
+  String? _profilePicUrl;
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -63,15 +62,25 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
   StreamSubscription<Position>? _positionStream;
 
+  BitmapDescriptor? smallMarkerIcon;
+
   @override
   void initState() {
     super.initState();
+    BitmapDescriptor.fromAssetImage(
+      ImageConfiguration(size: Size(40, 40)), // Small size
+      'assets/markers/small_marker.png',
+    ).then((icon) {
+      setState(() {
+        smallMarkerIcon = icon;
+      });
+    });
     updateLastActiveTimestamp();
     fetchAllData();
     _initializePolygons();
     _fetchUserFullName();
     _loadProfileImage();
-    _listenToLocationChanges();
+    //_listenToLocationChanges();
   }
 
   Widget _detailRow(String label, String? value) {
@@ -304,6 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Marker> processBuildings(List<Building> buildings) {
     return buildings.map((element) {
+      print(
+        "📍 Adding marker for: ${element.name} at ${element.location.latitude}, ${element.location.longitude}",
+      );
       return Marker(
         markerId: MarkerId(element.id),
         position: LatLng(element.location.latitude, element.location.longitude),
@@ -311,7 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
           title: element.name,
           snippet: element.description,
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon:
+            smallMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         onTap: () {
           _showBuildingBottomSheet(context, buildingName: element.name);
         },
@@ -387,14 +401,15 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
-      final processedMarkers = await compute(processBuildings, buildings);
+      print("✅ Fetched buildings: ${buildings.length}");
+      final processedMarkers = processBuildings(buildings);
       if (mounted) {
         setState(() {
           fetchedBuildings.addAll(buildings);
           markers.addAll(processedMarkers);
         });
       }
-      print("✅ Successfully fetched ${buildings.length} buildings.");
+      print("✅ Markers added: ${processedMarkers.length}");
     } catch (e, stackTrace) {
       print("❌ Failed to fetch buildings: $e");
       print(stackTrace);
@@ -527,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, scrollController) {
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withOpacity(0.07),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -545,7 +560,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _BuildingBottomSheetContent(
                     buildingName: buildingName,
                     scrollController: scrollController,
-                    onDirectionsTap: () {},
+                    onDirectionsTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(
+                        context,
+                        '/LocationSelectScreen',
+                        arguments: {'buildingName': buildingName},
+                      );
+                    },
                     onFeedbackSubmit: (a, b, c) {},
                   ),
                   Positioned(
@@ -891,6 +913,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   tiltGesturesEnabled: true,
                   rotateGesturesEnabled: true,
                 ),
+                ...fetchedBuildings.map((building) {
+                  if (mapController == null) return SizedBox.shrink();
+                  return FutureBuilder<ScreenCoordinate>(
+                    future: mapController!.getScreenCoordinate(
+                      LatLng(
+                        building.location.latitude,
+                        building.location.longitude,
+                      ),
+                    ),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return SizedBox.shrink();
+                      final screenCoordinate = snapshot.data!;
+                      return Positioned(
+                        left: screenCoordinate.x.toDouble() + 24,
+                        top: screenCoordinate.y.toDouble() - 12,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            building.name,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }),
                 Positioned(
                   top: screenHeight * 0.02,
                   left: screenWidth * 0.04,
@@ -964,10 +1030,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final buildings = querySnapshot.docs
                             .map(
-                              (doc) => Building.fromFirestore(
-                                doc.data() as Map<String, dynamic>,
-                                doc.id,
-                              ),
+                              (doc) =>
+                                  Building.fromFirestore(doc.data(), doc.id),
                             )
                             .toList();
 
@@ -1031,16 +1095,46 @@ class _HomeScreenState extends State<HomeScreen> {
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
                           builder: (context) {
-                            return _BuildingBottomSheetContent(
-                              buildingName: suggestion.name,
-                              scrollController: ScrollController(),
-                              onDirectionsTap: () {
-                                // Add your navigation logic here
-                              },
-                              onFeedbackSubmit:
-                                  (issueType, issueTitle, description) {
-                                    // Add your feedback logic here
+                            return Stack(
+                              children: [
+                                _BuildingBottomSheetContent(
+                                  buildingName: suggestion.name,
+                                  scrollController: ScrollController(),
+                                  onDirectionsTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/LocationSelectScreen',
+                                      arguments: {
+                                        'buildingName': suggestion.name,
+                                      },
+                                    );
                                   },
+                                  onFeedbackSubmit:
+                                      (issueType, issueTitle, description) {
+                                        // Add your feedback logic here
+                                      },
+                                ),
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.9),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 20,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             );
                           },
                         );
@@ -1381,7 +1475,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!_isBottomNavVisible)
             Positioned(
               bottom: screenHeight * 0.03,
-              right: screenWidth * 0.04,
+              left: screenWidth * 0.04,
               child: GestureDetector(
                 onTap: () {
                   setState(() {
@@ -1590,19 +1684,6 @@ class _BuildingBottomSheetContentState
                         ),
                       ),
                     ),
-                    SizedBox(width: screenWidth * 0.01),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        margin: EdgeInsets.only(right: 2, top: 2),
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.close, color: Colors.white, size: 28),
-                      ),
-                    ),
                   ],
                 ),
                 SizedBox(height: screenHeight * 0.02),
@@ -1705,7 +1786,7 @@ class _BuildingBottomSheetContentState
                           // First image (large, left)
                           Expanded(
                             flex: 2,
-                            child: Container(
+                            child: SizedBox(
                               height: screenHeight * 0.30,
                               child: buildImage(
                                 imageUrls.isNotEmpty ? imageUrls[0] : null,
@@ -1728,7 +1809,7 @@ class _BuildingBottomSheetContentState
                                     12, // Smaller radius for column images
                                   ),
                                 ),
-                                Container(
+                                SizedBox(
                                   height: (screenHeight * 0.22 - 3) / 1.5,
                                   width: (screenWidth * 0.34),
                                   child: buildImage(

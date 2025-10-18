@@ -102,6 +102,7 @@ flutter:
     - assets/images/
     - assets/data/
     - assets/icons/
+    - assets/markers/small_marker.png
 
 # App Icon Configuration
 flutter_launcher_icons:

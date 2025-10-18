@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
@@ -21,7 +22,7 @@ class NavigationService extends GetxController {
   final RxString errorMessage = ''.obs;
 
   // Google Maps API key - REPLACE WITH YOUR ACTUAL KEY
-  final String _googleMapsApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
+  final String _googleMapsApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
 
   StreamSubscription<Position>? _positionStreamSubscription;
   LatLng? _destination;
@@ -29,7 +30,6 @@ class NavigationService extends GetxController {
   // Constants for navigation
   static const double _stepCompletionThreshold = 20.0; // meters
   static const double _routeDeviationThreshold = 50.0; // meters
-  static const int _locationUpdateInterval = 3000; // milliseconds
 
   @override
   void onClose() {
@@ -99,9 +99,10 @@ class NavigationService extends GetxController {
           'destination=${destination.latitude},${destination.longitude}&'
           'mode=walking&'
           'key=$_googleMapsApiKey';
+      print('DEBUG: Directions URL: $url');
 
       final response = await http.get(Uri.parse(url));
-
+      print('DEBUG: Directions status=${response.statusCode} body=${response.body.substring(0, math.min(1000, response.body.length))}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
@@ -128,6 +129,7 @@ class NavigationService extends GetxController {
           navigationSteps.value = (leg['steps'] as List)
               .map((step) => NavigationStep.fromJson(step))
               .toList();
+          print('DEBUG: route status=${data['status']} legs=${(data['routes'] as List).length} steps=${(leg['steps'] as List).length}');
 
           if (navigationSteps.isNotEmpty) {
             currentStep.value = navigationSteps[0];
@@ -154,21 +156,46 @@ class NavigationService extends GetxController {
   }
 
   /// Start navigation with real-time location tracking
-  Future<void> startNavigation(LatLng destination) async {
+  Future<void> startNavigation(LatLng destination, {LatLng? origin, bool startTracking = true}) async {
     try {
-      // Get current location
-      final position = await getCurrentLocation();
-      if (position == null) return;
+      // Use provided origin if available, otherwise get device location
+      LatLng originLatLng;
+      if (origin != null) {
+        originLatLng = origin;
+      } else {
+        final position = await getCurrentLocation();
+        if (position == null) return;
+        originLatLng = LatLng(position.latitude, position.longitude);
+      }
 
-      final origin = LatLng(position.latitude, position.longitude);
+      // debug log to confirm origin/destination used
+      // ignore: avoid_print
+      print('DEBUG startNavigation origin=$originLatLng destination=$destination startTracking=$startTracking');
 
-      // Fetch route
-      final routeFetched = await fetchRoute(origin, destination);
+      // Fetch route using the resolved origin
+      final routeFetched = await fetchRoute(originLatLng, destination);
       if (!routeFetched) return;
 
-      // Start location tracking
+      // store destination
+      _destination = destination;
+
+      // initialize navigation state
       isNavigating.value = true;
-      _startLocationTracking();
+
+      // set initial distance to next step (if steps exist)
+      if (navigationSteps.isNotEmpty && currentStep.value != null) {
+        distanceToNextStep.value = Geolocator.distanceBetween(
+          originLatLng.latitude,
+          originLatLng.longitude,
+          currentStep.value!.endLocation.latitude,
+          currentStep.value!.endLocation.longitude,
+        );
+      }
+
+      // Start live tracking only when requested
+      if (startTracking) {
+        _startLocationTracking();
+      }
     } catch (e) {
       errorMessage.value = 'Error starting navigation: $e';
     }
@@ -200,6 +227,9 @@ class NavigationService extends GetxController {
     final currentLatLng = LatLng(position.latitude, position.longitude);
     final stepEndLocation = currentStep.value!.endLocation;
 
+    // Recompute which step the user is closest to / currently on
+    _syncCurrentStepWithPosition(currentLatLng);
+
     // Calculate distance to next step
     distanceToNextStep.value = Geolocator.distanceBetween(
       currentLatLng.latitude,
@@ -208,23 +238,76 @@ class NavigationService extends GetxController {
       stepEndLocation.longitude,
     );
 
-    // Check if step is completed
-    if (distanceToNextStep.value < _stepCompletionThreshold) {
-      _moveToNextStep();
+    // Now update distance to the (new) current step end
+    if (currentStep.value != null) {
+      final stepEndLocation = currentStep.value!.endLocation;
+      distanceToNextStep.value = Geolocator.distanceBetween(
+        currentLatLng.latitude,
+        currentLatLng.longitude,
+        stepEndLocation.latitude,
+        stepEndLocation.longitude,
+      );
+
+      // If close enough to step end, move to next step
+      if (distanceToNextStep.value < _stepCompletionThreshold) {
+        _moveToNextStep();
+      }
     }
-
-    // Check for route deviation
-    _checkRouteDeviation(currentLatLng);
-  }
-
-  /// Move to the next navigation step
-  void _moveToNextStep() {
-    if (currentStepIndex.value < navigationSteps.length - 1) {
-      currentStepIndex.value++;
-      currentStep.value = navigationSteps[currentStepIndex.value];
-    } else {
       // Navigation completed
       _completeNavigation();
+    
+  }
+  void _moveToNextStep() {
+  // Guard: nothing to do if there are no steps.
+  if (navigationSteps.isEmpty) return;
+
+  // Get current index (use -1 if not yet set).
+  final int currentIndex = currentStepIndex.value ?? -1;
+  final int nextIndex = currentIndex + 1;
+
+  // If we've reached or passed the last step, finish navigation.
+  if (nextIndex >= navigationSteps.length) {
+    currentStepIndex.value = navigationSteps.length - 1;
+    currentStep.value = navigationSteps.last;
+    _completeNavigation();
+    return;
+  }
+
+  // Advance to next step.
+  currentStepIndex.value = nextIndex;
+  currentStep.value = navigationSteps[nextIndex];
+}
+
+  /// Update currentStep/currentStepIndex by finding the closest step end to current location.
+  /// This allows the app to mark steps already covered even if user jumps ahead or started mid-route.
+  void _syncCurrentStepWithPosition(LatLng currentLatLng) {
+    if (navigationSteps.isEmpty) return;
+
+    double minDistance = double.infinity;
+    int nearestIndex = 0;
+
+    for (var i = 0; i < navigationSteps.length; i++) {
+      final step = navigationSteps[i];
+      final d = Geolocator.distanceBetween(
+        currentLatLng.latitude,
+        currentLatLng.longitude,
+        step.endLocation.latitude,
+        step.endLocation.longitude,
+      );
+      if (d < minDistance) {
+        minDistance = d;
+        nearestIndex = i;
+      }
+    }
+
+    // If nearestIndex is different from current index, update to reflect user's position
+    if (nearestIndex != currentStepIndex.value) {
+      currentStepIndex.value = nearestIndex;
+      currentStep.value = navigationSteps[nearestIndex];
+    } else if (currentStep.value == null) {
+      // ensure currentStep is set at least once
+      currentStepIndex.value = nearestIndex;
+      currentStep.value = navigationSteps[nearestIndex];
     }
   }
 
