@@ -65,6 +65,7 @@ dependencies:
   flutter_local_notifications: ^19.5.0
   # Firebase Cloud Messaging for push notifications
   firebase_messaging:
+  webview_flutter: ^4.7.0
 
 dev_dependencies:
   flutter_test:
@@ -103,6 +104,11 @@ flutter:
     - assets/data/
     - assets/icons/
     - assets/markers/small_marker.png
+
+  plugin:
+    platforms:
+      ios:
+        pluginClass: SwiftPlugin
 
 # App Icon Configuration
 flutter_launcher_icons:
