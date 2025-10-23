@@ -105,11 +105,7 @@ flutter:
     - assets/icons/
     - assets/markers/small_marker.png
 
-  plugin:
-    platforms:
-      ios:
-        pluginClass: SwiftPlugin
-
+  
 # App Icon Configuration
 flutter_launcher_icons:
   android: true
