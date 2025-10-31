@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:get/get.dart';
@@ -99,10 +98,8 @@ class NavigationService extends GetxController {
           'destination=${destination.latitude},${destination.longitude}&'
           'mode=walking&'
           'key=$_googleMapsApiKey';
-      print('DEBUG: Directions URL: $url');
 
       final response = await http.get(Uri.parse(url));
-      print('DEBUG: Directions status=${response.statusCode} body=${response.body.substring(0, math.min(1000, response.body.length))}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
@@ -129,7 +126,6 @@ class NavigationService extends GetxController {
           navigationSteps.value = (leg['steps'] as List)
               .map((step) => NavigationStep.fromJson(step))
               .toList();
-          print('DEBUG: route status=${data['status']} legs=${(data['routes'] as List).length} steps=${(leg['steps'] as List).length}');
 
           if (navigationSteps.isNotEmpty) {
             currentStep.value = navigationSteps[0];
@@ -169,8 +165,7 @@ class NavigationService extends GetxController {
       }
 
       // debug log to confirm origin/destination used
-      // ignore: avoid_print
-      print('DEBUG startNavigation origin=$originLatLng destination=$destination startTracking=$startTracking');
+     
 
       // Fetch route using the resolved origin
       final routeFetched = await fetchRoute(originLatLng, destination);
@@ -337,7 +332,6 @@ class NavigationService extends GetxController {
 
   /// Recalculate route when user deviates
   Future<void> _recalculateRoute(LatLng origin, LatLng destination) async {
-    print('Route deviation detected. Recalculating...');
     await fetchRoute(origin, destination);
   }
 

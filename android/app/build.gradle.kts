@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mubs_locator"
+    namespace = "com.mubs.locatorapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -22,21 +22,36 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.mubs_locator"
+        applicationId = "com.mubs.locatorapp"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
-        }
+    signingConfigs {
+        create("release") {
+            storeFile = file("mubs_locator-release-key.jks")
+            storePassword = "Alvin11David."
+            keyAlias = "mubs_locator_alias"
+            keyPassword = "Alvin11David."
     }
 }
+
+    buildTypes {
+    getByName("release") {
+        signingConfig = signingConfigs.getByName("release")
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+    }
+}
+}
+
+
 
 flutter {
     source = "../.."

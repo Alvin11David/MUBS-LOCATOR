@@ -1,4 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/components/bottom_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -67,9 +72,61 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           });
         }
       } catch (e) {
-        print('Error loading profile picture: $e');
+        //
       }
     }
+  }
+
+  Future<void> _onShareAppPressed() async {
+    final androidUrl = 'https://play.google.com/store/apps/details?id=com.yourcompany.mubs_locator'; // <-- replace
+    final iosUrl = 'https://apps.apple.com/app/idYOUR_APP_ID'; // <-- replace
+    final link = Platform.isAndroid ? androidUrl : iosUrl;
+
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Share'),
+              onTap: () {
+                Share.share('Check out MUBS Locator:\n$link');
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: const Text('Open Store'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final uri = Uri.parse(link);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  _showCustomSnackBar('Cannot open store page', Colors.red);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Copy link'),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: link));
+                Navigator.pop(ctx);
+                _showCustomSnackBar('Link copied to clipboard', Colors.green);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showCustomSnackBar(String message, Color backgroundColor) {
@@ -356,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           screenWidth: screenWidth,
                           screenHeight: screenHeight,
                           onTap: () {
-                            _showCustomSnackBar('Share App tapped', Colors.green);
+                            _onShareAppPressed();
                           },
                         ),
                         SizedBox(height: screenHeight * 0.020),

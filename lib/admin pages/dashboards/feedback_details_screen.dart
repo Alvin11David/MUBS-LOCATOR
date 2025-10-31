@@ -57,7 +57,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
       } catch (e) {
-        print('Error loading profile picture: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load profile picture: $e')),
         );
@@ -249,7 +248,6 @@ class _FeedbackDetailsScreenState extends State<FeedbackDetailsScreen>
               'body': 'You have a new reply to your feedback: $issueTitle',
             });
       } catch (e) {
-        print('Error sending FCM notification: $e');
       }
 
       _showCustomSnackBar(

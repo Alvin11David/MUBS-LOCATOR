@@ -1,4 +1,4 @@
-package com.example.mubs_locator
+package com.mubs.locatorapp
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -158,7 +158,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       // Update Firebase Authentication password
       await user.updatePassword(newPassword);
-      print('Firebase Authentication password updated for email: $email');
 
       // Update password in Firestore
       await FirebaseFirestore.instance
@@ -168,14 +167,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         'password': newPassword,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      print('Password updated in Firestore for email: $email');
 
       // Delete OTP from Firestore
       await FirebaseFirestore.instance
           .collection('password_reset_otp')
           .doc(email)
           .delete();
-      print('OTP deleted from Firestore for email: $email');
 
       if (mounted) {
         _passwordController.clear();
@@ -188,9 +185,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           arguments: {'email': email},
         );
       }
-    } catch (e, stackTrace) {
-      print('Error updating password: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         _showCustomSnackBar(context, 'Error: $e');
       }

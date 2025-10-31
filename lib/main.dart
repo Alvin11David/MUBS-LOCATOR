@@ -37,7 +37,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Background message handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Background message: ${message.notification?.title}");
   // FCM handles notification display in the notification bar
 }
 
@@ -50,7 +49,6 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('Firebase initialized successfully');
     // Initialize flutter_local_notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -80,14 +78,12 @@ Future<void> main() async {
     final messaging = FirebaseMessaging.instance;
     await _saveFcmToken();
     await messaging.subscribeToTopic('all_users');
-    print('Subscribed to all_users topic');
     // Handle token refresh
     messaging.onTokenRefresh.listen((token) {
       _saveFcmToken();
     });
     // Handle foreground notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Foreground message: ${message.notification?.title}');
       final notification = message.notification;
       if (notification != null) {
         flutterLocalNotificationsPlugin.show(
@@ -108,7 +104,6 @@ Future<void> main() async {
     });
     // Handle notification tap (background/terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Notification tapped: ${message.notification?.title}');
       if (message.data['type'] == 'feedback_reply') {
         final feedbackId = message.data['feedbackId'];
         if (feedbackId != null) {
@@ -125,7 +120,6 @@ Future<void> main() async {
     // Handle initial message (app opened from terminated state)
     messaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        print('Opened from terminated: ${message.notification?.title}');
         if (message.data['type'] == 'feedback_reply') {
           final feedbackId = message.data['feedbackId'];
           if (feedbackId != null) {
@@ -140,7 +134,7 @@ Future<void> main() async {
       }
     });
   } catch (e) {
-    print('Firebase init error: $e');
+    //
   }
   Get.put(NavigationService());
   runApp(const MyApp());
@@ -156,11 +150,10 @@ Future<void> _saveFcmToken() async {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'fcmToken': token,
         }, SetOptions(merge: true));
-        print('FCM Token saved: $token');
       }
     }
   } catch (e) {
-    print('Error saving FCM token: $e');
+    //
   }
 }
 

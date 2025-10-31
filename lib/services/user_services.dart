@@ -44,7 +44,6 @@ class UserService {
 
       return downloadUrl;
     } catch (e) {
-      print('Upload error: $e');
       return null;
     }
   }

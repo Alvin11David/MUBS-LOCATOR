@@ -51,7 +51,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
         }
       }
     } catch (e) {
-      print('Error loading profile image: $e');
     }
   }
 
@@ -75,10 +74,8 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
         return;
       }
       await user.getIdToken(true);
-      print('Token refreshed for user: ${user.uid}');
 
       final idTokenResult = await user.getIdTokenResult();
-      print('Custom claims: ${idTokenResult.claims}');
 
       final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
       final result = await callable.call({
@@ -121,7 +118,6 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
   }
 
   void _navigateToScreen(String routeName) {
-    print('Current route: ${ModalRoute.of(context)?.settings.name}, Target route: $routeName');
     setState(() {
       _isMenuVisible = false;
       _isDropdownVisible = false;
@@ -133,9 +129,7 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
       } else {
         Navigator.pushNamed(context, routeName);
       }
-      print('Navigated to $routeName');
     } catch (e) {
-      print('Navigation error to $routeName: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Navigation error: $e')),
       );
@@ -317,8 +311,8 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                   ),
                   if (_isDropdownVisible)
                     Positioned(
-                      top: screenHeight * 0.09,
-                      right: screenWidth * 0.04,
+                      top: screenHeight * 0.14,
+                      right: screenWidth * 0.07,
                       child: Container(
                         width: screenWidth * 0.25,
                         height: screenHeight * 0.06,
@@ -363,19 +357,13 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Edit Profile',
+                                        'Profile',
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: screenWidth * 0.04,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Poppins',
                                         ),
-                                      ),
-                                      Image.asset(
-                                        'assets/images/edit.png',
-                                        color: Colors.black,
-                                        width: screenWidth * 0.04,
-                                        height: screenWidth * 0.04,
                                       ),
                                     ],
                                   ),

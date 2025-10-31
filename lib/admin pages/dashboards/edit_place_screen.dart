@@ -73,7 +73,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
       } catch (e) {
-        print('Error loading profile picture: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load profile picture: $e')),
         );
@@ -120,7 +119,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
         });
       }
     } catch (e) {
-      print('Error fetching building details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load building details: $e')),
       );
@@ -141,7 +139,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       }
     } catch (e) {
-      print('Logout error: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to log out: $e')));
@@ -177,7 +174,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
         const SnackBar(content: Text('Field updated successfully')),
       );
     } catch (e) {
-      print('Error updating Firestore: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to update field: $e')));
@@ -195,7 +191,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
         });
         await _updateFirestoreField({'imageUrls': _imageUrls});
       } catch (e) {
-        print('Error deleting image: $e');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to delete image: $e')));
@@ -224,7 +219,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
         await _updateFirestoreField({'imageUrls': _imageUrls});
       }
     } catch (e) {
-      print('Error adding image: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to add image: $e')));
@@ -1002,12 +996,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                                     fontFamily: 'Poppins',
                                   ),
                                 ),
-                                Image.asset(
-                                  'assets/images/edit.png',
-                                  color: Colors.black,
-                                  width: screenWidth * 0.04,
-                                  height: screenWidth * 0.04,
-                                ),
                               ],
                             ),
                           ),
@@ -1133,7 +1121,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Dashboard row tapped');
                             Navigator.pushNamed(
                               context,
                               '/AdminDashboardScreen',
@@ -1172,7 +1159,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Feedback & Reports row tapped');
                             Navigator.pushNamed(context, '/FeedbackListScreen');
                             setState(() {
                               _isMenuVisible = false;
@@ -1208,7 +1194,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () async {
-                            print('Profile Settings row tapped');
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1253,7 +1238,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Push Notifications row tapped');
                             Navigator.pushNamed(
                               context,
                               '/SendNotificationsScreen',
@@ -1292,7 +1276,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Locations row tapped');
                             Navigator.pushNamed(
                               context,
                               '/LocationManagementScreen',
@@ -1331,7 +1314,6 @@ class _EditPlaceScreenState extends State<EditPlaceScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Logout row tapped');
                             _logout();
                           },
                           child: Row(

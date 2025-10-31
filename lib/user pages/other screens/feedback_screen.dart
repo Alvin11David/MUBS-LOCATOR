@@ -73,21 +73,17 @@ class _FeedbackScreenState extends State<FeedbackScreen>
       sound: true,
     );
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('Notification permission granted');
     } else {
-      print('Notification permission denied');
     }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && user.email != null) {
       String? fcmToken = await _firebaseMessaging.getToken();
-      if (fcmToken != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'fcmToken': fcmToken,
-          'email': user.email,
-        }, SetOptions(merge: true));
-      }
-
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'fcmToken': fcmToken,
+        'email': user.email,
+      }, SetOptions(merge: true));
+    
       // load unread notifications count from Firestore
       try {
         final snap = await FirebaseFirestore.instance
@@ -110,8 +106,9 @@ class _FeedbackScreenState extends State<FeedbackScreen>
           Colors.black87,
         );
       }
-      if (mounted)
+      if (mounted) {
         setState(() => _unreadNotifications = _unreadNotifications + 1);
+      }
     });
 
     // When the user taps the notification and app opens, you may want to mark read

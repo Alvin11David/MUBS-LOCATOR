@@ -45,7 +45,6 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
         }
       }
     } catch (e) {
-      print('Error loading profile image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading profile: $e')),
@@ -69,10 +68,8 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
           context,
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
-        print('Logged out and navigated to SignInScreen');
       }
     } catch (e) {
-      print('Logout error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logout error: $e')),
@@ -344,12 +341,6 @@ class _FeedbackListScreenState extends State<FeedbackListScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Poppins',
                                 ),
-                              ),
-                              Image.asset(
-                                'assets/images/edit.png',
-                                color: Colors.black,
-                                width: screenWidth * 0.04,
-                                height: screenWidth * 0.04,
                               ),
                             ],
                           ),

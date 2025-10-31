@@ -15,7 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:mubs_locator/components/bottom_navbar.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {
@@ -153,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> {
     String message, {
     bool isSuccess = false,
   }) {
-    print('Showing SnackBar: $message');
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -198,11 +196,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       onVisible: () {
-        print('SnackBar is visible: $message');
       },
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar).closed.then((reason) {
-      print('SnackBar closed: $message, reason: $reason');
     });
   }
 
@@ -244,7 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      print('Error fetching user full name: $e');
       if (mounted) {
         setState(() {
           _userFullName = 'User';
@@ -281,7 +276,6 @@ class _HomeScreenState extends State<HomeScreen> {
         await batch.commit();
       }
     } catch (e) {
-      print('Error marking feedback as read: $e');
     }
   }
 
@@ -313,9 +307,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Marker> processBuildings(List<Building> buildings) {
     return buildings.map((element) {
-      print(
-        "📍 Adding marker for: ${element.name} at ${element.location.latitude}, ${element.location.longitude}",
-      );
       return Marker(
         markerId: MarkerId(element.id),
         position: LatLng(element.location.latitude, element.location.longitude),
@@ -401,7 +392,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       BuildingRepository buildingRepository = BuildingRepository();
       final buildings = await buildingRepository.getAllBuildings();
-      print("✅ Fetched buildings: ${buildings.length}");
       final processedMarkers = processBuildings(buildings);
       if (mounted) {
         setState(() {
@@ -409,10 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
           markers.addAll(processedMarkers);
         });
       }
-      print("✅ Markers added: ${processedMarkers.length}");
-    } catch (e, stackTrace) {
-      print("❌ Failed to fetch buildings: $e");
-      print(stackTrace);
+    } catch (e) {
       rethrow;
     }
   }
@@ -426,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await buildingRepository.addBuilding(item);
       }
     } catch (e) {
-      print('Error creating buildings: $e');
+      //
     }
   }
 
@@ -446,7 +433,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       }
     } catch (e) {
-      print('Error signing out: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         _showCustomSnackBar(context, 'Error signing out: $e');
@@ -696,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      print('Error getting directions: $e');
+      //
     }
   }
 
@@ -764,10 +750,6 @@ class _HomeScreenState extends State<HomeScreen> {
     String issueTitle,
     String description,
   ) {
-    print('Feedback submitted for ${building.name}:');
-    print('Issue Type: $issueType');
-    print('Title: $issueTitle');
-    print('Description: $description');
     FirebaseFirestore.instance.collection('feedback').add({
       'userEmail': FirebaseAuth.instance.currentUser?.email ?? 'anonymous',
       'userName': _userFullName,
@@ -1182,7 +1164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 bottomRight: Radius.circular(30),
               ),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
                 child: Container(
                   width: screenWidth * 0.6,
                   height: screenHeight * 0.8,

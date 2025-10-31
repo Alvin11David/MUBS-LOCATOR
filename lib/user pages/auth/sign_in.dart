@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -23,6 +24,7 @@ class _SignInScreenState extends State<SignInScreen> {
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
+    clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
   );
 
   bool isButtonEnabled = false;
@@ -53,10 +55,8 @@ class _SignInScreenState extends State<SignInScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         if (user.email?.toLowerCase() == 'adminuser@gmail.com') {
-          print('Admin user detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
-          print('Regular user, navigating to HomeScreen');
           Navigator.pushReplacementNamed(context, '/HomeScreen');
         }
       }
@@ -76,11 +76,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 'fcmToken': token,
                 'email': user.email?.toLowerCase(),
               }, SetOptions(merge: true));
-          print('FCM Token saved: $token');
         }
       }
     } catch (e) {
-      print('Error saving FCM token: $e');
     }
   }
 
@@ -156,10 +154,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
       if (mounted) {
         if (email == 'adminuser@gmail.com') {
-          print('Admin email detected, navigating to AdminDashboardScreen');
           Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
         } else {
-          print('Regular user, navigating to HomeScreen');
           Navigator.pushReplacementNamed(context, '/HomeScreen');
         }
       }
@@ -172,11 +168,8 @@ class _SignInScreenState extends State<SignInScreen> {
       } else if (e.code == 'invalid-credential') {
         message = 'Invalid credentials. Please check your email and password.';
       }
-      print('FirebaseAuthException: ${e.code}, ${e.message}');
       _showCustomSnackBar(context, message);
-    } catch (e, stackTrace) {
-      print('Error during sign-in: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       _showCustomSnackBar(context, 'Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -186,19 +179,40 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _signInWithGoogle() async {
   setState(() => _isLoading = true);
   try {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
+    GoogleSignInAccount? googleUser;
+    GoogleSignInAuthentication? googleAuth;
+
+    if (kIsWeb) {
+      final webGoogleSignIn = GoogleSignIn(
+        clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
+        scopes: ['email', 'profile'],
+      );
+      googleUser = await webGoogleSignIn.signIn();
+      if (googleUser == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+      googleAuth = await googleUser.authentication;
+    } else {
+      googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+      googleAuth = await googleUser.authentication;
     }
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+    if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+      throw Exception('No ID token or access token received');
+    }
+
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
+
     final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
-    // Save user info to Firestore (add this block)
     final user = userCredential.user;
     if (user != null) {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
@@ -219,15 +233,13 @@ class _SignInScreenState extends State<SignInScreen> {
     if (mounted) {
       final email = userCredential.user?.email?.toLowerCase();
       if (email == 'adminuser@gmail.com') {
-        print('Admin user detected, navigating to AdminDashboardScreen');
         Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
       } else {
-        print('Regular user, navigating to HomeScreen');
         Navigator.pushReplacementNamed(context, '/HomeScreen');
       }
     }
   } on FirebaseAuthException catch (e) {
-    String message = 'Google sign in failed';
+    String message = 'Google sign-in failed';
     if (e.code == 'account-exists-with-different-credential') {
       message = 'An account already exists with the same email.';
     } else if (e.code == 'invalid-credential') {

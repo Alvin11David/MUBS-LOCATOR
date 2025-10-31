@@ -134,7 +134,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         originLatLng = LatLng(pos.latitude, pos.longitude);
         originName = 'Your Current Location';
       }
-      print('DEBUG: originLatLng=$originLatLng originName=$originName; destination=${_selectedToLocation?.name}');
 
       setState(() => _isCheckingPermissions = false);
 
@@ -294,9 +293,7 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
           _isLoadingBuildings = false;
         });
       }
-      print("✅ Successfully fetched ${buildings.length} buildings.");
     } catch (e) {
-      print("❌ Failed to fetch buildings: $e");
       if (mounted) {
         setState(() {
           _isLoadingBuildings = false;
@@ -355,7 +352,6 @@ class _LocationSelectScreenState extends State<LocationSelectScreen> {
         );
       }
     } catch (e) {
-      print("Error getting location: $e");
       if (mounted) {
         setState(() {
           _isLoadingLocation = false;

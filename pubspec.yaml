@@ -1,7 +1,7 @@
 name: mubs_locator
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+9
 
 environment:
   sdk: ^3.8.1
@@ -29,6 +29,8 @@ dependencies:
   string_similarity: ^2.1.1
   # Typeahead for autocomplete search
   flutter_typeahead: ^5.2.0
+  #Google Sign In web
+  google_sign_in_web:
   # Share functionality
   share_plus:
   # HTTP requests

@@ -17,9 +17,6 @@ class BuildingRepository {
   // Read all
   Future<List<Building>> getAllBuildings() async {
     final snapshot = await _collection.get();
-    print(
-      "Number of buildings fetched: ${snapshot.size}😁😁😁😁😁😁😁😁😁😁😁😁😁😁😁",
-    );
     return snapshot.docs
         .map(
           (doc) => Building.fromFirestore(
@@ -41,7 +38,6 @@ class BuildingRepository {
         )
         .toList();
     final count = snapshot.size;
-    print("Number of buildings fetched: $count");
     return {'count': count, 'buildings': buildings};
   }
 

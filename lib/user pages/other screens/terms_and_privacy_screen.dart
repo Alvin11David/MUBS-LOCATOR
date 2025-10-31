@@ -13,16 +13,13 @@ class TermsAndPrivacyScreen extends StatefulWidget {
 class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
   // Function to launch email client with preloaded email address
   Future<void> _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-    );
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open email client')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open email client')));
     }
   }
 
@@ -68,7 +65,10 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                   bottomRight: Radius.circular(screenWidth * 0.075),
                 ),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: screenWidth * 0.0125, sigmaY: screenWidth * 0.0125),
+                  filter: ImageFilter.blur(
+                    sigmaX: screenWidth * 0.0125,
+                    sigmaY: screenWidth * 0.0125,
+                  ),
                   child: Stack(
                     children: [
                       Center(
@@ -199,7 +199,10 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(screenWidth * 0.1),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: screenWidth * 0.0125, sigmaY: screenWidth * 0.0125),
+                  filter: ImageFilter.blur(
+                    sigmaX: screenWidth * 0.0125,
+                    sigmaY: screenWidth * 0.0125,
+                  ),
                   child: Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.04,
@@ -272,7 +275,7 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                           ),
                           SizedBox(height: screenHeight * 0.01),
                           Text(
-                            'Use of Maps, Firebase, or other tools',
+                            'We use third‑party services (e.g., Google Maps) which may collect and process data for functionality and analytics. Please review their privacy policies for details.',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w400,
@@ -307,7 +310,8 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                               ),
                               children: [
                                 TextSpan(
-                                  text: 'If you have any questions about these terms, contact us at: ',
+                                  text:
+                                      'If you have any questions about these terms, contact us at: ',
                                 ),
                                 TextSpan(
                                   text: 'alvin69david@gmail.com',
@@ -318,6 +322,46 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
                                   recognizer: TapGestureRecognizer()
                                     ..onTap = () {
                                       _launchEmail('alvin69david@gmail.com');
+                                    },
+                                ),
+                                TextSpan(text: ' or visit '),
+                                TextSpan(
+                                  text: 'our website',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 20, 111, 36),
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                        'https://mubs-locator.netlify.app/',
+                                      );
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(
+                                          url,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      }
+                                    },
+                                ),
+                                TextSpan(text: '\n\nIf you want to delete your account, please visit '),
+                                TextSpan(
+                                  text: 'this data deletion page.',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 20, 111, 36),
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                        'https://mubs-locator-data-deletion.netlify.app/',
+                                      );
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(
+                                          url,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      }
                                     },
                                 ),
                               ],

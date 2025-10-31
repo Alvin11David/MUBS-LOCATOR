@@ -7,20 +7,72 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:700901312627:android:cc7bd9e19054378c050206",
+        "mobilesdk_app_id": "1:700901312627:android:7c41d4663981a764050206",
         "android_client_info": {
-          "package_name": "com.example.mubs_locator"
+          "package_name": "com.mubs.locatorapp"
         }
       },
       "oauth_client": [
         {
-          "client_id": "700901312627-nbrmorqmmdb57od54m6c0736if3ciodr.apps.googleusercontent.com",
+          "client_id": "700901312627-73o93bm4ein2noufdksqmudc9qfmka28.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.mubs_locator",
+            "package_name": "com.mubs.locatorapp",
             "certificate_hash": "582cf93643ea423596e83106c996892dbb6d6d15"
           }
         },
+        {
+          "client_id": "700901312627-h0r7k9v6edm7cg2jg5ssrg3v2lbofv7e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mubs.locatorapp",
+            "certificate_hash": "6e99b635d32c044cb1582ae63f277270a472a809"
+          }
+        },
+        {
+          "client_id": "700901312627-vp9qk4s95j7hc33gno4k6i7e0upuse39.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mubs.locatorapp",
+            "certificate_hash": "3cc83327a462c0ff3d448284e3ce8a4974a1334f"
+          }
+        },
+        {
+          "client_id": "700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTqbZ0H-uvPmELnETwgfKhyhbHs-GghKk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "700901312627-hubq0arl8cblcmp2nqrs6hhkjusel8be.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mubsLocator"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700901312627:android:9748d1fd85538e01050206",
+        "android_client_info": {
+          "package_name": "com.mubs.locatorapplication1"
+        }
+      },
+      "oauth_client": [
         {
           "client_id": "700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com",
           "client_type": 3

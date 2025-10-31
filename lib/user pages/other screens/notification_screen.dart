@@ -79,7 +79,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         }
       }
     } catch (e) {
-      print('Error fetching user data: $e');
       if (mounted) {
         setState(() {
           _userFullName = 'User';
@@ -99,7 +98,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         sound: true,
       );
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
-        print('Notification permissions not granted');
         if (mounted) {
           _showCustomSnackBar(
             'Please enable notifications for updates',
@@ -108,7 +106,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         }
       }
     } catch (e) {
-      print('Error requesting notification permissions: $e');
       if (mounted) {
         _showCustomSnackBar(
           'Error requesting notification permissions: $e',
@@ -128,21 +125,17 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               .collection('users')
               .doc(user.uid)
               .set({'fcmToken': token}, SetOptions(merge: true));
-          print('FCM Token saved: $token');
         } else {
-          print('FCM Token is null');
           if (mounted) {
             _showCustomSnackBar('Failed to retrieve FCM token', Colors.red);
           }
         }
       } else {
-        print('No user signed in');
         if (mounted) {
           _showCustomSnackBar('No user signed in', Colors.red);
         }
       }
     } catch (e) {
-      print('Error saving FCM token: $e');
       if (mounted) {
         _showCustomSnackBar('Error saving FCM token: $e', Colors.red);
       }
@@ -158,10 +151,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               .collection('users')
               .doc(user.uid)
               .set({'fcmToken': token}, SetOptions(merge: true));
-          print('FCM Token refreshed: $token');
         }
       } catch (e) {
-        print('Error refreshing FCM token: $e');
         if (mounted) {
           _showCustomSnackBar('Error refreshing FCM token: $e', Colors.red);
         }
@@ -185,10 +176,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           batch.update(doc.reference, {'userRead': true});
         }
         await batch.commit();
-        print('Notifications marked as read');
       }
     } catch (e) {
-      print('Error marking notifications as read: $e');
       if (mounted) {
         _showCustomSnackBar('Error loading notifications: $e', Colors.red);
       }
@@ -210,7 +199,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         }
       }
     } catch (e) {
-      print('Error deleting notification: $e');
       if (mounted) {
         _showCustomSnackBar('Error deleting notification: $e', Colors.red);
       }

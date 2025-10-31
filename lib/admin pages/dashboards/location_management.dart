@@ -24,7 +24,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
     super.initState();
     _loadProfileImage();
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      print('Auth state changed: User ${user?.uid}, email: ${user?.email}');
     });
     _refreshData();
   }
@@ -41,7 +40,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
       } catch (e) {
-        print('Error loading profile picture: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load profile picture: $e')),
         );
@@ -63,17 +61,12 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   void _logout() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
-      print('Signing out user: $userId');
       await FirebaseAuth.instance.signOut();
-      print('Sign out successful');
       if (mounted) {
-        print('Navigating to /SignInScreen');
         Navigator.pushReplacementNamed(context, '/SignInScreen');
       } else {
-        print('Widget not mounted, skipping navigation');
       }
     } catch (e) {
-      print('Logout error: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to log out: $e')));
@@ -81,7 +74,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
   }
 
   void _navigateToEditProfile() async {
-    print('Navigating to EditProfileScreen');
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const EditProfileScreen()),
@@ -96,20 +88,16 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
 
   void _navigateToScreen(String routeName) {
     final String? currentRoute = ModalRoute.of(context)?.settings.name;
-    print('Current route: $currentRoute, Target route: $routeName');
     setState(() {
       _isMenuVisible = false;
       _isDropdownVisible = false;
     });
     if (routeName == currentRoute) {
-      print('Same route, skipping navigation');
       return;
     }
     try {
       Navigator.pushReplacementNamed(context, routeName);
-      print('Navigated to $routeName');
     } catch (e) {
-      print('Navigation error to $routeName: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Navigation error: $e')));
@@ -122,9 +110,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final user = FirebaseAuth.instance.currentUser;
     final fullName = user?.displayName ?? 'User';
-    print(
-      'Building LocationManagementScreen for user: ${user?.uid}, email: ${user?.email}',
-    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF93C5FD),
@@ -544,7 +529,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Dashboard row tapped');
                             _navigateToScreen('/AdminDashboardScreen');
                           },
                           child: Row(
@@ -577,7 +561,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Feedback & Reports row tapped');
                             _navigateToScreen('/FeedbackListScreen');
                           },
                           child: Row(
@@ -640,7 +623,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Push Notifications row tapped');
                             _navigateToScreen('/SendNotificationsScreen');
                           },
                           child: Row(
@@ -673,7 +655,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Locations row tapped');
                             _navigateToScreen('/LocationManagementScreen');
                           },
                           child: Row(
@@ -706,7 +687,6 @@ class _LocationManagementScreenState extends State<LocationManagementScreen>
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            print('Logout row tapped');
                             _logout();
                           },
                           child: Row(
@@ -773,7 +753,6 @@ class _LocationTableState extends State<LocationTable> {
     setState(() {
       _buildingsFuture =
           FirebaseFirestore.instance.collection('buildings').get();
-      print('Refreshing buildings data');
     });
   }
 
@@ -906,21 +885,15 @@ class _LocationTableState extends State<LocationTable> {
                     future: _buildingsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        print('FutureBuilder: Loading buildings data...');
                         return const Center(child: CircularProgressIndicator());
                       }
                       if (snapshot.hasError) {
-                        print('FutureBuilder Error: ${snapshot.error}');
                         return Center(child: Text('Error: ${snapshot.error}'));
                       }
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        print('FutureBuilder: No buildings found');
                         return const Center(child: Text('No buildings found'));
                       }
                       final docs = snapshot.data!.docs;
-                      print(
-                        'FutureBuilder: Found ${docs.length} building documents',
-                      );
                       return Table(
                         columnWidths: const {
                           0: FlexColumnWidth(1),
@@ -996,9 +969,6 @@ class _LocationTableState extends State<LocationTable> {
                             final name = data['name'] as String? ?? 'Unnamed';
                             final description = data['description'] as String? ??
                                 'No description';
-                            print(
-                              'Document: ID=${doc.id}, Name=$name, Description=$description',
-                            );
                             return TableRow(
                               children: [
                                 Padding(
@@ -1132,8 +1102,6 @@ class _LocationTableState extends State<LocationTable> {
                                               );
                                               _refreshData();
                                             } catch (e) {
-                                              print(
-                                                  'Error deleting location: $e');
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(
                                                 SnackBar(

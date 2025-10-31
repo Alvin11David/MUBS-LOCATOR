@@ -99,7 +99,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
       } catch (e) {
-        print('Error loading profile picture: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load profile picture: $e')),
         );
@@ -302,31 +301,28 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     if (value == null || value.trim().isEmpty) {
       return 'Enter the building name';
     }
-    final nameRegex = RegExp(r'^[a-zA-Z0-9\s\-,.&()]+$');
-    if (!nameRegex.hasMatch(value.trim())) {
-      return 'Name can only contain letters, numbers, spaces, and -,.&()';
-    }
+
     if (value.trim().length < 2) {
       return 'Name must be at least 2 characters long';
     }
-    return null;
+
+    return null; // ✅ Accepts any symbols or characters
   }
 
   String? _validateDescription(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Enter the description';
     }
-    final descriptionRegex = RegExp(r'^[a-zA-Z0-9\s\-,.&()]+$');
-    if (!descriptionRegex.hasMatch(value.trim())) {
-      return 'Description can only contain letters, numbers, spaces, and -,.&()';
-    }
+
     if (value.trim().length < 2) {
       return 'Description must be at least 2 characters long';
     }
+
     if (value.trim().length > 500) {
       return 'Description cannot exceed 500 characters';
     }
-    return null;
+
+    return null; // ✅ Accepts any characters
   }
 
   String? _validateMtnNumber(String? value) {
@@ -621,7 +617,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
             if (_isDropdownVisible)
               Positioned(
                 top: screenHeight * 0.09,
-                right: screenWidth * 0.04,
+                right: screenWidth * 0.05,
                 child: GestureDetector(
                   onTap: () {
                     Navigator.pushNamed(context, '/ProfileScreen');
@@ -631,7 +627,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                     });
                   },
                   child: Container(
-                    width: screenWidth * 0.25,
+                    width: screenWidth * 0.24,
                     height: screenHeight * 0.06,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
@@ -667,12 +663,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                                     fontWeight: FontWeight.bold,
                                     fontFamily: 'Poppins',
                                   ),
-                                ),
-                                Image.asset(
-                                  'assets/images/edit.png',
-                                  color: Colors.black,
-                                  width: screenWidth * 0.04,
-                                  height: screenWidth * 0.04,
                                 ),
                               ],
                             ),

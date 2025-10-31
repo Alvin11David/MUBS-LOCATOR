@@ -41,7 +41,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _profilePicUrl = doc.data()?['profilePicUrl'] as String?;
         });
       } catch (e) {
-        print('Error loading profile picture: $e');
       }
     }
   }
@@ -55,7 +54,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _userCount = querySnapshot.docs.length;
       });
     } catch (e) {
-      print('Error loading user count: $e');
     }
   }
 
@@ -69,7 +67,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _pendingFeedbackCount = querySnapshot.docs.length;
       });
     } catch (e) {
-      print('Error loading pending feedback count: $e');
     }
   }
 
@@ -86,7 +83,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _activeUserCount = querySnapshot.docs.length;
       });
     } catch (e) {
-      print('Error loading active user count: $e');
     }
   }
 
@@ -844,9 +840,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
                                       child: Image.asset(
-                                        'assets/images/feedback.png',
-                                        width: screenWidth * 0.7,
-                                        height: screenWidth * 0.7,
+                                        'assets/images/feedback.jpg',
+                                        width: screenWidth * 0.5,
+                                        height: screenWidth * 0.5,
                                         fit: BoxFit.contain,
                                         errorBuilder:
                                             (context, error, stackTrace) =>
@@ -987,8 +983,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                       child: Image.asset(
                                         'assets/images/notifications.png',
-                                        width: screenWidth * 0.7,
-                                        height: screenWidth * 0.7,
+                                        width: screenWidth * 0.5,
+                                        height: screenWidth * 0.5,
                                         fit: BoxFit.contain,
                                         errorBuilder:
                                             (context, error, stackTrace) =>

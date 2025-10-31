@@ -28,7 +28,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
   @override
   void initState() {
     super.initState();
-    print('Received email: "${widget.email}"');
     _startCountdown();
   }
 
@@ -123,9 +122,7 @@ class _OTP_ScreenState extends State<OTP_Screen> {
     });
     try {
       final email = widget.email.trim().toLowerCase();
-      print('Resending OTP for email: "$email"');
       final otp = _generateOTP();
-      print('Generated OTP: $otp');
 
       // Call Firebase Function to send OTP email and update Firestore
       try {
@@ -135,11 +132,9 @@ class _OTP_ScreenState extends State<OTP_Screen> {
           'email': email,
           'otp': otp,
         });
-        print('Firebase Function response: ${result.data}');
 
         // Check if the response indicates success
         if (result.data['success'] != true) {
-          print('Firebase Function failed: ${result.data}');
           if (mounted) {
             _showCustomSnackBar(context, 'Error sending OTP: ${result.data['message']}');
           }
@@ -149,7 +144,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
           return;
         }
       } catch (e) {
-        print('Firebase Function error: $e');
         if (mounted) {
           _showCustomSnackBar(context, 'Error sending OTP email: $e');
         }
@@ -168,12 +162,9 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       _startCountdown();
 
       if (mounted) {
-        print('ACTIVE OTP CODE SENT: $otp');
         _showCustomSnackBar(context, 'A new 4 digit code has been sent to $email', isSuccess: true);
       }
-    } catch (e, stackTrace) {
-      print('Error resending OTP: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         _showCustomSnackBar(context, 'Error resending OTP: $e');
       }
@@ -192,7 +183,6 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       (controller) => controller.text.trim().length == 1,
     );
     if (!isComplete) {
-      print('OTP incomplete: Not all fields filled');
       return;
     }
 
@@ -202,17 +192,12 @@ class _OTP_ScreenState extends State<OTP_Screen> {
 
     try {
       final enteredOTP = _controllers.map((c) => c.text.trim()).join();
-      print('Raw controller values: ${_controllers.map((c) => '"${c.text}"').toList()}');
-      print('Entered OTP: "$enteredOTP"');
       final email = widget.email.trim().toLowerCase();
-      print('Checking OTP for email: "$email"');
 
       final doc = await FirebaseFirestore.instance
           .collection('password_reset_otp')
           .doc(email)
           .get();
-
-      print('Firestore document exists: ${doc.exists}');
       if (!doc.exists) {
         if (mounted) {
           _showCustomSnackBar(context, 'No OTP found for this email');
@@ -223,12 +208,8 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       final data = doc.data()!;
       final storedOTP = data['otp'] as String?;
       final expiresAtMillis = data['expiresAt'] as int?;
-      print('Stored OTP: "$storedOTP"');
-      print('Expires At (ms): $expiresAtMillis');
-      print('Current Time (ms): ${DateTime.now().millisecondsSinceEpoch}');
 
       if (storedOTP == null || expiresAtMillis == null) {
-        print('Invalid OTP data: storedOTP=$storedOTP, expiresAtMillis=$expiresAtMillis');
         if (mounted) {
           _showCustomSnackBar(context, 'Invalid OTP data');
         }
@@ -236,12 +217,8 @@ class _OTP_ScreenState extends State<OTP_Screen> {
       }
 
       final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
-      print('Expires At (formatted): ${expiresAt.toIso8601String()}');
-      print('Current Time (formatted): ${DateTime.now().toIso8601String()}');
-      print('Is OTP valid (before expiration and matching)? ${DateTime.now().isBefore(expiresAt) && enteredOTP == storedOTP}');
 
       if (enteredOTP == storedOTP && DateTime.now().isBefore(expiresAt)) {
-        print('OTP verification successful');
         if (mounted) {
           Navigator.pushNamed(
             context,
@@ -250,16 +227,11 @@ class _OTP_ScreenState extends State<OTP_Screen> {
           );
         }
       } else {
-        print('OTP verification failed:');
-        print('  - OTP Mismatch: ${enteredOTP != storedOTP}');
-        print('  - Expired: ${!DateTime.now().isBefore(expiresAt)}');
         if (mounted) {
           _showCustomSnackBar(context, 'Invalid or expired OTP');
         }
       }
-    } catch (e, stackTrace) {
-      print('Error verifying OTP: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         _showCustomSnackBar(context, 'Error verifying OTP: $e');
       }
