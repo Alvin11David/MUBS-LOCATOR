@@ -29,6 +29,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     _requestNotificationPermissions();
     _saveFcmToken();
     _listenForTokenRefresh();
+    _fetchAllNotifications();
   }
 
   String _getGreeting() {
@@ -86,6 +87,50 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         });
         _showCustomSnackBar('Error fetching user data: $e', Colors.red);
       }
+    }
+  }
+
+  Future<List<QueryDocumentSnapshot>> _fetchAllNotifications() async {
+    final firestore = FirebaseFirestore.instance;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final List<QueryDocumentSnapshot> combined = [];
+
+    try {
+      // user-specific notifications
+      if (currentUser != null) {
+        final userSnap = await firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .collection('user_notifications')
+            .get();
+        combined.addAll(userSnap.docs);
+      }
+
+      // top-level notifications saved by admin screen
+      final topSnap = await firestore.collection('user_notifications').get();
+      combined.addAll(topSnap.docs);
+
+      // deduplicate by document id (if any overlap)
+      final Map<String, QueryDocumentSnapshot> byId = {};
+      for (var d in combined) {
+        byId[d.id] = d;
+      }
+      final merged = byId.values.toList();
+
+      // sort by timestamp descending (documents without timestamp go to the end)
+      merged.sort((a, b) {
+        final aData = a.data() as Map<String, dynamic>;
+        final bData = b.data() as Map<String, dynamic>;
+        final aTs = (aData['timestamp'] as Timestamp?) ?? (aData['sentAt'] as Timestamp?);
+        final bTs = (bData['timestamp'] as Timestamp?) ?? (bData['sentAt'] as Timestamp?);
+        final aDate = aTs?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = bTs?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+
+      return merged;
+    } catch (e) {
+      rethrow;
     }
   }
 
