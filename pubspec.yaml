@@ -1,7 +1,7 @@
 name: mubs_locator
 description: "A new Flutter project."
-publish_to: 'none'
-version: 1.0.0+9
+publish_to: "none"
+version: 1.0.0+17
 
 environment:
   sdk: ^3.8.1
@@ -29,8 +29,6 @@ dependencies:
   string_similarity: ^2.1.1
   # Typeahead for autocomplete search
   flutter_typeahead: ^5.2.0
-  #Google Sign In web
-  google_sign_in_web:
   # Share functionality
   share_plus:
   # HTTP requests
@@ -51,6 +49,8 @@ dependencies:
   geolocator:
   # Google Directions API for routing
   google_directions_api:
+  # Firebase App Check for security
+  firebase_app_check:
   # GetX for state management and navigation
   get:
   # Dio for advanced HTTP requests

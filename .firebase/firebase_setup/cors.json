@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "http://localhost:61147",
+      "http://localhost:5000",
+      "https://mubs-locator.web.app",
+      "https://mubs-locator.firebaseapp.com"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "maxAgeSeconds": 3600
+  }
+]

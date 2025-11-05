@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +23,8 @@ class _OTP_ScreenState extends State<OTP_Screen> {
   int _countdown = 0;
   bool _isButtonEnabled = true;
   bool _isLoading = false;
+  
+  final now = DateTime.now();
 
   @override
   void initState() {
@@ -116,133 +117,91 @@ class _OTP_ScreenState extends State<OTP_Screen> {
   }
 
   // Resend OTP
+    // ──────────────────────────────────────────────────────────────
+  // Resend OTP – writes a NEW OTP + 5-minute expiry
+  // ──────────────────────────────────────────────────────────────
   Future<void> _resendOTP() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     try {
       final email = widget.email.trim().toLowerCase();
-      final otp = _generateOTP();
+      final otp = (1000 + Random().nextInt(9000)).toString();
 
-      // Call Firebase Function to send OTP email and update Firestore
-      try {
-        final result = await FirebaseFunctions.instance
-            .httpsCallable('sendOTPEmail')
-            .call({
-          'email': email,
-          'otp': otp,
-        });
+      // <-- NEW: add expiresAt (5 minutes from now)
+      final now = DateTime.now();
+      await FirebaseFirestore.instance
+          .collection('password_reset_otp')
+          .doc(email)
+          .set({
+        'otp': otp,
+        'email': email,
+        'generatedAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(now.add(const Duration(minutes: 5))),   // <-- NEW
+      }, SetOptions(merge: true));
 
-        // Check if the response indicates success
-        if (result.data['success'] != true) {
-          if (mounted) {
-            _showCustomSnackBar(context, 'Error sending OTP: ${result.data['message']}');
-          }
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-      } catch (e) {
-        if (mounted) {
-          _showCustomSnackBar(context, 'Error sending OTP email: $e');
-        }
-        setState(() {
-          _isLoading = false;
-        });
-        return;
+      // clear fields + restart countdown
+      for (var c in _controllers) {
+        c.clear();
       }
-
-      // Clear OTP input fields
-      for (var controller in _controllers) {
-        controller.clear();
-      }
-
-      // Start countdown for resend button
+      _focusNodes[0].requestFocus();
       _startCountdown();
 
-      if (mounted) {
-        _showCustomSnackBar(context, 'A new 4 digit code has been sent to $email', isSuccess: true);
-      }
+      _showCustomSnackBar(context, 'New OTP sent to $email', isSuccess: true);
     } catch (e) {
-      if (mounted) {
-        _showCustomSnackBar(context, 'Error resending OTP: $e');
-      }
+      _showCustomSnackBar(context, 'Resend failed: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   // Verify OTP
   Future<void> _checkOTPAndNavigate() async {
-    bool isComplete = _controllers.every(
-      (controller) => controller.text.trim().length == 1,
-    );
-    if (!isComplete) {
+  final filled = _controllers.every((c) => c.text.trim().isNotEmpty);
+  if (!filled) return;
+
+  setState(() => _isLoading = true);
+
+  try {
+    final enteredOTP = _controllers.map((c) => c.text.trim()).join();
+    final email = widget.email.trim().toLowerCase();
+
+    final doc = await FirebaseFirestore.instance
+        .collection('password_reset_otp')
+        .doc(email)
+        .get();
+
+    if (!doc.exists) {
+      _showCustomSnackBar(context, 'No OTP found – request a new one');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    final data = doc.data()!;
+    final storedOTP = data['otp'] as String?;
+    final expiresAt = (data['expiresAt'] as Timestamp?)?.toDate();
 
-    try {
-      final enteredOTP = _controllers.map((c) => c.text.trim()).join();
-      final email = widget.email.trim().toLowerCase();
-
-      final doc = await FirebaseFirestore.instance
-          .collection('password_reset_otp')
-          .doc(email)
-          .get();
-      if (!doc.exists) {
-        if (mounted) {
-          _showCustomSnackBar(context, 'No OTP found for this email');
-        }
-        return;
-      }
-
-      final data = doc.data()!;
-      final storedOTP = data['otp'] as String?;
-      final expiresAtMillis = data['expiresAt'] as int?;
-
-      if (storedOTP == null || expiresAtMillis == null) {
-        if (mounted) {
-          _showCustomSnackBar(context, 'Invalid OTP data');
-        }
-        return;
-      }
-
-      final expiresAt = DateTime.fromMillisecondsSinceEpoch(expiresAtMillis);
-
-      if (enteredOTP == storedOTP && DateTime.now().isBefore(expiresAt)) {
-        if (mounted) {
-          Navigator.pushNamed(
-            context,
-            '/ResetPasswordScreen',
-            arguments: email,
-          );
-        }
-      } else {
-        if (mounted) {
-          _showCustomSnackBar(context, 'Invalid or expired OTP');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showCustomSnackBar(context, 'Error verifying OTP: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (storedOTP == null || expiresAt == null) {
+      _showCustomSnackBar(context, 'Invalid OTP data');
+      return;
     }
+
+    if (enteredOTP == storedOTP && DateTime.now().isBefore(expiresAt)) {
+      if (!mounted) return;
+      Navigator.pushNamed(
+        context,
+        '/ResetPasswordScreen',
+        arguments: email,
+      );
+    } else {
+      _showCustomSnackBar(
+        context,
+        enteredOTP != storedOTP ? 'Wrong code' : 'OTP expired',
+      );
+    }
+  } catch (e) {
+    _showCustomSnackBar(context, 'Verification error: $e');
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {

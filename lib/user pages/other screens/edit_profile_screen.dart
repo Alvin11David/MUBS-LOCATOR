@@ -49,6 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
       }
     } catch (e) {
+      print('Error fetching user data: $e');
       if (mounted) {
         _showSnackBar('Error loading data: $e');
       }
@@ -109,6 +110,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
       }
     } catch (e) {
+      print('Error saving profile data: $e');
       if (mounted) {
         _showSnackBar('Error updating profile: $e');
       }

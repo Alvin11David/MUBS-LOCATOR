@@ -21,7 +21,7 @@ class NavigationService extends GetxController {
   final RxString errorMessage = ''.obs;
 
   // Google Maps API key - REPLACE WITH YOUR ACTUAL KEY
-  final String _googleMapsApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
+  final String _googleMapsApiKey = 'AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso';
 
   StreamSubscription<Position>? _positionStreamSubscription;
   LatLng? _destination;
@@ -93,11 +93,8 @@ class NavigationService extends GetxController {
       _destination = destination;
 
       final String url =
-          'https://maps.googleapis.com/maps/api/directions/json?'
-          'origin=${origin.latitude},${origin.longitude}&'
-          'destination=${destination.latitude},${destination.longitude}&'
-          'mode=walking&'
-          'key=$_googleMapsApiKey';
+          '/directions?origin=${origin.latitude},${origin.longitude}'
+    '&destination=${destination.latitude},${destination.longitude}';
 
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {

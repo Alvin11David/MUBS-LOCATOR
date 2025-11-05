@@ -2,7 +2,7 @@
 <html>
 <head>
   <!-- Google Maps (you already had this) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso&libraries=places"></script>
 
   <!-- Google Sign-In SDK -->
   <script src="https://apis.google.com/js/platform.js" async defer></script>
@@ -18,7 +18,7 @@
   <!-- Firebase config – copy from Firebase Console → Project Settings → SDK setup -->
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyDTqbZ0H-uvPmELnETwgfKhyhbHs-GghKk",   // your API key (public, safe to expose)
+      apiKey: "AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso",   // your API key (public, safe to expose)
       authDomain: "mubs-locator.firebaseapp.com",
       projectId: "mubs-locator",
       storageBucket: "mubs-locator.firebasestorage.app",
@@ -41,13 +41,20 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="mubs_locator">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="icons/logo.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="logo.png"/>
 
   <title>mubs_locator</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    window.addEventListener('load', function() {
+      if (!window.google || !window.google.maps) {
+        console.error('Google Maps failed to load');
+      }
+    });
+  </script>
 </head>
 
 <body>

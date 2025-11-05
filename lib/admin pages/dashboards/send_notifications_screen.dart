@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -55,57 +56,79 @@ class _SendNotificationScreenState extends State<SendNotificationScreen> {
   }
 
   Future<void> _sendNotification() async {
-    if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
+  if (_selectedCategory == null || _messageController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a category and enter a message.')),
+    );
+    return;
+  }
+
+  setState(() => _isSending = true);
+
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category and enter a message.')),
+        const SnackBar(content: Text('You must be signed in to send notifications.')),
       );
+      setState(() => _isSending = false);
       return;
     }
 
-    setState(() => _isSending = true);
+    final messageText = _messageController.text.trim();
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be signed in to send notifications.')),
-        );
-        setState(() => _isSending = false);
-        return;
-      }
-      await user.getIdToken(true);
+    final callable = FirebaseFunctions.instanceFor(region: 'us-central1')
+        .httpsCallable(
+      'sendSimpleNotification',
+      options: HttpsCallableOptions(
+        timeout: Duration(seconds: 30),
+      ),
+    );
 
-      final idTokenResult = await user.getIdTokenResult();
+    final result = await callable.call({
+      'title': _selectedCategory,
+      'body': messageText,
+      'category': _selectedCategory,
+    });
 
-      final callable = FirebaseFunctions.instanceFor(region: 'us-central1').httpsCallable('sendGlobalNotification');
-      final result = await callable.call({
-        'title': 'MUBS Locator: $_selectedCategory',
-        'body': _messageController.text.trim(),
-        'category': _selectedCategory,
-      });
+    // Save notification to Firestore
+    await FirebaseFirestore.instance.collection('user_notifications').add({
+      'category': _selectedCategory,
+      'message': messageText,
+      'sentAt': FieldValue.serverTimestamp(),
+      'sentBy': user.uid,
+    });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.data['message'])),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.data['message'] ?? 'Notification sent successfully!',
+        ),
+      ),
+    );
 
-      _messageController.clear();
-      setState(() => _selectedCategory = null);
-    } on FirebaseFunctionsException catch (e) {
-      String errorMessage = 'Error sending notification: ${e.message}';
-      if (e.code == 'permission-denied') {
-        errorMessage = 'Admin access required to send notifications.';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unexpected error: $e')),
-      );
-    } finally {
-      setState(() => _isSending = false);
+    _messageController.clear();
+    setState(() => _selectedCategory = null);
+  } on FirebaseFunctionsException catch (e) {
+    String errorMessage = 'Error sending notification: ${e.message}';
+    if (e.code == 'unauthenticated') {
+      errorMessage = 'Login expired. Please log out and log in again.';
+    } else if (e.code == 'permission-denied') {
+      errorMessage = 'You must be an admin to send notifications.';
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMessage)),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unexpected error: $e')),
+    );
+  } finally {
+    setState(() => _isSending = false);
   }
+}
+
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();

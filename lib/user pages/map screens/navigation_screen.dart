@@ -33,6 +33,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _initializeNavigation() async {
+    print('DEBUG: NavigationScreen.init origin=${widget.origin} originName=${widget.originName}');
     // pass origin if provided (selected start building)
     await _navigationService.startNavigation(
       widget.destination,

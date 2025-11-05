@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_web/google_sign_in_web.dart' as web; // ADD THIS
+// ADD THIS
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // ADD THIS
+// ADD THIS
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -56,30 +56,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
     int strengthScore = 0;
     List<String> hints = [];
     bool hasMinLength = password.length >= 6;
-    if (hasMinLength)
+    if (hasMinLength) {
       strengthScore++;
-    else
+    } else {
       hints.add("Password must be at least 6 characters long");
+    }
     bool hasLowercase = password.contains(RegExp(r'[a-z]'));
-    if (hasLowercase)
+    if (hasLowercase) {
       strengthScore++;
-    else
+    } else {
       hints.add("Add at least one lowercase letter (a-z)");
+    }
     bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
-    if (hasUppercase)
+    if (hasUppercase) {
       strengthScore++;
-    else
+    } else {
       hints.add("Add at least one uppercase letter (A-Z)");
+    }
     bool hasNumber = password.contains(RegExp(r'[0-9]'));
-    if (hasNumber)
+    if (hasNumber) {
       strengthScore++;
-    else
+    } else {
       hints.add("Consider adding a number (0-9)");
+    }
     bool hasSpecial = password.contains(RegExp(r'[!@#\$&*~]'));
-    if (hasSpecial)
+    if (hasSpecial) {
       strengthScore++;
-    else
+    } else {
       hints.add("Consider adding a special character (!@#\$&*~)");
+    }
 
     setState(() {
       _passwordStrengthProgress = (strengthScore / 3.0).clamp(0.0, 1.0);
@@ -130,20 +135,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   String? _validateForm() {
-    if (_fullNameController.text.trim().isEmpty)
+    if (_fullNameController.text.trim().isEmpty) {
       return 'Please enter your full name';
+    }
     if (_emailController.text.trim().isEmpty) return 'Please enter your email';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(_emailController.text.trim()))
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
       return 'Please enter a valid email';
+    }
     if (_emailHint != null) return _emailHint;
-    if (_passwordController.text.trim().isEmpty)
+    if (_passwordController.text.trim().isEmpty) {
       return 'Please enter a password';
-    if (_passwordController.text.trim().length < 6)
+    }
+    if (_passwordController.text.trim().length < 6) {
       return 'Password must be at least 6 characters';
+    }
     if (_confirmPasswordController.text.trim() !=
-        _passwordController.text.trim())
+        _passwordController.text.trim()) {
       return 'Passwords do not match';
+    }
     return null;
   }
 
@@ -671,75 +681,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.08,
-                                ),
-                                child: _OrDivider(
-                                  fontSize: screenWidth * 0.04,
-                                  horizontalPadding: screenWidth * 0.02,
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.03),
-                              // GOOGLE BUTTON - WEB + MOBILE
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.08,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: screenHeight * 0.06,
-                                  child: kIsWeb
-                                      ? OutlinedButton.icon(
-                                          onPressed: _isLoading
-                                              ? null
-                                              : _signUpWithGoogleWeb,
-                                          icon: Image.asset(
-                                            'assets/logo/googleicon.png', // add this asset or replace with Image.network(...)
-                                            height: 20,
-                                          ),
-                                          label: Text('Google'),
-                                          style: OutlinedButton.styleFrom(
-                                            minimumSize: Size(
-                                              double.infinity,
-                                              screenHeight * 0.06,
-                                            ),
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                            ),
-                                          ),
-                                        )
-                                      : GestureDetector(
-                                          onTap: _isLoading
-                                              ? null
-                                              : _signUpWithGoogleMobile,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(30),
-                                              border: Border.all(
-                                                color: _isLoading
-                                                    ? Colors.grey
-                                                    : const Color(0xFFD59A00),
-                                                width: 1,
-                                              ),
-                                              color: Colors.white,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.12),
-                                                  spreadRadius: 1,
-                                                  blurRadius: 6,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            alignment: Alignment.center,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              SizedBox(height: screenHeight * 0.03),
                               Center(
                                 child: SizedBox(
                                   width: screenWidth * 0.8,
@@ -823,8 +764,9 @@ class _ResponsiveTextField extends StatelessWidget {
       textInputAction: textInputAction,
       onChanged: onChanged,
       onFieldSubmitted: (_) {
-        if (nextFocusNode != null)
+        if (nextFocusNode != null) {
           FocusScope.of(context).requestFocus(nextFocusNode);
+        }
       },
       decoration: InputDecoration(
         labelText: label,
@@ -906,8 +848,9 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
       obscureText: _isObscured,
       onChanged: widget.onChanged,
       onFieldSubmitted: (_) {
-        if (widget.nextFocusNode != null)
+        if (widget.nextFocusNode != null) {
           FocusScope.of(context).requestFocus(widget.nextFocusNode);
+        }
       },
       decoration: InputDecoration(
         labelText: widget.label,
@@ -964,35 +907,3 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
   }
 }
 
-class _OrDivider extends StatelessWidget {
-  final double fontSize;
-  final double horizontalPadding;
-
-  const _OrDivider({required this.fontSize, required this.horizontalPadding});
-
-  @override
-  Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    return SizedBox(
-      width: screenWidth * 0.8,
-      child: Row(
-        children: [
-          const Expanded(child: Divider(color: Colors.grey)),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            child: Text(
-              'Or Sign Up With',
-              style: TextStyle(
-                color: const Color(0xFF6B7280),
-                fontSize: fontSize,
-                fontFamily: 'Epunda Slab',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-          const Expanded(child: Divider(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-}

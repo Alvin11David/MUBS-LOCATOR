@@ -1,6 +1,7 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'package:cloud_functions/cloud_functions.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -13,6 +14,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool isButtonEnabled = false;
   bool isLoading = false;
+  
+  
 
   @override
   void initState() {
@@ -29,7 +32,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   // Custom SnackBar method
-  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+  void _showCustomSnackBar(
+    BuildContext context,
+    String message, {
+    bool isSuccess = false, 
+    required Duration duration,
+  }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -45,7 +53,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               width: screenWidth * 0.08,
               height: screenWidth * 0.08,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(width: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -69,7 +78,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         right: 10,
         bottom: MediaQuery.of(context).size.height - 100,
       ),
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 6),
       backgroundColor: Colors.transparent,
       elevation: 0,
     );
@@ -78,34 +87,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    setState(() {
-      isLoading = true;
-    });
-    try {
-      final email = _emailController.text.trim();
-      final otp = (1000 + Random().nextInt(9000)).toString();
+  setState(() => isLoading = true);
 
-      // Call your deployed Cloud Function
-      final callable = FirebaseFunctions.instance.httpsCallable('sendOTPEmail');
-      await callable.call({'email': email, 'otp': otp});
+  try {
+    final email = _emailController.text.trim();
+    final otp = (1000 + Random().nextInt(9000)).toString();
 
-      if (mounted) {
-        _showCustomSnackBar(context, 'A 4 digit code has been sent to $email', isSuccess: true);
-        Navigator.pushNamed(context, '/OTPScreen', arguments: email);
-      }
-    } catch (e) {
-      if (mounted) {
-        _showCustomSnackBar(context, 'Error: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+    // 1. Store OTP in Firestore
+    final now = DateTime.now();
+    await FirebaseFirestore.instance
+        .collection('password_reset_otp')
+        .doc(email)
+        .set({
+          'otp': otp,
+          'email': email,
+          'generatedAt': FieldValue.serverTimestamp(),
+          'expiresAt': Timestamp.fromDate(now.add(const Duration(minutes: 5))),
+        }, SetOptions(merge: true));
+
+    // 2. Show OTP for exactly 6 seconds
+    const otpDuration = Duration(seconds: 6);
+    _showCustomSnackBar(
+      context,
+      'Your OTP: $otp',
+      isSuccess: true,
+      duration: otpDuration,
+    );
+
+    // 3. Navigate **after** the same 6 seconds (independent of SnackBar)
+    await Future.delayed(otpDuration);
+
+    if (!mounted) return;   // widget may have been disposed while waiting
+    Navigator.pushNamed(context, '/OTPScreen', arguments: email);
+  } catch (e) {
+    if (mounted) {
+      _showCustomSnackBar(
+        context,
+        'Error: $e',
+        duration: const Duration(seconds: 6),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
-
+}
   @override
   void dispose() {
     _emailController.dispose();
@@ -285,7 +312,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     if (value == null || value.trim().isEmpty) {
                                       return 'Enter your email address';
                                     }
-                                    final emailRegex = RegExp(r'^[\w\.-]+@gmail\.com$');
+                                    final emailRegex = RegExp(
+                                      r'^[\w\.-]+@gmail\.com$',
+                                    );
                                     if (!emailRegex.hasMatch(value.trim())) {
                                       return 'Please enter a Gmail address (e.g., username@gmail.com)';
                                     }
@@ -306,13 +335,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       fontWeight: FontWeight.w400,
                                       fontSize: screenWidth * 0.04,
                                     ),
-                                    fillColor: const Color.fromARGB(255, 237, 236, 236),
+                                    fillColor: const Color.fromARGB(
+                                      255,
+                                      237,
+                                      236,
+                                      236,
+                                    ),
                                     filled: true,
                                     prefixIcon: Padding(
-                                      padding: EdgeInsets.only(left: screenWidth * 0.02),
+                                      padding: EdgeInsets.only(
+                                        left: screenWidth * 0.02,
+                                      ),
                                       child: Icon(
                                         Icons.mail,
-                                        color: const Color.fromARGB(255, 69, 141, 224),
+                                        color: const Color.fromARGB(
+                                          255,
+                                          69,
+                                          141,
+                                          224,
+                                        ),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
@@ -347,7 +388,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: (isButtonEnabled && !isLoading) ? _handleSubmit : null,
+                                    onTap: (isButtonEnabled && !isLoading)
+                                        ? _handleSubmit
+                                        : null,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
@@ -357,8 +400,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         ),
                                         gradient: LinearGradient(
                                           colors: isButtonEnabled && !isLoading
-                                              ? [const Color(0xFFE0E7FF), const Color(0xFF93C5FD)]
-                                              : [Colors.grey[300]!, Colors.grey[500]!],
+                                              ? [
+                                                  const Color(0xFFE0E7FF),
+                                                  const Color(0xFF93C5FD),
+                                                ]
+                                              : [
+                                                  Colors.grey[300]!,
+                                                  Colors.grey[500]!,
+                                                ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
@@ -369,7 +418,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                               width: 24,
                                               height: 24,
                                               child: CircularProgressIndicator(
-                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Colors.black),
                                                 strokeWidth: 3,
                                               ),
                                             )
@@ -402,7 +454,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.pushNamed(context, '/SignInScreen');
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/SignInScreen',
+                                          );
                                         },
                                         child: Text(
                                           'Sign In',

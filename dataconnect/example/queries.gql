@@ -1,0 +1,67 @@
+mutation CreateCampusLocation(
+  $building: String!
+  $description: String
+  $floor: String
+  $latitude: Float
+  $locationType: String!
+  $longitude: Float
+  $name: String!
+  $roomNumber: String
+) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  campusLocation_insert(
+    data: {
+      building: $building
+      description: $description
+      floor: $floor
+      latitude: $latitude
+      locationType: $locationType
+      longitude: $longitude
+      name: $name
+      roomNumber: $roomNumber
+    }
+  )
+}
+
+query ListCampusLocations @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  campusLocations {
+    id
+    name
+    building
+    description
+    floor
+    latitude
+    longitude
+    locationType
+    roomNumber
+  }
+}
+
+mutation CreateFeedback(
+  $campusLocationId: UUID
+  $userId: UUID!
+  $createdAt: Timestamp!
+  $message: String!
+  $status: String
+  $type: String!
+) @auth(level: USER) {
+  feedback_insert(
+    data: {
+      campusLocationId: $campusLocationId
+      userId: $userId
+      createdAt: $createdAt
+      message: $message
+      status: $status
+      type: $type
+    }
+  )
+}
+
+query GetUser($id: UUID!) @auth(level: USER) {
+  user(id: $id) {
+    id
+    authId
+    createdAt
+    displayName
+    email
+  }
+}

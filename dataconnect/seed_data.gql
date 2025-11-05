@@ -1,0 +1,62 @@
+mutation SeedData @transaction @auth(level: PUBLIC, insecureReason: "This mutation is for seeding data and is safe to expose to the public.") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      authId: "someAuthId1",
+      createdAt: "2024-01-01T00:00:00Z",
+      displayName: "Demo User 1",
+      email: "demo1@example.com"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      authId: "someAuthId2",
+      createdAt: "2024-01-02T00:00:00Z",
+      displayName: "Demo User 2",
+      email: "demo2@example.com"
+    }
+  ])
+  campusLocation_insertMany(data: [
+    {
+      id: "650e8400-e29b-41d4-a716-446655440000",
+      name: "Location A",
+      building: "Building 1",
+      floor: "1st",
+      roomNumber: "101",
+      latitude: 34.0522,
+      longitude: -118.2437,
+      locationType: "classroom",
+      description: "A classroom on the first floor"
+    },
+    {
+      id: "650e8400-e29b-41d4-a716-446655440001",
+      name: "Location B",
+      building: "Building 2",
+      floor: "2nd",
+      roomNumber: "201",
+      latitude: 34.0523,
+      longitude: -118.2438,
+      locationType: "office",
+      description: "An office on the second floor"
+    }
+  ])
+  feedback_insertMany(data: [
+    {
+      id: "750e8400-e29b-41d4-a716-446655440000",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      campusLocationId: "650e8400-e29b-41d4-a716-446655440000",
+      createdAt: "2024-01-03T00:00:00Z",
+      message: "Feedback for Location A",
+      type: "General",
+      status: "pending"
+    },
+    {
+      id: "750e8400-e29b-41d4-a716-446655440001",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      campusLocationId: "650e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-01-04T00:00:00Z",
+      message: "Feedback for Location B",
+      type: "Issue",
+      status: "resolved"
+    }
+  ])
+}

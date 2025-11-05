@@ -1,0 +1,26 @@
+type User @table {
+  authId: String!
+  createdAt: Timestamp!
+  displayName: String
+  email: String
+}
+
+type CampusLocation @table {
+  name: String!
+  locationType: String!
+  building: String!
+  description: String
+  floor: String
+  roomNumber: String
+  latitude: Float
+  longitude: Float
+}
+
+type Feedback @table {
+  user: User!
+  campusLocation: CampusLocation
+  type: String!
+  message: String!
+  createdAt: Timestamp!
+  status: String
+}
