@@ -21,7 +21,6 @@ async function setAdminClaim(uid) {
     console.error("Error setting custom claim:", error);
   }
 }
-
 // Replace 'USER_UID' with the actual UID of the user
 const userUid = "0QeBxEgowfToV60e6UT55VJqOF42"; // Replace with the actual UID
 setAdminClaim(userUid).then(() => process.exit());

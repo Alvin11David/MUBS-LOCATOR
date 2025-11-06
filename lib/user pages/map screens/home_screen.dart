@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mubs_locator/components/bottom_navbar.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {

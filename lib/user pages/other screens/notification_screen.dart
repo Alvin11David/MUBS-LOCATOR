@@ -21,6 +21,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   bool _isMenuVisible = false;
   File? _profileImage;
 
+  late Future<List<QueryDocumentSnapshot>> _notificationsFuture;
+
   @override
   void initState() {
     super.initState();
@@ -29,7 +31,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     _requestNotificationPermissions();
     _saveFcmToken();
     _listenForTokenRefresh();
-    _fetchAllNotifications();
+    _notificationsFuture = _fetchAllNotifications();
   }
 
   String _getGreeting() {
@@ -121,8 +123,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       merged.sort((a, b) {
         final aData = a.data() as Map<String, dynamic>;
         final bData = b.data() as Map<String, dynamic>;
-        final aTs = (aData['timestamp'] as Timestamp?) ?? (aData['sentAt'] as Timestamp?);
-        final bTs = (bData['timestamp'] as Timestamp?) ?? (bData['sentAt'] as Timestamp?);
+        final aTs =
+            (aData['timestamp'] as Timestamp?) ??
+            (aData['sentAt'] as Timestamp?);
+        final bTs =
+            (bData['timestamp'] as Timestamp?) ??
+            (bData['sentAt'] as Timestamp?);
         final aDate = aTs?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
         final bDate = bTs?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
@@ -502,7 +508,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                       ),
                       GestureDetector(
                         onTap: () {
-                         Navigator.pushReplacementNamed(context, '/HomeScreen');
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/HomeScreen',
+                          );
                         },
                         child: Icon(
                           Icons.chevron_left,
@@ -519,15 +528,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseAuth.instance.currentUser != null
-                      ? FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(FirebaseAuth.instance.currentUser!.uid)
-                            .collection('user_notifications')
-                            .orderBy('timestamp', descending: true)
-                            .snapshots()
-                      : Stream.empty(),
+                child: FutureBuilder<List<QueryDocumentSnapshot>>(
+                  future: _notificationsFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -556,7 +558,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         ),
                       );
                     }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -591,7 +593,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                       );
                     }
 
-                    final notifications = snapshot.data!.docs;
+                    final notifications = snapshot.data!;
 
                     return ListView.builder(
                       padding: EdgeInsets.symmetric(
@@ -933,36 +935,36 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                           ),
                           SizedBox(height: screenHeight * 0.02),
                           Padding(
-                        padding: EdgeInsets.only(
-                          left: screenWidth * 0.03,
-                          top: screenHeight * 0.02,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/LocationSelectScreen',
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_on,
-                                color: Colors.black,
-                                size: textScaler.scale(20),
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/LocationSelectScreen',
                               ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Text(
-                                'Search Locations',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: textScaler.scale(14),
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Urbanist',
-                                ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Search Locations',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
                           SizedBox(height: screenHeight * 0.02),
                           Padding(
                             padding: EdgeInsets.only(
