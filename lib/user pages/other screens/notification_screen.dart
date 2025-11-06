@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,6 +24,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   late Future<List<QueryDocumentSnapshot>> _notificationsFuture;
 
+  int _unreadCount = 0;
+  StreamSubscription<QuerySnapshot>? _userNotifSub;
+  StreamSubscription<QuerySnapshot>? _topNotifSub;
+  StreamSubscription<DocumentSnapshot>? _userDocSub;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +38,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     _saveFcmToken();
     _listenForTokenRefresh();
     _notificationsFuture = _fetchAllNotifications();
+    _listenForUnreadCount();
   }
 
   String _getGreeting() {
@@ -227,12 +234,91 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           batch.update(doc.reference, {'userRead': true});
         }
         await batch.commit();
+        // mark top-level admin notifications as seen for this user
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'lastSeenNotifications': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        if (mounted) {
+          _showCustomSnackBar('Notifications marked read', Colors.green);
+        }
       }
     } catch (e) {
       if (mounted) {
         _showCustomSnackBar('Error loading notifications: $e', Colors.red);
       }
     }
+  }
+
+  void _listenForUnreadCount() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // listen to per-user unread notifications
+    _userNotifSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('user_notifications')
+        .where('userRead', isEqualTo: false)
+        .snapshots()
+        .listen((_) => _recalculateUnread(user.uid));
+
+    // listen to top-level admin notifications and user's doc (for lastSeen)
+    _topNotifSub = FirebaseFirestore.instance
+        .collection('user_notifications')
+        .snapshots()
+        .listen((_) => _recalculateUnread(user.uid));
+
+    _userDocSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((_) => _recalculateUnread(user.uid));
+  }
+
+  Future<void> _recalculateUnread(String uid) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      final userUnreadSnap = await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('user_notifications')
+          .where('userRead', isEqualTo: false)
+          .get();
+
+      final userDoc = await firestore.collection('users').doc(uid).get();
+      final lastSeen = (userDoc.data()?['lastSeenNotifications'] as Timestamp?)
+          ?.toDate();
+
+      final topSnap = await firestore.collection('user_notifications').get();
+      int topUnread = 0;
+      for (var doc in topSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final ts =
+            (data['timestamp'] as Timestamp?) ?? (data['sentAt'] as Timestamp?);
+        if (ts == null) {
+          // if no timestamp assume it's unread (conservative)
+          topUnread++;
+        } else if (lastSeen == null || ts.toDate().isAfter(lastSeen)) {
+          topUnread++;
+        }
+      }
+
+      final total = userUnreadSnap.docs.length + topUnread;
+      if (mounted) {
+        setState(() => _unreadCount = total);
+      }
+    } catch (_) {
+      // ignore transient errors for badge counting
+    }
+  }
+
+  @override
+  void dispose() {
+    _userNotifSub?.cancel();
+    _topNotifSub?.cancel();
+    _userDocSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _deleteNotification(String notificationId) async {
@@ -463,11 +549,59 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                     _isMenuVisible = !_isMenuVisible;
                                   });
                                 },
-                                behavior: HitTestBehavior.opaque,
-                                child: Icon(
-                                  Icons.menu,
-                                  color: Colors.black,
-                                  size: screenWidth * 0.08,
+                                behavior: HitTestBehavior.translucent,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Icon(
+                                      Icons.menu,
+                                      color: Colors.black,
+                                      size: screenWidth * 0.08,
+                                    ),
+                                    if (_unreadCount > 0)
+                                      Positioned(
+                                        right: -6,
+                                        top: -6,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.translucent,
+                                          onTap: () {
+                                            // open notifications screen when user taps badge
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/NotificationsScreen',
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 1.2,
+                                              ),
+                                            ),
+                                            constraints: BoxConstraints(
+                                              minWidth: screenWidth * 0.06,
+                                              minHeight: screenWidth * 0.06,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                _unreadCount > 99
+                                                    ? '99+'
+                                                    : '$_unreadCount',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: textScaler.scale(9),
+                                                  fontFamily: 'Poppins',
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                               SizedBox(width: screenWidth * 0.04),
@@ -605,106 +739,113 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         final doc = notifications[index];
                         final data = doc.data() as Map<String, dynamic>;
                         // prefer timestamp -> sentAt, fall back to epoch
-                        final Timestamp? ts = (data['timestamp'] as Timestamp?) ??
+                        final Timestamp? ts =
+                            (data['timestamp'] as Timestamp?) ??
                             (data['sentAt'] as Timestamp?);
                         final DateTime timestamp =
-                            ts?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
-                        final formattedTime =
-                            DateFormat('MMM d, yyyy h:mm a').format(timestamp);
+                            ts?.toDate() ??
+                            DateTime.fromMillisecondsSinceEpoch(0);
+                        final formattedTime = DateFormat(
+                          'MMM d, yyyy h:mm a',
+                        ).format(timestamp);
 
                         // message and category for top-level admin notifications
-                        final String? adminReplyRaw = data['adminReply'] as String?; 
+                        final String? adminReplyRaw =
+                            data['adminReply'] as String?;
                         final String? messageRaw = data['message'] as String?;
                         final String? categoryRaw = data['category'] as String?;
                         final String message =
                             messageRaw ?? adminReplyRaw ?? 'No message';
                         final String category =
-                            categoryRaw ?? (data['issueTitle'] as String?) ?? '';
-                         final notificationId = doc.id;
- 
+                            categoryRaw ??
+                            (data['issueTitle'] as String?) ??
+                            '';
+                        final notificationId = doc.id;
+
                         return Dismissible(
-                           key: Key(notificationId),
-                           direction: DismissDirection
-                               .startToEnd, // Swipe left to delete
-                           background: Container(
-                             alignment: Alignment.centerLeft,
-                             padding: const EdgeInsets.only(
-                               left: 4,
-                             ), // Match notification padding
-                             color: Colors.red,
-                             child: const Icon(
-                               Icons.delete,
-                               color: Colors.white,
-                             ),
-                           ),
-                           confirmDismiss: (direction) async {
-                             return await showDialog(
-                               context: context,
-                               builder: (context) => AlertDialog(
-                                 title: const Text('Delete Notification'),
-                                 content: const Text(
-                                   'Are you sure you want to delete this notification?',
-                                 ),
-                                 actions: [
-                                   TextButton(
-                                     onPressed: () =>
-                                         Navigator.of(context).pop(false),
-                                     child: const Text('Cancel'),
-                                   ),
-                                   TextButton(
-                                     onPressed: () =>
-                                         Navigator.of(context).pop(true),
-                                     child: const Text(
-                                       'Delete',
-                                       style: TextStyle(color: Colors.red),
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             );
-                           },
-                           onDismissed: (direction) {
-                             _deleteNotification(notificationId);
-                           },
-                           child: Container(
-                             margin: EdgeInsets.only(
-                               bottom: screenHeight * 0.02,
-                             ),
-                             padding: const EdgeInsets.symmetric(
-                               horizontal: 60,
-                               vertical: 16,
-                             ), // 4px horizontal padding
-                             decoration: BoxDecoration(
-                               color: Colors.white.withOpacity(0.2),
-                               borderRadius: BorderRadius.circular(16),
-                               border: Border.all(
-                                 color: Colors.white.withOpacity(0.3),
-                                 width: 1,
-                               ),
-                               boxShadow: [
-                                 BoxShadow(
-                                   color: Colors.black.withOpacity(0.1),
-                                   blurRadius: 8,
-                                   spreadRadius: 2,
-                                   offset: const Offset(0, 2),
-                                 ),
-                               ],
-                             ),
-                             child: ClipRRect(
-                               borderRadius: BorderRadius.circular(16),
-                               child: BackdropFilter(
-                                 filter: ImageFilter.blur(
-                                   sigmaX: 10,
-                                   sigmaY: 10,
-                                 ),
-                                 child: Column(
-                                   crossAxisAlignment:
-                                       CrossAxisAlignment.stretch,
-                                   children: [
-                                     SizedBox(height: screenHeight * 0.005),
+                          key: Key(notificationId),
+                          direction: DismissDirection
+                              .startToEnd, // Swipe left to delete
+                          background: Container(
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.only(
+                              left: 4,
+                            ), // Match notification padding
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            return await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Notification'),
+                                content: const Text(
+                                  'Are you sure you want to delete this notification?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          onDismissed: (direction) {
+                            _deleteNotification(notificationId);
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              bottom: screenHeight * 0.02,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 60,
+                              vertical: 16,
+                            ), // 4px horizontal padding
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(
+                                  sigmaX: 10,
+                                  sigmaY: 10,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    SizedBox(height: screenHeight * 0.005),
                                     // If this doc is an admin/top-level notification it will usually have 'message' and 'category'.
                                     // If it's a user-feedback-reply doc it will have 'adminReply' (handled via message variable above).
-                                    if (messageRaw != null || adminReplyRaw != null) ...[
+                                    if (messageRaw != null ||
+                                        adminReplyRaw != null) ...[
                                       if (category.isNotEmpty)
                                         Text(
                                           'Category: $category',
@@ -716,12 +857,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                      SizedBox(height: screenHeight * 0.005),                                      Text(
+                                      SizedBox(height: screenHeight * 0.005),
+                                      Text(
                                         message,
                                         style: TextStyle(
                                           fontSize: textScaler.scale(14),
                                           fontFamily: 'Poppins',
-                                         color: Colors.black87,
+                                          color: Colors.black87,
                                         ),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
@@ -757,293 +899,293 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                         ),
                                       ),
                                     ],
-                                   ],
-                                 ),
-                               ),
-                             ),
-                           ),
-                         );
-                       },
-                     );
-                   },
-                 ),
-               ),
-               AnimatedPositioned(
-                 duration: const Duration(milliseconds: 300),
-                 curve: Curves.easeInOut,
-                 left: _isMenuVisible ? 0 : -screenWidth * 0.6,
-                 top: 0,
-                 child: ClipRRect(
-                   borderRadius: const BorderRadius.only(
-                     topRight: Radius.circular(30),
-                     bottomRight: Radius.circular(30),
-                   ),
-                   child: BackdropFilter(
-                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                     child: Container(
-                       width: screenWidth * 0.6,
-                       height: screenHeight * 0.8,
-                       decoration: BoxDecoration(
-                         color: Colors.white.withOpacity(0.55),
-                         borderRadius: const BorderRadius.only(
-                           topRight: Radius.circular(30),
-                           bottomRight: Radius.circular(30),
-                         ),
-                         border: Border.all(
-                           color: Colors.white.withOpacity(0.3),
-                           width: 1,
-                         ),
-                         boxShadow: [
-                           BoxShadow(
-                             color: Colors.black.withOpacity(0.25),
-                             blurRadius: 12,
-                             offset: const Offset(2, 4),
-                           ),
-                         ],
-                       ),
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Stack(
-                             children: [
-                               Image.asset(
-                                 'assets/images/sidebar.png',
-                                 width: screenWidth * 0.6,
-                                 height: screenHeight * 0.16,
-                                 fit: BoxFit.cover,
-                               ),
-                               Positioned(
-                                 left: screenWidth * 0.03,
-                                 top: screenHeight * 0.03,
-                                 child: Container(
-                                   width: screenWidth * 0.14,
-                                   height: screenWidth * 0.14,
-                                   decoration: BoxDecoration(
-                                     shape: BoxShape.circle,
-                                     color: Colors.white.withOpacity(0.7),
-                                     border: Border.all(
-                                       color: Colors.white70,
-                                       width: 1,
-                                     ),
-                                   ),
-                                   child: ClipOval(
-                                     child: _profilePicUrl != null
-                                         ? Image.network(
-                                             _profilePicUrl!,
-                                             width: screenWidth * 0.14,
-                                             height: screenWidth * 0.14,
-                                             fit: BoxFit.cover,
-                                             errorBuilder:
-                                                 (context, error, stackTrace) =>
-                                                     Icon(
-                                                       Icons.person,
-                                                       color: Colors.black
-                                                           .withOpacity(0.8),
-                                                       size: screenWidth * 0.07,
-                                                     ),
-                                           )
-                                         : Icon(
-                                             Icons.person,
-                                             color: Colors.black.withOpacity(
-                                               0.8,
-                                             ),
-                                             size: screenWidth * 0.07,
-                                           ),
-                                   ),
-                                 ),
-                               ),
-                               Positioned(
-                                 left: screenWidth * 0.19,
-                                 top: screenHeight * 0.05,
-                                 child: Text(
-                                   'MUBS Locator',
-                                   style: TextStyle(
-                                     color: Colors.white,
-                                     fontSize: textScaler.scale(15),
-                                     fontWeight: FontWeight.bold,
-                                     fontFamily: 'Urbanist',
-                                   ),
-                                 ),
-                               ),
-                               Positioned(
-                                 left: screenWidth * 0.19,
-                                 top: screenHeight * 0.085,
-                                 child: Text(
-                                   _userFullName,
-                                   style: TextStyle(
-                                     color: Colors.white.withOpacity(0.9),
-                                     fontSize: textScaler.scale(12),
-                                     fontWeight: FontWeight.w500,
-                                     fontFamily: 'Urbanist',
-                                   ),
-                                   maxLines: 1,
-                                   overflow: TextOverflow.ellipsis,
-                                 ),
-                               ),
-                             ],
-                           ),
-                           Padding(
-                             padding: EdgeInsets.only(
-                               left: screenWidth * 0.03,
-                               top: screenHeight * 0.02,
-                             ),
-                             child: GestureDetector(
-                               onTap: () =>
-                                   Navigator.pushNamed(context, '/HomeScreen'),
-                               child: Row(
-                                 children: [
-                                   Icon(
-                                     Icons.home,
-                                     color: Colors.black,
-                                     size: textScaler.scale(20),
-                                   ),
-                                   SizedBox(width: screenWidth * 0.02),
-                                   Text(
-                                     'Home',
-                                     style: TextStyle(
-                                       color: Colors.black,
-                                       fontSize: textScaler.scale(14),
-                                       fontWeight: FontWeight.w500,
-                                       fontFamily: 'Urbanist',
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                           SizedBox(height: screenHeight * 0.02),
-                           Padding(
-                             padding: EdgeInsets.only(
-                               left: screenWidth * 0.03,
-                               top: screenHeight * 0.02,
-                             ),
-                             child: GestureDetector(
-                               onTap: () => Navigator.pushNamed(
-                                 context,
-                                 '/ProfileScreen',
-                               ),
-                               child: Row(
-                                 children: [
-                                   Icon(
-                                     Icons.settings,
-                                     color: Colors.black,
-                                     size: textScaler.scale(20),
-                                   ),
-                                   SizedBox(width: screenWidth * 0.02),
-                                   Text(
-                                     'Profile Settings',
-                                     style: TextStyle(
-                                       color: Colors.black,
-                                       fontSize: textScaler.scale(14),
-                                       fontWeight: FontWeight.w500,
-                                       fontFamily: 'Urbanist',
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                           SizedBox(height: screenHeight * 0.02),
-                           Padding(
-                             padding: EdgeInsets.only(
-                               left: screenWidth * 0.03,
-                               top: screenHeight * 0.02,
-                             ),
-                             child: GestureDetector(
-                               onTap: () => Navigator.pushNamed(
-                                 context,
-                                 '/NotificationsScreen',
-                               ),
-                               child: Row(
-                                 children: [
-                                   Icon(
-                                     Icons.notifications,
-                                     color: Colors.black,
-                                     size: textScaler.scale(20),
-                                   ),
-                                   SizedBox(width: screenWidth * 0.02),
-                                   Text(
-                                     'Notifications',
-                                     style: TextStyle(
-                                       color: Colors.black,
-                                       fontSize: textScaler.scale(14),
-                                       fontWeight: FontWeight.w500,
-                                       fontFamily: 'Urbanist',
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                           SizedBox(height: screenHeight * 0.02),
-                           Padding(
-                             padding: EdgeInsets.only(
-                               left: screenWidth * 0.03,
-                               top: screenHeight * 0.02,
-                             ),
-                             child: GestureDetector(
-                               onTap: () => Navigator.pushNamed(
-                                 context,
-                                 '/LocationSelectScreen',
-                               ),
-                               child: Row(
-                                 children: [
-                                   Icon(
-                                     Icons.location_on,
-                                     color: Colors.black,
-                                     size: textScaler.scale(20),
-                                   ),
-                                   SizedBox(width: screenWidth * 0.02),
-                                   Text(
-                                     'Search Locations',
-                                     style: TextStyle(
-                                       color: Colors.black,
-                                       fontSize: textScaler.scale(14),
-                                       fontWeight: FontWeight.w500,
-                                       fontFamily: 'Urbanist',
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                           SizedBox(height: screenHeight * 0.02),
-                           Padding(
-                             padding: EdgeInsets.only(
-                               left: screenWidth * 0.03,
-                               top: screenHeight * 0.02,
-                             ),
-                             child: GestureDetector(
-                               onTap: () {
-                                 _showLogoutDialog(context);
-                               },
-                               child: Row(
-                                 children: [
-                                   Icon(
-                                     Icons.exit_to_app,
-                                     color: Colors.black,
-                                     size: textScaler.scale(20),
-                                   ),
-                                   SizedBox(width: screenWidth * 0.02),
-                                   Text(
-                                     'Logout',
-                                     style: TextStyle(
-                                       color: Colors.black,
-                                       fontSize: textScaler.scale(14),
-                                       fontWeight: FontWeight.w500,
-                                       fontFamily: 'Urbanist',
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                   ),
-                 ),
-               ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                left: _isMenuVisible ? 0 : -screenWidth * 0.6,
+                top: 0,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      width: screenWidth * 0.6,
+                      height: screenHeight * 0.8,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.55),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 12,
+                            offset: const Offset(2, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              Image.asset(
+                                'assets/images/sidebar.png',
+                                width: screenWidth * 0.6,
+                                height: screenHeight * 0.16,
+                                fit: BoxFit.cover,
+                              ),
+                              Positioned(
+                                left: screenWidth * 0.03,
+                                top: screenHeight * 0.03,
+                                child: Container(
+                                  width: screenWidth * 0.14,
+                                  height: screenWidth * 0.14,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.7),
+                                    border: Border.all(
+                                      color: Colors.white70,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: _profilePicUrl != null
+                                        ? Image.network(
+                                            _profilePicUrl!,
+                                            width: screenWidth * 0.14,
+                                            height: screenWidth * 0.14,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Icon(
+                                                      Icons.person,
+                                                      color: Colors.black
+                                                          .withOpacity(0.8),
+                                                      size: screenWidth * 0.07,
+                                                    ),
+                                          )
+                                        : Icon(
+                                            Icons.person,
+                                            color: Colors.black.withOpacity(
+                                              0.8,
+                                            ),
+                                            size: screenWidth * 0.07,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: screenWidth * 0.19,
+                                top: screenHeight * 0.05,
+                                child: Text(
+                                  'MUBS Locator',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: textScaler.scale(15),
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: screenWidth * 0.19,
+                                top: screenHeight * 0.085,
+                                child: Text(
+                                  _userFullName,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: textScaler.scale(12),
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/HomeScreen'),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.home,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Home',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/ProfileScreen',
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.settings,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Profile Settings',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/NotificationsScreen',
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.notifications,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Notifications',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/LocationSelectScreen',
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Search Locations',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: screenWidth * 0.03,
+                              top: screenHeight * 0.02,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                _showLogoutDialog(context);
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.exit_to_app,
+                                    color: Colors.black,
+                                    size: textScaler.scale(20),
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: textScaler.scale(14),
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
