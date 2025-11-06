@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 class NavigationScreen extends StatefulWidget {
   final LatLng destination;
@@ -28,7 +29,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   String _distanceText = '';
   String _durationText = '';
 
-  static const String _apiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
+  static const String _apiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
 
   @override
   void initState() {
@@ -52,8 +53,23 @@ class _NavigationScreenState extends State<NavigationScreen> {
     debugPrint('🌐 Fetching from URL: $url');
 
     try {
+      if (!await _checkInternetConnection()) {
+        debugPrint('❌ No internet connection');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No internet connection. Please check your network settings.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       final resp = await http.get(Uri.parse(url));
       debugPrint('📡 API Response Status: ${resp.statusCode}');
+      debugPrint('📦 Full Response Body: ${resp.body}'); // Add this line
 
       if (resp.statusCode != 200) {
         debugPrint('❌ API Error: ${resp.statusCode} ${resp.body}');
@@ -63,8 +79,43 @@ class _NavigationScreenState extends State<NavigationScreen> {
       final data = json.decode(resp.body);
       debugPrint('✅ Received JSON response');
 
+      // Check the API status
+      if (data['status'] != 'OK') {
+        debugPrint('❌ API Status not OK: ${data['status']}');
+        debugPrint(
+          '❌ Error Message: ${data['error_message'] ?? 'No error message'}',
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not find route: ${data['status']}')),
+          );
+        }
+        return;
+      }
+
       if ((data['routes'] as List).isEmpty) {
         debugPrint('⚠️ No routes found in response');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No route found between these locations'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Validate coordinates are within reasonable bounds
+      if (origin.latitude == 0 ||
+          origin.longitude == 0 ||
+          widget.destination.latitude == 0 ||
+          widget.destination.longitude == 0) {
+        debugPrint('⚠️ Invalid coordinates detected');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid location coordinates')),
+          );
+        }
         return;
       }
 
@@ -112,6 +163,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
       }
     } catch (e) {
       debugPrint('❌ Error fetching route: $e');
+    }
+  }
+
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } on SocketException catch (_) {
+      return false;
     }
   }
 

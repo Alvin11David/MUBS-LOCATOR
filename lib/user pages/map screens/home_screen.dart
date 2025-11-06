@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
-  final String _googleApiKey = 'AIzaSyBTk9548rr1JiKe1guF1i8z2wqHV8CZjRA';
+  final String _googleApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
   List<Building> fetchedBuildings = [];
   bool searchActive = true;
   bool isNavigating = false;
