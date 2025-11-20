@@ -333,7 +333,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
             Text(widget.destinationName, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
             if (_distanceText.isNotEmpty || _durationText.isNotEmpty)
               Text(
-                '${_durationText.isNotEmpty ? _durationText + ' • ' : ''}${_distanceText}',
+                '${_durationText.isNotEmpty ? '$_durationText • ' : ''}$_distanceText',
                 style: const TextStyle(color: Colors.black54, fontSize: 12),
               ),
           ],

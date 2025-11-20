@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:amba_locator/user%20pages/auth/sign_in.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
@@ -293,7 +293,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       final topSnap = await firestore.collection('user_notifications').get();
       int topUnread = 0;
       for (var doc in topSnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         final ts =
             (data['timestamp'] as Timestamp?) ?? (data['sentAt'] as Timestamp?);
         if (ts == null) {

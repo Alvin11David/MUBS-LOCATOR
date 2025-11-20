@@ -448,10 +448,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: SingleChildScrollView(
+                      // keep the white container size fixed (no resizing of scaffold)
+                      // but allow extra vertical scroll when keyboard is visible
                       physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.06,
+                      ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: screenHeight * 0.69,
+                          minHeight: screenHeight * 1.2,
                         ),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
@@ -906,4 +915,3 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
     );
   }
 }
-

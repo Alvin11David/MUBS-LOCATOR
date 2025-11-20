@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mubs_locator/admin%20pages/dashboards/edit_place_screen.dart';
+import 'package:amba_locator/admin%20pages/dashboards/edit_place_screen.dart';
 import 'dart:ui';
-import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
+import 'package:amba_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class LocationManagementScreen extends StatefulWidget {
   const LocationManagementScreen({super.key});

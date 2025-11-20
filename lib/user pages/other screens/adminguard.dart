@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:amba_locator/user%20pages/auth/sign_in.dart';
 
 class AdminGuard extends StatelessWidget {
   final Widget child;

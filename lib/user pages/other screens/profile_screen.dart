@@ -426,6 +426,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             _showLogoutDialog(context);
                           },
                         ),
+                        SizedBox(height: screenHeight * 0.020),
+                        _buildMenuItem(
+                          icon: Icons.delete_outline,
+                          title: 'Delete Account',
+                          screenWidth: screenWidth,
+                          screenHeight: screenHeight,
+                          onTap: () {
+                            _showDeleteAccountDialog(context);
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -560,6 +570,107 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               },
               child: const Text(
                 'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+    void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Delete Account',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to delete your account? This action cannot be undone.',
+            style: TextStyle(
+              color: Colors.black87,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.7),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    );
+                  },
+                );
+
+                try {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    final userEmail = user.email;
+                    
+                    // Delete user data from Firestore
+                    final querySnapshot = await FirebaseFirestore.instance
+                        .collection('users')
+                        .where('email', isEqualTo: userEmail)
+                        .get();
+                    
+                    for (var doc in querySnapshot.docs) {
+                      await doc.reference.delete();
+                    }
+                    
+                    // Delete the Firebase Auth user
+                    await user.delete();
+                    
+                    // Remove loading dialog and navigate
+                    if (context.mounted) {
+                      Navigator.of(context).pop(); // Remove loading dialog
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/SignInScreen',
+                        (route) => false,
+                      );
+                    }
+                  }
+                } catch (e) {
+                  // Remove loading dialog
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    _showCustomSnackBar('Error deleting account: $e', Colors.red);
+                  }
+                }
+              },
+              child: const Text(
+                'Delete',
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,

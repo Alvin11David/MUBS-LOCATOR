@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
+import 'package:amba_locator/user%20pages/intro/onboarding_screen1.dart';
 
 class OnboardingScreen2 extends StatefulWidget {
   const OnboardingScreen2({super.key});

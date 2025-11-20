@@ -24,7 +24,8 @@ class _SignInScreenState extends State<SignInScreen> {
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
-    clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
+    clientId:
+        '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
   );
 
   bool isButtonEnabled = false;
@@ -78,8 +79,7 @@ class _SignInScreenState extends State<SignInScreen> {
               }, SetOptions(merge: true));
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _signIn() async {
@@ -177,81 +177,84 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-  setState(() => _isLoading = true);
-  try {
-    GoogleSignInAccount? googleUser;
-    GoogleSignInAuthentication? googleAuth;
+    setState(() => _isLoading = true);
+    try {
+      GoogleSignInAccount? googleUser;
+      GoogleSignInAuthentication? googleAuth;
 
-    if (kIsWeb) {
-      final webGoogleSignIn = GoogleSignIn(
-        clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
-        scopes: ['email', 'profile'],
-      );
-      googleUser = await webGoogleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      googleAuth = await googleUser.authentication;
-    } else {
-      googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      googleAuth = await googleUser.authentication;
-    }
-
-    if (googleAuth.idToken == null && googleAuth.accessToken == null) {
-      throw Exception('No ID token or access token received');
-    }
-
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-    final user = userCredential.user;
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'fullName': user.displayName ?? 'Google User',
-        'email': user.email ?? '',
-        'profilePicUrl': user.photoURL,
-        'authProvider': 'google',
-        'isAdmin': user.email?.toLowerCase() == 'adminuser@gmail.com',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'fcmToken': await FirebaseMessaging.instance.getToken(),
-      }, SetOptions(merge: true));
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-
-    if (mounted) {
-      final email = userCredential.user?.email?.toLowerCase();
-      if (email == 'adminuser@gmail.com') {
-        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      if (kIsWeb) {
+        final webGoogleSignIn = GoogleSignIn(
+          clientId:
+              '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
+          scopes: ['email', 'profile'],
+        );
+        googleUser = await webGoogleSignIn.signIn();
+        if (googleUser == null) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        googleAuth = await googleUser.authentication;
       } else {
-        Navigator.pushReplacementNamed(context, '/HomeScreen');
+        googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        googleAuth = await googleUser.authentication;
       }
+
+      if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+        throw Exception('No ID token or access token received');
+      }
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fullName': user.displayName ?? 'Google User',
+          'email': user.email ?? '',
+          'profilePicUrl': user.photoURL,
+          'authProvider': 'google',
+          'isAdmin': user.email?.toLowerCase() == 'adminuser@gmail.com',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'fcmToken': await FirebaseMessaging.instance.getToken(),
+        }, SetOptions(merge: true));
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+      if (mounted) {
+        final email = userCredential.user?.email?.toLowerCase();
+        if (email == 'adminuser@gmail.com') {
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Google sign-in failed';
+      if (e.code == 'account-exists-with-different-credential') {
+        message = 'An account already exists with the same email.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credential. Please try again.';
+      }
+      _showCustomSnackBar(context, message);
+    } catch (e) {
+      _showCustomSnackBar(context, 'Error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  } on FirebaseAuthException catch (e) {
-    String message = 'Google sign-in failed';
-    if (e.code == 'account-exists-with-different-credential') {
-      message = 'An account already exists with the same email.';
-    } else if (e.code == 'invalid-credential') {
-      message = 'Invalid credential. Please try again.';
-    }
-    _showCustomSnackBar(context, message);
-  } catch (e) {
-    _showCustomSnackBar(context, 'Error: $e');
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   void _showCustomSnackBar(BuildContext context, String message) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -401,7 +404,17 @@ class _SignInScreenState extends State<SignInScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: SingleChildScrollView(
+                      // keep the white container size fixed (resizeToAvoidBottomInset: false)
+                      // but allow extra scrollable space so fields/buttons can be scrolled above the keyboard
                       physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.only(
+                        // add the keyboard inset so content can be scrolled into view when keyboard is visible
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.8,
+                      ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           minHeight: screenHeight * 0.69,

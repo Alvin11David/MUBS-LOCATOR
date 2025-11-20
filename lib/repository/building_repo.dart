@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mubs_locator/models/building_model.dart';
+import 'package:amba_locator/models/building_model.dart';
 
 class BuildingRepository {
   // This class will handle data operations related to buildings

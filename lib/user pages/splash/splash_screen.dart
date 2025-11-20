@@ -277,7 +277,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: SizedBox(
                           width: screenWidth * 0.6,
                           child: Text(
-                            "Best wishes during \nyour stay at MUBS. \nMay you find inspiration \nin your studies, build lasting\nconnections for a successful\nfuture.",
+                            "Best wishes during \nyour stay at campus. \nMay you find inspiration \nin your studies, build lasting\nconnections for a successful\nfuture.",
                             style: TextStyle(
                               fontSize: screenWidth * 0.045,
                               color: _textColorAnimation.value ?? Colors.white,

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mubs_locator/components/bottom_navbar.dart';
+import 'package:amba_locator/components/bottom_navbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
+import 'package:amba_locator/user%20pages/auth/sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class FeedbackScreen extends StatefulWidget {

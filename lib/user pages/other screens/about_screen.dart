@@ -415,7 +415,7 @@ class _AboutScreenState extends State<AboutScreen> with SingleTickerProviderStat
 
   Widget _buildGlassyRectangle(double screenWidth, double screenHeight, int index) {
     final contents = [
-      'Navigate MUBS with ease,\n your success is our guide.',
+      'Navigate with ease,\n your success is our guide.',
       'Explore new opportunities,\n grow with every step.',
       'Connect with peers,\n build your future today.',
       'Lead with confidence,\n inspire with action.',

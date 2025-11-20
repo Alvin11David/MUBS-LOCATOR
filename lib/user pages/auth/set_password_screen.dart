@@ -13,7 +13,8 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool isButtonEnabled = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -32,7 +33,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
     setState(() {
-      isButtonEnabled = password.isNotEmpty &&
+      isButtonEnabled =
+          password.isNotEmpty &&
           confirmPassword.isNotEmpty &&
           password == confirmPassword &&
           _passwordStrengthProgress == 1.0;
@@ -60,7 +62,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
   }
 
-  void _showCustomSnackBar(BuildContext context, String message, {bool isSuccess = false}) {
+  void _showCustomSnackBar(
+    BuildContext context,
+    String message, {
+    bool isSuccess = false,
+  }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final snackBar = SnackBar(
       content: Container(
@@ -76,7 +82,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               width: screenWidth * 0.08,
               height: screenWidth * 0.08,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(width: 24),
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox(width: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -145,7 +152,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         if (e.code == 'invalid-credential') {
           // If Firestore password is incorrect, inform the user to sign in manually
           throw Exception(
-              'Stored credentials are outdated. Please sign in with your current password and try again.');
+            'Stored credentials are outdated. Please sign in with your current password and try again.',
+          );
         } else {
           rethrow; // Rethrow other FirebaseAuth exceptions
         }
@@ -164,9 +172,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           .collection('users')
           .doc(userDoc.id)
           .update({
-        'password': newPassword,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+            'password': newPassword,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
 
       // Delete OTP from Firestore
       await FirebaseFirestore.instance
@@ -177,7 +185,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         _passwordController.clear();
         _confirmPasswordController.clear();
-        _showCustomSnackBar(context, 'Password updated successfully! Please sign in.', isSuccess: true);
+        _showCustomSnackBar(
+          context,
+          'Password updated successfully! Please sign in.',
+          isSuccess: true,
+        );
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/SignInScreen',
@@ -309,10 +321,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        vertical: screenHeight * 0.04,
-                        horizontal: screenWidth * 0.05,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        top: screenHeight * 0.01,
+                        left: screenWidth * 0.05,
+                        right: screenWidth * 0.05,
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.4,
                       ),
                       child: Column(
                         children: [
@@ -368,14 +384,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
-                                    fillColor: const Color.fromARGB(255, 237, 236, 236),
+                                    fillColor: const Color.fromARGB(
+                                      255,
+                                      237,
+                                      236,
+                                      236,
+                                    ),
                                     prefixIcon: Icon(
                                       Icons.lock,
                                       color: Color(0xFF458DE0),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                        _obscurePassword
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
                                         color: Color(0xFF458DE0),
                                       ),
                                       onPressed: () {
@@ -423,7 +446,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                           color: Colors.white,
                                         ),
                                         FractionallySizedBox(
-                                          widthFactor: _passwordStrengthProgress,
+                                          widthFactor:
+                                              _passwordStrengthProgress,
                                           child: Container(
                                             height: 6,
                                             color: _strengthColor,
@@ -453,19 +477,27 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                       fontSize: screenWidth * 0.04,
                                     ),
                                     filled: true,
-                                    fillColor: const Color.fromARGB(255, 237, 236, 236),
+                                    fillColor: const Color.fromARGB(
+                                      255,
+                                      237,
+                                      236,
+                                      236,
+                                    ),
                                     prefixIcon: Icon(
                                       Icons.lock,
                                       color: Color(0xFF458DE0),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                                        _obscureConfirmPassword
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
                                         color: Color(0xFF458DE0),
                                       ),
                                       onPressed: () {
                                         setState(() {
-                                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                                          _obscureConfirmPassword =
+                                              !_obscureConfirmPassword;
                                         });
                                       },
                                     ),
@@ -500,7 +532,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   width: double.infinity,
                                   height: screenHeight * 0.06,
                                   child: GestureDetector(
-                                    onTap: isButtonEnabled && !_isLoading ? _handleChangePassword : null,
+                                    onTap: isButtonEnabled && !_isLoading
+                                        ? _handleChangePassword
+                                        : null,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(30),
@@ -510,8 +544,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                         ),
                                         gradient: LinearGradient(
                                           colors: isButtonEnabled && !_isLoading
-                                              ? [Color(0xFFE0E7FF), Color(0xFF93C5FD)]
-                                              : [Colors.grey[300]!, Colors.grey[500]!],
+                                              ? [
+                                                  Color(0xFFE0E7FF),
+                                                  Color(0xFF93C5FD),
+                                                ]
+                                              : [
+                                                  Colors.grey[300]!,
+                                                  Colors.grey[500]!,
+                                                ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
@@ -548,7 +588,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                     ),
                                     GestureDetector(
                                       onTap: () {
-                                        Navigator.pushNamed(context, '/SignInScreen');
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/SignInScreen',
+                                        );
                                       },
                                       child: Text(
                                         'Sign In',

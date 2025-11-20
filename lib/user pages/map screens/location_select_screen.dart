@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:ui';
-import 'package:mubs_locator/components/bottom_navbar.dart';
+import 'package:amba_locator/components/bottom_navbar.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:mubs_locator/models/building_model.dart';
-import 'package:mubs_locator/repository/building_repo.dart';
-import 'package:mubs_locator/services/navigation_service.dart';
-import 'package:mubs_locator/user%20pages/map%20screens/navigation_screen.dart';
+import 'package:amba_locator/models/building_model.dart';
+import 'package:amba_locator/repository/building_repo.dart';
+import 'package:amba_locator/services/navigation_service.dart';
+import 'package:amba_locator/user%20pages/map%20screens/navigation_screen.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';

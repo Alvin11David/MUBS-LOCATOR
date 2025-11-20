@@ -35,7 +35,7 @@ class _TermsAndPrivacyScreenState extends State<TermsAndPrivacyScreen> {
       backgroundColor: const Color(0xFF93C5FD),
       body: Stack(
         children: [
-          // Top glass container with logo, MUBS, and Locator
+          
           Positioned(
             top: 0,
             left: 0,
