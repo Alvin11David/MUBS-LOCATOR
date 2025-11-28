@@ -1,64 +1,103 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <!-- Google Maps (you already had this) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso&libraries=places"></script>
+  <head>
+    <!-- Google Maps (you already had this) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso&libraries=places"></script>
 
-  <!-- Google Sign-In SDK -->
-  <script src="https://apis.google.com/js/platform.js" async defer></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <!-- Google Sign-In Web Client ID (REQUIRED for the Google button on web) -->
-  <meta name="google-signin-client_id"
-        content="700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com">
+    <!-- Google Sign-In SDK -->
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google Sign-In Web Client ID (REQUIRED for the Google button on web) -->
+    <meta
+      name="google-signin-client_id"
+      content="700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com"
+    />
 
-  <!-- Firebase SDK (compat version works with the same code you use on mobile) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <!-- Firebase SDK (compat version works with the same code you use on mobile) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-  <!-- Firebase config – copy from Firebase Console → Project Settings → SDK setup -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso",   // your API key (public, safe to expose)
-      authDomain: "mubs-locator.firebaseapp.com",
-      projectId: "mubs-locator",
-      storageBucket: "mubs-locator.firebasestorage.app",
-      messagingSenderId: "700901312627",
-      appId: "1:700901312627:web:c2dfd9dcd0d03865050206"
-    };
+    <!-- Firebase config – copy from Firebase Console → Project Settings → SDK setup -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso", // your API key (public, safe to expose)
+        authDomain: "mubs-locator.firebaseapp.com",
+        projectId: "mubs-locator",
+        storageBucket: "mubs-locator.firebasestorage.app",
+        messagingSenderId: "700901312627",
+        appId: "1:700901312627:web:c2dfd9dcd0d03865050206",
+      };
 
-    // Initialise Firebase *before* Flutter loads
-    firebase.initializeApp(firebaseConfig);
-  </script>
+      // Initialise Firebase *before* Flutter loads
+      firebase.initializeApp(firebaseConfig);
+    </script>
 
-  <!-- Flutter base href (do NOT remove) -->
-  <base href="$FLUTTER_BASE_HREF">
+    <title>MUBS Locator | Campus Map & Directions</title>
+    <meta
+      name="description"
+      content="MUBS Locator helps users find buildings, services, and walking directions around Makerere University Business School campus."
+    />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://mubs-locator.web.app/" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MUBS Locator" />
+    <meta
+      property="og:description"
+      content="Find buildings and walking routes around the MUBS campus."
+    />
+    <meta property="og:url" content="https://mubs-locator.web.app/" />
+    <meta property="og:image" content="/icons/Icon-192.png" />
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="mubs_locator">
-  <link rel="apple-touch-icon" href="icons/logo.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="logo.png"/>
-
-  <title>mubs_locator</title>
-  <link rel="manifest" href="manifest.json">
-  <script>
-    window.addEventListener('load', function() {
-      if (!window.google || !window.google.maps) {
-        console.error('Google Maps failed to load');
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MUBS Locator",
+        "url": "https://mubs-locator.web.app/",
+        "description": "Campus map and walking directions for MUBS.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://mubs-locator.web.app/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
       }
-    });
-  </script>
-</head>
+    </script>
 
-<body>
-  <!-- Flutter bootstrap (unchanged) -->
-  <script src="flutter_bootstrap.js" async></script>
-</body>
+    <!-- Flutter base href (do NOT remove) -->
+    <base href="$FLUTTER_BASE_HREF" />
+
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="description" content="A new Flutter project." />
+
+    <!-- iOS meta tags & icons -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="mubs_locator" />
+    <link rel="apple-touch-icon" href="icons/logo.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="logo.png" />
+
+    <title>mubs_locator</title>
+    <link rel="manifest" href="manifest.json" />
+    <script>
+      window.addEventListener("load", function () {
+        if (!window.google || !window.google.maps) {
+          console.error("Google Maps failed to load");
+        }
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="seo-content" style="display:block;max-width:760px;margin:16px auto;font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#222;">
+    <h1>MUBS Locator</h1>
+    <p>MUBS Locator is a web application that helps students and visitors find Makerere University Business School campus buildings, departments, services, and walking routes quickly.</p>
+    <p>Use MUBS Locator to search buildings, get directions, explore campus facilities, and navigate efficiently.</p>
+  </div>
+    <!-- Flutter bootstrap (unchanged) -->
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
 </html>

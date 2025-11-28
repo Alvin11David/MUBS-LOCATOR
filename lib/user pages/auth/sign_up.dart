@@ -127,7 +127,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   static const String APK_URL =
-      'https://drive.google.com/file/d/1BuzlGSBq8drL5JoTwCj5aUJ8mO4gq8-U/view?usp=sharing'; 
+      'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; 
 
   Future<void> _downloadApk() async {
     await Permission.storage.request();

@@ -54,7 +54,8 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
     await prefs.setBool('onboardingComplete', true);
   }
 
-  static const String APK_URL = 'https://drive.google.com/file/d/1BuzlGSBq8drL5JoTwCj5aUJ8mO4gq8-U/view?usp=sharing'; // TODO: replace
+  static const String APK_URL =
+      'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; // TODO: replace
 
   Future<void> _downloadApk() async {
     await Permission.storage.request();
@@ -71,7 +72,13 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
+      SnackBar(
+        content: Text(
+          taskId != null
+              ? 'Downloading APK… Check notifications.'
+              : 'Failed to start download.',
+        ),
+      ),
     );
   }
 
@@ -201,7 +208,10 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
-                                border: Border.all(color: Colors.white, width: 1),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1,
+                                ),
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: Row(
