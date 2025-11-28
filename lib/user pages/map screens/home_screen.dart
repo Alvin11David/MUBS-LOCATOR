@@ -46,18 +46,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isBottomNavVisible = false;
   String? _profilePicUrl;
   String _getGreeting() {
-  final hour = DateTime.now().hour;
-  
-  if (hour >= 5 && hour < 12) {
-    return 'Good morning';
-  } else if (hour >= 12 && hour < 17) {
-    return 'Good afternoon';
-  } else if (hour >= 17 && hour < 21) {
-    return 'Good evening';
-  } else {
-    return 'Good night';
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening';
+    } else {
+      return 'Good night';
+    }
   }
-}
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     BitmapDescriptor.fromAssetImage(
-      ImageConfiguration(size: Size(35, 35)),
+      ImageConfiguration(size: Size(30, 30)),
       'assets/markers/small_marker.png',
     ).then((icon) {
       setState(() {
