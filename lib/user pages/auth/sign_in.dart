@@ -1,6 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +28,8 @@ class _SignInScreenState extends State<SignInScreen> {
   // Google Sign-In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email'],
-    clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
+    clientId:
+        '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
   );
 
   bool isButtonEnabled = false;
@@ -63,6 +68,28 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  static const String APK_URL =
+      'https://drive.google.com/file/d/1BuzlGSBq8drL5JoTwCj5aUJ8mO4gq8-U/view?usp=sharing'; 
+
+  Future<void> _downloadApk() async {
+    await Permission.storage.request();
+    await Permission.notification.request();
+
+    const downloadsDir = '/storage/emulated/0/Download';
+
+    final taskId = await FlutterDownloader.enqueue(
+      url: APK_URL,
+      savedDir: downloadsDir,
+      showNotification: true,
+      openFileFromNotification: true,
+      fileName: 'MUBS_Locator.apk',
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
+    );
+  }
+
   Future<void> _saveFcmToken() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -78,8 +105,7 @@ class _SignInScreenState extends State<SignInScreen> {
               }, SetOptions(merge: true));
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _signIn() async {
@@ -177,81 +203,84 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-  setState(() => _isLoading = true);
-  try {
-    GoogleSignInAccount? googleUser;
-    GoogleSignInAuthentication? googleAuth;
+    setState(() => _isLoading = true);
+    try {
+      GoogleSignInAccount? googleUser;
+      GoogleSignInAuthentication? googleAuth;
 
-    if (kIsWeb) {
-      final webGoogleSignIn = GoogleSignIn(
-        clientId: '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
-        scopes: ['email', 'profile'],
-      );
-      googleUser = await webGoogleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      googleAuth = await googleUser.authentication;
-    } else {
-      googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      googleAuth = await googleUser.authentication;
-    }
-
-    if (googleAuth.idToken == null && googleAuth.accessToken == null) {
-      throw Exception('No ID token or access token received');
-    }
-
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-    final user = userCredential.user;
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'fullName': user.displayName ?? 'Google User',
-        'email': user.email ?? '',
-        'profilePicUrl': user.photoURL,
-        'authProvider': 'google',
-        'isAdmin': user.email?.toLowerCase() == 'adminuser@gmail.com',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'fcmToken': await FirebaseMessaging.instance.getToken(),
-      }, SetOptions(merge: true));
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-
-    if (mounted) {
-      final email = userCredential.user?.email?.toLowerCase();
-      if (email == 'adminuser@gmail.com') {
-        Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+      if (kIsWeb) {
+        final webGoogleSignIn = GoogleSignIn(
+          clientId:
+              '700901312627-jajad1h1v8qia7k47toir97tlcrfjgeh.apps.googleusercontent.com',
+          scopes: ['email', 'profile'],
+        );
+        googleUser = await webGoogleSignIn.signIn();
+        if (googleUser == null) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        googleAuth = await googleUser.authentication;
       } else {
-        Navigator.pushReplacementNamed(context, '/HomeScreen');
+        googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        googleAuth = await googleUser.authentication;
       }
+
+      if (googleAuth.idToken == null && googleAuth.accessToken == null) {
+        throw Exception('No ID token or access token received');
+      }
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'fullName': user.displayName ?? 'Google User',
+          'email': user.email ?? '',
+          'profilePicUrl': user.photoURL,
+          'authProvider': 'google',
+          'isAdmin': user.email?.toLowerCase() == 'adminuser@gmail.com',
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'fcmToken': await FirebaseMessaging.instance.getToken(),
+        }, SetOptions(merge: true));
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+      if (mounted) {
+        final email = userCredential.user?.email?.toLowerCase();
+        if (email == 'adminuser@gmail.com') {
+          Navigator.pushReplacementNamed(context, '/AdminDashboardScreen');
+        } else {
+          Navigator.pushReplacementNamed(context, '/HomeScreen');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Google sign-in failed';
+      if (e.code == 'account-exists-with-different-credential') {
+        message = 'An account already exists with the same email.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credential. Please try again.';
+      }
+      _showCustomSnackBar(context, message);
+    } catch (e) {
+      _showCustomSnackBar(context, 'Error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  } on FirebaseAuthException catch (e) {
-    String message = 'Google sign-in failed';
-    if (e.code == 'account-exists-with-different-credential') {
-      message = 'An account already exists with the same email.';
-    } else if (e.code == 'invalid-credential') {
-      message = 'Invalid credential. Please try again.';
-    }
-    _showCustomSnackBar(context, message);
-  } catch (e) {
-    _showCustomSnackBar(context, 'Error: $e');
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   void _showCustomSnackBar(BuildContext context, String message) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -376,6 +405,54 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
+                //Install App Button 
+                  Positioned(
+                    top: screenHeight * 0.01,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: GestureDetector(
+                            onTap: _downloadApk,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.0,
+                                vertical: screenHeight * 0.009,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                border: Border.all(color: Colors.white, width: 1.5),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.phone_iphone,
+                                    color: Colors.white,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Install App',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: screenHeight * 0.17,
                   left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -401,7 +478,17 @@ class _SignInScreenState extends State<SignInScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: SingleChildScrollView(
+                      // keep the white container size fixed (resizeToAvoidBottomInset: false)
+                      // but allow extra scrollable space so fields/buttons can be scrolled above the keyboard
                       physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.only(
+                        // add the keyboard inset so content can be scrolled into view when keyboard is visible
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.8,
+                      ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           minHeight: screenHeight * 0.69,
@@ -483,7 +570,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                     },
                                     onTap: () {},
                                     child: Text(
-                                      "Forgot Password?",
+                                      "",
                                       style: TextStyle(
                                         fontSize: screenWidth * 0.04,
                                         fontWeight: FontWeight.bold,
@@ -569,76 +656,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                   horizontal: screenWidth * 0.08,
                                 ),
                                 child: const OrDivider(),
-                              ),
-                              SizedBox(height: screenHeight * 0.03),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.08,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: screenHeight * 0.06,
-                                  child: GestureDetector(
-                                    onTap: _isLoading
-                                        ? null
-                                        : _signInWithGoogle,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(30),
-                                        border: Border.all(
-                                          color: _isLoading
-                                              ? Colors.grey
-                                              : const Color(0xFFD59A00),
-                                          width: 1,
-                                        ),
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color.fromARGB(255, 255, 255, 255),
-                                            Color.fromARGB(255, 255, 255, 255),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.2,
-                                            ),
-                                            spreadRadius: 2,
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Image.asset(
-                                            'assets/logo/googleicon.png',
-                                            width: screenWidth * 0.08,
-                                            height: screenHeight * 0.03,
-                                            fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    const SizedBox(),
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            "Google",
-                                            style: TextStyle(
-                                              fontSize: screenWidth * 0.05,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black,
-                                              fontFamily: 'Epunda Slab',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
                               ),
                               SizedBox(height: screenHeight * 0.03),
                               Center(
@@ -891,15 +908,7 @@ class OrDivider extends StatelessWidget {
               Expanded(child: Container(height: 1, color: Colors.grey)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                child: Text(
-                  'Or Sign In With',
-                  style: TextStyle(
-                    color: const Color(0xFF6B7280),
-                    fontSize: screenWidth * 0.04,
-                    fontFamily: 'Epunda Slab',
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+                
               ),
               Expanded(child: Container(height: 1, color: Colors.grey)),
             ],

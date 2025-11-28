@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:mubs_locator/user%20pages/intro/onboarding_screen1.dart';
-import 'package:mubs_locator/user%20pages/intro/onboarding_screen2.dart';
+import 'package:amba_locator/user%20pages/intro/onboarding_screen1.dart';
+import 'package:amba_locator/user%20pages/intro/onboarding_screen2.dart';
 
 class OnboardingScreen3 extends StatefulWidget {
   const OnboardingScreen3({super.key});
@@ -50,6 +52,27 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboardingComplete', true);
+  }
+
+  static const String APK_URL = 'https://drive.google.com/file/d/1BuzlGSBq8drL5JoTwCj5aUJ8mO4gq8-U/view?usp=sharing'; // TODO: replace
+
+  Future<void> _downloadApk() async {
+    await Permission.storage.request();
+    await Permission.notification.request();
+
+    const downloadsDir = '/storage/emulated/0/Download';
+
+    final taskId = await FlutterDownloader.enqueue(
+      url: APK_URL,
+      savedDir: downloadsDir,
+      showNotification: true,
+      openFileFromNotification: true,
+      fileName: 'MUBS_Locator.apk',
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
+    );
   }
 
   @override
@@ -155,6 +178,53 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: screenHeight * 0.02,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: GestureDetector(
+                            onTap: _downloadApk,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.04,
+                                vertical: screenHeight * 0.012,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                border: Border.all(color: Colors.white, width: 1),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.download_rounded,
+                                    color: Colors.white,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Install App',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),

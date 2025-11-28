@@ -1,10 +1,14 @@
+import 'dart:ui' as ui;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 // ADD THIS
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
 // ADD THIS
 
 class SignUpScreen extends StatefulWidget {
@@ -120,6 +124,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() => _emailHint = 'Error checking email');
       }
     });
+  }
+
+  static const String APK_URL =
+      'https://drive.google.com/file/d/1BuzlGSBq8drL5JoTwCj5aUJ8mO4gq8-U/view?usp=sharing'; 
+
+  Future<void> _downloadApk() async {
+    await Permission.storage.request();
+    await Permission.notification.request();
+
+    const downloadsDir = '/storage/emulated/0/Download';
+
+    final taskId = await FlutterDownloader.enqueue(
+      url: APK_URL,
+      savedDir: downloadsDir,
+      showNotification: true,
+      openFileFromNotification: true,
+      fileName: 'MUBS_Locator.apk',
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
+    );
   }
 
   Future<void> _saveFcmToken(String uid, String email) async {
@@ -437,6 +463,54 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
+                //Install App Button 
+                  Positioned(
+                    top: screenHeight * 0.01,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: GestureDetector(
+                            onTap: _downloadApk,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.0,
+                                vertical: screenHeight * 0.009,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                border: Border.all(color: Colors.white, width: 1.5),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.phone_iphone,
+                                    color: Colors.white,
+                                    size: screenWidth * 0.06,
+                                  ),
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Install App',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: screenHeight * 0.31,
                   left: screenWidth * 0.02,
@@ -448,10 +522,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: SingleChildScrollView(
+                      // keep the white container size fixed (no resizing of scaffold)
+                      // but allow extra vertical scroll when keyboard is visible
                       physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom +
+                            screenHeight * 0.06,
+                      ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: screenHeight * 0.69,
+                          minHeight: screenHeight * 1.2,
                         ),
                         child: Padding(
                           padding: EdgeInsets.symmetric(
@@ -906,4 +989,3 @@ class _ResponsivePasswordFieldState extends State<_ResponsivePasswordField> {
     );
   }
 }
-

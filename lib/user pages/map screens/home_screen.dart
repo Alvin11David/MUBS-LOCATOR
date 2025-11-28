@@ -6,17 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:mubs_locator/models/building_model.dart';
+import 'package:amba_locator/models/building_model.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:mubs_locator/repository/building_repo.dart';
+import 'package:amba_locator/repository/building_repo.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:get/get.dart';
 import '../../services/navigation_service.dart';
-import 'package:flutter/foundation.dart';
-import 'package:mubs_locator/components/bottom_navbar.dart'; // Add this import
+import 'package:amba_locator/components/bottom_navbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<Marker> markers = {};
   Set<Polygon> polygons = {};
   Set<Polyline> polylines = {};
-  final String _googleApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
+  final String _googleApiKey = 'AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso';
   List<Building> fetchedBuildings = [];
   bool searchActive = true;
   bool isNavigating = false;
@@ -46,6 +45,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoggingOut = false;
   bool _isBottomNavVisible = false;
   String? _profilePicUrl;
+  String _getGreeting() {
+  final hour = DateTime.now().hour;
+  
+  if (hour >= 5 && hour < 12) {
+    return 'Good morning';
+  } else if (hour >= 12 && hour < 17) {
+    return 'Good afternoon';
+  } else if (hour >= 17 && hour < 21) {
+    return 'Good evening';
+  } else {
+    return 'Good night';
+  }
+}
 
   final List<LatLng> _mubsBounds = const [
     LatLng(0.32665770214412915, 32.615554267866116),
@@ -68,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     BitmapDescriptor.fromAssetImage(
-      ImageConfiguration(size: Size(40, 40)), // Small size
+      ImageConfiguration(size: Size(40, 40)),
       'assets/markers/small_marker.png',
     ).then((icon) {
       setState(() {
@@ -809,7 +821,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Good morning, $_userFullName',
+          '${_getGreeting()}, $_userFullName',
           style: TextStyle(
             fontSize: textScaler.scale(16),
             fontWeight: FontWeight.bold,
@@ -1030,10 +1042,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final buildings = querySnapshot.docs
                             .map(
-                              (doc) => Building.fromFirestore(
-                                doc.data(),
-                                doc.id,
-                              ),
+                              (doc) =>
+                                  Building.fromFirestore(doc.data(), doc.id),
                             )
                             .toList();
 

@@ -21,7 +21,7 @@ class NavigationService extends GetxController {
   final RxString errorMessage = ''.obs;
 
   // Google Maps API key - REPLACE WITH YOUR ACTUAL KEY
-  final String _googleMapsApiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
+  final String _googleMapsApiKey = 'AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso';
 
   StreamSubscription<Position>? _positionStreamSubscription;
   LatLng? _destination;

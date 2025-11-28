@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <supports-screens
+       android:smallScreens="true"
+       android:normalScreens="true"
+       android:largeScreens="false"
+       android:xlargeScreens="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="true" />
     <queries>
         <!-- Allow detecting if WhatsApp is installed -->
         <package android:name="com.whatsapp" />
@@ -33,7 +39,7 @@
         </service>
         <meta-data
     android:name="com.google.android.gms.play_integrity.api_key"
-    android:value="AIzaSyAeLHgMyEwiOEf0ocRqoMZqjB4e_Or6M74" />
+    android:value="${PLAY_INTEGRITY_API_KEY}" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -63,7 +69,7 @@
             android:value="2" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw"/>
+            android:value="${GOOGLE_MAPS_API_KEY}"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

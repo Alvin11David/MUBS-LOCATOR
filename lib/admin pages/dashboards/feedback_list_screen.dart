@@ -2,9 +2,9 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mubs_locator/user%20pages/auth/sign_in.dart';
-import 'package:mubs_locator/admin%20pages/dashboards/feedback_details_screen.dart';
-import 'package:mubs_locator/user%20pages/other%20screens/edit_profile_screen.dart';
+import 'package:amba_locator/user%20pages/auth/sign_in.dart';
+import 'package:amba_locator/admin%20pages/dashboards/feedback_details_screen.dart';
+import 'package:amba_locator/user%20pages/other%20screens/edit_profile_screen.dart';
 
 class FeedbackListScreen extends StatefulWidget {
   const FeedbackListScreen({super.key});

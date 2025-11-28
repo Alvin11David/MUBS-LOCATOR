@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -32,7 +33,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   bool _loading = true;
 
   // ...existing code...
-  static const String _apiKey = 'AIzaSyCEGBl8TYQLOGqw6qIgBu2bX43uz1WAzzw';
+  static const String _apiKey = 'AIzaSyDKGTdWstqbR6wn-Y81PdRcsnFvPYH5nso';
 
   @override
   void initState() {
@@ -45,14 +46,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     final originLatLng = widget.origin ?? widget.destination;
     final originStr = '${originLatLng.latitude},${originLatLng.longitude}';
-    final destStr = '${widget.destination.latitude},${widget.destination.longitude}';
+    final destStr =
+        '${widget.destination.latitude},${widget.destination.longitude}';
 
     debugPrint('📍 Origin: $originStr');
     debugPrint('🎯 Destination: $destStr');
 
-    final url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=$originStr&destination=$destStr&mode=walking&key=$_apiKey';
-    debugPrint('🌐 Fetching from URL: $url');
+    final url = Uri.https('directions-twj36og2vq-uc.a.run.app', '/', {
+      'origin': originStr,
+      'destination': destStr,
+      'mode': 'walking',
+    });
 
     try {
       if (!await _checkInternetConnection()) {
@@ -66,7 +70,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
         return;
       }
 
-      final resp = await http.get(Uri.parse(url));
+      final resp = await http.get(url).timeout(const Duration(seconds: 20));
       debugPrint('📡 API Response Status: ${resp.statusCode}');
       debugPrint('📦 Full Response Body: ${resp.body}');
 
@@ -81,7 +85,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
       if (data['status'] != 'OK') {
         debugPrint('❌ API Status not OK: ${data['status']}');
-        debugPrint('❌ Error Message: ${data['error_message'] ?? 'No error message'}');
+        debugPrint(
+          '❌ Error Message: ${data['error_message'] ?? 'No error message'}',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not find route: ${data['status']}')),
@@ -107,13 +113,63 @@ class _NavigationScreenState extends State<NavigationScreen> {
       }
 
       final leg = legs[0];
-      final polyEncoded = route['overview_polyline']?['points'] as String? ?? '';
+      final polyEncoded =
+          route['overview_polyline']?['points'] as String? ?? '';
+      if (polyEncoded.isEmpty) {
+        debugPrint("❌ No polyline received from API. Cannot draw route.");
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No route found.')));
+        }
+        setState(() => _loading = false);
+        return;
+      }
       debugPrint('📏 Distance: ${leg['distance']?['text']}');
       debugPrint('⏱️ Duration: ${leg['duration']?['text']}');
       debugPrint('👣 Number of steps: ${(leg['steps'] as List).length}');
 
-      final points = _decodePolyline(polyEncoded);
-      debugPrint('📍 Decoded ${points.length} polyline points');
+      // Use the exact start/end of the route leg for markers and bounds
+      final startLoc = leg['start_location'];
+      final endLoc = leg['end_location'];
+      final startLatLng = LatLng(
+        (startLoc['lat'] as num).toDouble(),
+        (startLoc['lng'] as num).toDouble(),
+      );
+      final endLatLng = LatLng(
+        (endLoc['lat'] as num).toDouble(),
+        (endLoc['lng'] as num).toDouble(),
+      );
+      debugPrint('🧭 Route start: $startLatLng, end: $endLatLng');
+
+      // Prefer concatenating step polylines (avoid overview glitches)
+      final stepsRaw = (leg['steps'] as List);
+      final List<LatLng> stepPoints = [];
+      for (final s in stepsRaw) {
+        final segEnc = (s['polyline']?['points'] ?? '') as String;
+        if (segEnc.isEmpty) continue;
+        final seg = _decodePolyline(segEnc);
+        if (stepPoints.isNotEmpty &&
+            seg.isNotEmpty &&
+            stepPoints.last == seg.first) {
+          stepPoints.addAll(seg.skip(1));
+        } else {
+          stepPoints.addAll(seg);
+        }
+      }
+      // Fallback to overview if steps somehow empty
+      final pointsRaw = stepPoints.isNotEmpty
+          ? stepPoints
+          : _decodePolyline(polyEncoded);
+
+      // Filter invalid or jumpy points to avoid [90,-105] outlier
+      final points = _filterInvalidPoints(pointsRaw);
+      debugPrint('📍 Decoded ${points.length} polyline points (filtered)');
+      if (points.isNotEmpty) {
+        debugPrint(
+          '🔢 First point: ${points.first}, last point: ${points.last}',
+        );
+      }
 
       final stepsList = (leg['steps'] as List).map((s) {
         final instructionRaw = (s['html_instructions'] ?? '').toString();
@@ -133,17 +189,21 @@ class _NavigationScreenState extends State<NavigationScreen> {
         points: points,
         color: Colors.blue,
         width: 5,
+        geodesic: true,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        zIndex: 1,
       );
 
       final originMarker = Marker(
         markerId: const MarkerId('origin'),
-        position: originLatLng,
+        position: startLatLng,
         infoWindow: InfoWindow(title: widget.originName ?? 'Start'),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
       );
       final destMarker = Marker(
         markerId: const MarkerId('destination'),
-        position: widget.destination,
+        position: endLatLng,
         infoWindow: InfoWindow(title: widget.destinationName),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       );
@@ -158,26 +218,33 @@ class _NavigationScreenState extends State<NavigationScreen> {
       });
 
       if (_mapController != null && points.isNotEmpty) {
-        final bounds = _computeBounds(points);
+        final bounds = _computeBounds([...points, startLatLng, endLatLng]);
         _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
         debugPrint('🗺️ Map camera updated to bounds');
       }
     } catch (e) {
       debugPrint('❌ Error fetching route: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching route: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching route: $e')));
       }
       setState(() => _loading = false);
     }
   }
 
   Future<bool> _checkInternetConnection() async {
+    if (kIsWeb) {
+      // On web we cannot use InternetAddress.lookup → just assume yes and let the http request fail if no internet
+      return true;
+    }
+
     try {
       final result = await InternetAddress.lookup('google.com');
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } on SocketException catch (_) {
+      return false;
+    } catch (_) {
       return false;
     }
   }
@@ -279,7 +346,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                   ),
                   Text(
                     'Steps',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
@@ -290,7 +360,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                         final s = _steps[i];
                         return ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.12),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.12),
                             child: Icon(
                               _getDirectionIcon(s['instruction'] ?? ''),
                               color: Theme.of(context).primaryColor,
@@ -330,10 +402,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.destinationName, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
+            Text(
+              widget.destinationName,
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             if (_distanceText.isNotEmpty || _durationText.isNotEmpty)
               Text(
-                '${_durationText.isNotEmpty ? _durationText + ' • ' : ''}${_distanceText}',
+                '${_durationText.isNotEmpty ? '$_durationText • ' : ''}$_distanceText',
                 style: const TextStyle(color: Colors.black54, fontSize: 12),
               ),
           ],
@@ -342,7 +420,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: widget.destination, zoom: 16),
+            initialCameraPosition: CameraPosition(
+              target: widget.destination,
+              zoom: 16,
+            ),
             onMapCreated: (c) {
               _mapController = c;
               if (_polylines.isNotEmpty) {
@@ -351,7 +432,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
                   final bounds = _computeBounds(allPoints);
                   Future.delayed(const Duration(milliseconds: 300), () {
                     try {
-                      _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+                      _mapController?.animateCamera(
+                        CameraUpdate.newLatLngBounds(bounds, 50),
+                      );
                     } catch (e) {
                       debugPrint('⚠️ animateCamera error: $e');
                     }
@@ -380,8 +463,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                     elevation: 6,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
                 ),
               ),
@@ -399,8 +487,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
             ),
           ),
 
-          if (_loading)
-            const Center(child: CircularProgressIndicator()),
+          if (_loading) const Center(child: CircularProgressIndicator()),
         ],
       ),
     );
@@ -410,5 +497,29 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void dispose() {
     _mapController?.dispose();
     super.dispose();
+  }
+
+  // Add this helper below _decodePolyline(...)
+  List<LatLng> _filterInvalidPoints(List<LatLng> pts) {
+    final List<LatLng> out = [];
+    LatLng? prev;
+    for (final p in pts) {
+      final valid =
+          p.latitude >= -85 &&
+          p.latitude <= 85 &&
+          p.longitude >= -180 &&
+          p.longitude <= 180;
+      final jumpOk =
+          prev == null ||
+          ((p.latitude - prev.latitude).abs() <= 0.25 &&
+              (p.longitude - prev.longitude).abs() <= 0.25);
+      if (valid && jumpOk) {
+        out.add(p);
+        prev = p;
+      } else {
+        debugPrint('⚠️ Dropping suspect point $p');
+      }
+    }
+    return out;
   }
 }
