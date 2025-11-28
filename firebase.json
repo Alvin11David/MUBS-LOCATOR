@@ -15,13 +15,21 @@
             "value": "text/javascript"
           }
         ]
+      },
+      {
+        "source": "/apk/MUBS_Locator.apk",
+        "headers": [
+          { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+          { "key": "Content-Disposition", "value": "attachment; filename=\"MUBS_Locator.apk\"" }
+        ]
       }
     ],
     "rewrites": [
       {
         "source": "/directions",
         "function": "directions"
-      }
+      },
+      { "source": "**", "destination": "/index.html" }
     ]
   },
   "functions": {

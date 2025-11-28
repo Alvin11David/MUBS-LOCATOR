@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 // ADD THIS
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 // ADD THIS
 
 class SignUpScreen extends StatefulWidget {
@@ -130,23 +131,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; 
 
   Future<void> _downloadApk() async {
-    await Permission.storage.request();
-    await Permission.notification.request();
+  final uri = Uri.parse(APK_URL);
+    // Try platform default first (lets Android pick a browser)
+    var ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    if (!ok) {
+      // Fallback to external app
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
 
-    const downloadsDir = '/storage/emulated/0/Download';
-
-    final taskId = await FlutterDownloader.enqueue(
-      url: APK_URL,
-      savedDir: downloadsDir,
-      showNotification: true,
-      openFileFromNotification: true,
-      fileName: 'MUBS_Locator.apk',
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
-    );
-  }
+}
 
   Future<void> _saveFcmToken(String uid, String email) async {
     try {

@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:amba_locator/user%20pages/intro/onboarding_screen1.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OnboardingScreen2 extends StatefulWidget {
   const OnboardingScreen2({super.key});
@@ -48,23 +49,15 @@ class _OnboardingScreen2State extends State<OnboardingScreen2>
   static const String APK_URL = 'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; // TODO: replace
 
   Future<void> _downloadApk() async {
-    await Permission.storage.request();
-    await Permission.notification.request();
+  final uri = Uri.parse(APK_URL);
+    // Try platform default first (lets Android pick a browser)
+    var ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    if (!ok) {
+      // Fallback to external app
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
 
-    const downloadsDir = '/storage/emulated/0/Download';
-
-    final taskId = await FlutterDownloader.enqueue(
-      url: APK_URL,
-      savedDir: downloadsDir,
-      showNotification: true,
-      openFileFromNotification: true,
-      fileName: 'MUBS_Locator.apk',
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
-    );
-  }
+}
 
   @override
   Widget build(BuildContext context) {

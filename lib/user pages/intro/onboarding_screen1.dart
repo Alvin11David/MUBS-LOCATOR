@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OnboardingScreen1 extends StatefulWidget {
   const OnboardingScreen1({super.key});
@@ -47,23 +48,15 @@ class _OnboardingScreen1State extends State<OnboardingScreen1>
       'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; 
 
   Future<void> _downloadApk() async {
-    await Permission.storage.request();
-    await Permission.notification.request();
+  final uri = Uri.parse(APK_URL);
+    // Try platform default first (lets Android pick a browser)
+    var ok = await launchUrl(uri, mode: LaunchMode.platformDefault);
+    if (!ok) {
+      // Fallback to external app
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
 
-    const downloadsDir = '/storage/emulated/0/Download';
-
-    final taskId = await FlutterDownloader.enqueue(
-      url: APK_URL,
-      savedDir: downloadsDir,
-      showNotification: true,
-      openFileFromNotification: true,
-      fileName: 'MUBS_Locator.apk',
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
-    );
-  }
+}
 
   @override
   Widget build(BuildContext context) {
