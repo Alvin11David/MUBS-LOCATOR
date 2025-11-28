@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     BitmapDescriptor.fromAssetImage(
-      ImageConfiguration(size: Size(40, 40)),
+      ImageConfiguration(size: Size(35, 35)),
       'assets/markers/small_marker.png',
     ).then((icon) {
       setState(() {
@@ -954,15 +954,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 blurRadius: 4,
                               ),
                             ],
-                          ),
-                          child: Text(
-                            building.name,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                              color: Colors.black,
-                            ),
                           ),
                         ),
                       );

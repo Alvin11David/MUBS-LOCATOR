@@ -243,7 +243,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: _isUploading ? null : _pickImage,
                         child: Container(
                           width: screenWidth * 0.08,
                           height: screenWidth * 0.08,
@@ -256,11 +255,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ),
                           child: Center(
-                            child: Icon(
-                              Icons.camera_alt,
-                              color: Colors.black,
-                              size: screenWidth * 0.05,
-                            ),
                           ),
                         ),
                       ),
