@@ -946,7 +946,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -1190,7 +1189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: screenWidth * 0.6,
                   height: screenHeight * 0.8,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.55),
+                    color: Colors.white.withOpacity(0.99),
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(30),
                       bottomRight: Radius.circular(30),

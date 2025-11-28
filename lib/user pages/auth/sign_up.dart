@@ -466,7 +466,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 //Install App Button 
                   Positioned(
                     top: screenHeight * 0.01,
-                    left: 0,
+                    left: screenWidth * 0.65,
                     right: 0,
                     child: Center(
                       child: ClipRRect(
@@ -497,7 +497,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   Text(
                                     'Install App',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.045,
+                                      fontSize: screenWidth * 0.043,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       fontFamily: 'Urbanist',

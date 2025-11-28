@@ -408,7 +408,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 //Install App Button 
                   Positioned(
                     top: screenHeight * 0.01,
-                    left: 0,
+                    left: screenWidth * 0.65,
                     right: 0,
                     child: Center(
                       child: ClipRRect(
