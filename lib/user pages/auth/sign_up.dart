@@ -497,7 +497,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   Text(
                                     'Install App',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.043,
+                                      fontSize: screenWidth * 0.039,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       fontFamily: 'Urbanist',

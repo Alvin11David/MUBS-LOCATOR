@@ -69,7 +69,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   static const String APK_URL =
-      'https://mubs-locator.web.app/apk/MUBS_Locator.apk'; 
+      'https://mubs-locator.web.app/apk/MUBS_Locator.apk';
 
   Future<void> _downloadApk() async {
     await Permission.storage.request();
@@ -86,7 +86,13 @@ class _SignInScreenState extends State<SignInScreen> {
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(taskId != null ? 'Downloading APK… Check notifications.' : 'Failed to start download.')),
+      SnackBar(
+        content: Text(
+          taskId != null
+              ? 'Downloading APK… Check notifications.'
+              : 'Failed to start download.',
+        ),
+      ),
     );
   }
 
@@ -405,54 +411,57 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                //Install App Button 
-                  Positioned(
-                    top: screenHeight * 0.01,
-                    left: screenWidth * 0.65,
-                    right: 0,
-                    child: Center(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: GestureDetector(
-                            onTap: _downloadApk,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.0,
-                                vertical: screenHeight * 0.009,
+                //Install App Button
+                Positioned(
+                  top: screenHeight * 0.01,
+                  left: screenWidth * 0.65,
+                  right: 0,
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: GestureDetector(
+                          onTap: _downloadApk,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.0,
+                              vertical: screenHeight * 0.009,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                border: Border.all(color: Colors.white, width: 1.5),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.phone_iphone,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.phone_iphone,
+                                  color: Colors.white,
+                                  size: screenWidth * 0.06,
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Text(
+                                  'Install App',
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.039,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    size: screenWidth * 0.06,
+                                    fontFamily: 'Urbanist',
                                   ),
-                                  SizedBox(width: screenWidth * 0.02),
-                                  Text(
-                                    'Install App',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      fontFamily: 'Urbanist',
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                ),
                 Positioned(
                   top: screenHeight * 0.17,
                   left: screenWidth * 0.36 - (screenWidth * 0.3) / 2,
@@ -908,7 +917,6 @@ class OrDivider extends StatelessWidget {
               Expanded(child: Container(height: 1, color: Colors.grey)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                
               ),
               Expanded(child: Container(height: 1, color: Colors.grey)),
             ],

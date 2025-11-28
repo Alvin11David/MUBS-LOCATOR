@@ -226,7 +226,7 @@ class _OnboardingScreen3State extends State<OnboardingScreen3>
                                   Text(
                                     'Install App',
                                     style: TextStyle(
-                                      fontSize: screenWidth * 0.045,
+                                      fontSize: screenWidth * 0.039,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       fontFamily: 'Urbanist',

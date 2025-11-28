@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:amba_locator/admin%20pages/admin_dashboard.dart';
 import 'package:amba_locator/admin%20pages/dashboards/add_place_screen.dart';
@@ -56,6 +57,11 @@ Future<void> main() async {
       ? AndroidProvider.debug          // Local testing (flutter run)
       : AndroidProvider.playIntegrity, // Play Store (release)
 );
+
+await FlutterDownloader.initialize(debug: false, ignoreSsl: true);
+if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
 await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(false);
     // Initialize flutter_local_notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -65,9 +71,9 @@ await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(false);
     await FlutterLocalNotificationsPlugin().initialize(initializationSettings);
     // Create Android notification channel
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'amba_locator_notifications', // Channel ID
-      'Amba Locator Notifications', // Channel name
-      description: 'Notifications for Amba Locator app',
+      'MUBS_locator_notifications', // Channel ID
+      'MUBS Locator Notifications', // Channel name
+      description: 'Notifications for MUBS Locator app',
       importance: Importance.max,
     );
     final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -171,7 +177,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Amba Locator',
+      title: 'MUBS Locator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
